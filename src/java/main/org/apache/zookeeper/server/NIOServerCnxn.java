@@ -67,6 +67,12 @@ public class NIOServerCnxn extends ServerCnxn {
 
     boolean initialized;
 
+    private enum ClientSaslState {
+      Unauthenticated, Authenticating, Authenticated;
+    };
+
+    ClientSaslState clientSaslState;
+
     ByteBuffer lenBuffer = ByteBuffer.allocate(4);
 
     ByteBuffer incomingBuffer = lenBuffer;
@@ -97,6 +103,7 @@ public class NIOServerCnxn extends ServerCnxn {
         this.sock = sock;
         this.sk = sk;
         this.factory = factory;
+        this.clientSaslState = ClientSaslState.Unauthenticated;
         if (zk != null) { 
             outstandingLimit = zk.getGlobalOutstandingLimit();
         }
@@ -193,7 +200,13 @@ public class NIOServerCnxn extends ServerCnxn {
             if (!initialized) {
                 readConnectRequest();
             } else {
-                readRequest();
+                if (this.clientSaslState == ClientSaslState.Authenticating) {
+                    // read a SASL token from the client.
+                    readSaslToken();
+                }
+                else {
+                    readRequest();
+                }
             }
             lenBuffer.clear();
             incomingBuffer = lenBuffer;
@@ -403,6 +416,12 @@ public class NIOServerCnxn extends ServerCnxn {
         }
         zkServer.processConnectRequest(this, incomingBuffer);
         initialized = true;
+        this.clientSaslState = ClientSaslState.Authenticating;
+    }
+
+    private void readSaslToken() {
+        LOG.info("NIOServerCnxn:readSaslToken()...");
+        zkServer.readSaslToken(this,incomingBuffer);
     }
 
     /**
@@ -475,7 +494,7 @@ public class NIOServerCnxn extends ServerCnxn {
     /**
      * Set of threads for commmand ports. All the 4
      * letter commands are run via a thread. Each class
-     * maps to a correspoding 4 letter command. CommandThread
+     * maps to a corresponding 4 letter command. CommandThread
      * is the abstract class from which all the others inherit.
      */
     private abstract class CommandThread extends Thread {

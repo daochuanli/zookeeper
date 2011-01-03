@@ -49,6 +49,7 @@ import org.apache.zookeeper.proto.ConnectRequest;
 import org.apache.zookeeper.proto.ConnectResponse;
 import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.RequestHeader;
+import org.apache.zookeeper.proto.SaslClientToken;
 import org.apache.zookeeper.server.ServerCnxn.CloseRequestException;
 import org.apache.zookeeper.server.SessionTracker.Session;
 import org.apache.zookeeper.server.SessionTracker.SessionExpirer;
@@ -787,6 +788,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         // We don't want to receive any packets until we are sure that the
         // session is setup
         cnxn.disableRecv();
+
         long sessionId = connReq.getSessionId();
         if (sessionId != 0) {
             long clientSessionId = connReq.getSessionId();
@@ -801,6 +803,12 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                     + cnxn.getRemoteSocketAddress());
             createSession(cnxn, passwd, sessionTimeout);
         }
+    }
+
+    public void readSaslToken(ServerCnxn cnxn, ByteBuffer incomingBuffer) throws IOException {
+        BinaryInputArchive bia = BinaryInputArchive.getArchive(new ByteBufferInputStream(incomingBuffer));
+        SaslClientToken saslClientToken = new SaslClientToken();
+        saslClientToken.deserialize(bia,"sasltoken");
     }
 
     public boolean shouldThrottle(long outStandingCount) {
