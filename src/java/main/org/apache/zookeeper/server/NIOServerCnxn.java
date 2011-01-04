@@ -68,7 +68,7 @@ public class NIOServerCnxn extends ServerCnxn {
     boolean initialized;
 
     private enum ClientSaslState {
-      Unauthenticated, Authenticating, Authenticated;
+      Connecting, Authenticating, Authenticated, AuthenticationFailed;
     };
 
     ClientSaslState clientSaslState;
@@ -103,7 +103,7 @@ public class NIOServerCnxn extends ServerCnxn {
         this.sock = sock;
         this.sk = sk;
         this.factory = factory;
-        this.clientSaslState = ClientSaslState.Unauthenticated;
+        this.clientSaslState = ClientSaslState.Connecting;
         if (zk != null) { 
             outstandingLimit = zk.getGlobalOutstandingLimit();
         }
@@ -421,7 +421,13 @@ public class NIOServerCnxn extends ServerCnxn {
 
     private void readSaslToken() {
         LOG.info("NIOServerCnxn:readSaslToken()...");
-        zkServer.readSaslToken(this,incomingBuffer);
+        try {
+            zkServer.readSaslToken(this,incomingBuffer);
+        }
+        catch (IOException e) {
+            LOG.info("Error receiving SASL token from client: continuing without authentication.");
+            this.clientSaslState = ClientSaslState.AuthenticationFailed;
+        }
     }
 
     /**
