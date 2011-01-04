@@ -24,11 +24,20 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.security.PrivilegedExceptionAction;
 import java.util.LinkedList;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.LinkedBlockingQueue;
+import javax.security.auth.Subject;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.sasl.AuthorizeCallback;
+import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslClient;
+import javax.security.sasl.SaslException;
 
 import org.apache.jute.BinaryInputArchive;
 import org.apache.jute.BinaryOutputArchive;
@@ -154,6 +163,18 @@ public class ClientCnxn {
      * A set of ZooKeeper hosts this client could connect to.
      */
     private final HostProvider hostProvider;
+
+    private Subject subject;
+    private SaslClient sc;
+    // <Constants>
+    // TODO: these are hardwired and redundant (see ZooKeeperMain.java); use zoo.cfg instead.
+    final String JAAS_CONF_FILE_NAME = "/Users/ekoontz/zookeeper/jaas.conf";
+    final String HOST_NAME = "ekoontz"; // The hostname that the client (this code) is running on. (might be fully qualified, or not)
+    final String CLIENT_PRINCIPAL_NAME = "testclient"; // The client principal.
+    final String SERVICE_PRINCIPAL_NAME = "testserver"; // The service principal.
+    final String CLIENT_SECTION_OF_JAAS_CONF_FILE = "Client"; // The section (of the JAAS configuration file named $JAAS_CONF_FILE_NAME)
+    // that will be used to configure relevant parameters to do Kerberos authentication.
+    // </Constants>
 
     public long getSessionId() {
         return sessionId;
@@ -281,9 +302,9 @@ public class ClientCnxn {
      * @throws IOException
      */
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
-            ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket)
+            ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, Subject subject)
             throws IOException {
-        this(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher, clientCnxnSocket, 0, new byte[16]);
+        this(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher, clientCnxnSocket, 0, new byte[16], subject);
     }
 
     /**
@@ -307,7 +328,7 @@ public class ClientCnxn {
      */
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
             ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket,
-            long sessionId, byte[] sessionPasswd) {
+            long sessionId, byte[] sessionPasswd, Subject subject) {
         this.zooKeeper = zooKeeper;
         this.watcher = watcher;
         this.sessionId = sessionId;
@@ -321,6 +342,34 @@ public class ClientCnxn {
 
         sendThread = new SendThread(clientCnxnSocket);
         eventThread = new EventThread();
+        this.subject = subject;
+
+        // Create SASL client.
+        this.sc = null;
+        try {
+            sc = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
+                public SaslClient run() throws SaslException {
+
+                    System.out.println("CREATING SASL CLIENT OBJECT NOW...");
+                    String[] mechs = {"GSSAPI"};
+                    SaslClient saslClient = Sasl.createSaslClient(mechs,
+                            CLIENT_PRINCIPAL_NAME,
+                            SERVICE_PRINCIPAL_NAME,
+                            HOST_NAME,
+                            null,
+                            new ClientCallbackHandler());
+
+                    System.out.println("DONE CREATING SASL CLIENT OBJECT.");
+                    return saslClient;
+                }
+            });
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+
     }
 
     /**
@@ -1094,4 +1143,35 @@ public class ClientCnxn {
     States getState() {
         return state;
     }
+
+    private static class ClientCallbackHandler implements CallbackHandler {
+      @Override
+      public void handle(Callback[] callbacks) throws
+          UnsupportedCallbackException {
+        System.out.println("ClientCallbackHandler::handle()");
+        AuthorizeCallback ac = null;
+        for (Callback callback : callbacks) {
+          System.out.println("ClientCallbackHandler::handle()::each callback");
+          if (callback instanceof AuthorizeCallback) {
+            ac = (AuthorizeCallback) callback;
+          } else {
+            throw new UnsupportedCallbackException(callback,
+                "Unrecognized SASL GSSAPI Callback");
+          }
+        }
+        if (ac != null) {
+          String authid = ac.getAuthenticationID();
+          String authzid = ac.getAuthorizationID();
+          if (authid.equals(authzid)) {
+            ac.setAuthorized(true);
+          } else {
+            ac.setAuthorized(false);
+          }
+          if (ac.isAuthorized()) {
+            ac.setAuthorizedID(authzid);
+          }
+        }
+      }
+    }
+
 }

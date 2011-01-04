@@ -64,6 +64,7 @@ import org.apache.zookeeper.proto.SetDataResponse;
 import org.apache.zookeeper.proto.SyncRequest;
 import org.apache.zookeeper.proto.SyncResponse;
 import org.apache.zookeeper.server.DataTree;
+import javax.security.auth.Subject;
 
 /**
  * This is the main class of ZooKeeper client library. To use a ZooKeeper
@@ -372,7 +373,7 @@ public class ZooKeeper {
      * @throws IllegalArgumentException
      *             if an invalid chroot path is specified
      */
-    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher)
+    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher, Subject subject)
         throws IOException
     {
         LOG.info("Initiating client connection, connectString=" + connectString
@@ -386,7 +387,7 @@ public class ZooKeeper {
                 connectStringParser.getServerAddresses());
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
-                getClientCnxnSocket());
+                getClientCnxnSocket(),subject);
         cnxn.start();
     }
 
@@ -443,7 +444,7 @@ public class ZooKeeper {
      * @throws IllegalArgumentException for an invalid list of ZooKeeper hosts
      */
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
-            long sessionId, byte[] sessionPasswd)
+            long sessionId, byte[] sessionPasswd, Subject subject)
         throws IOException
     {
         LOG.info("Initiating client connection, connectString=" + connectString
@@ -461,7 +462,7 @@ public class ZooKeeper {
                 connectStringParser.getServerAddresses());
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
-                getClientCnxnSocket(), sessionId, sessionPasswd);
+                getClientCnxnSocket(), sessionId, sessionPasswd, subject);
         cnxn.start();
     }
 

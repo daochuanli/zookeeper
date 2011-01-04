@@ -73,6 +73,7 @@ public class ZooKeeperMain {
 
     protected ZooKeeper zk;
     protected String host = "";
+    protected Subject subject = null;
 
     public boolean getPrintWatches( ) {
         return printWatches;
@@ -279,7 +280,8 @@ public class ZooKeeperMain {
         host = newHost;
         zk = new ZooKeeper(host,
                  Integer.parseInt(cl.getOption("timeout")),
-                 new MyWatcher());
+                 new MyWatcher(),
+                 this.subject);
     }
     
     public static void main(String args[])
@@ -310,8 +312,7 @@ public class ZooKeeperMain {
             subject = loginCtx.getSubject();
         }
         catch (LoginException e) {
-            System.err.println("Kerberos login failure : " + e);
-            System.exit(-1);
+            LOG.error("Kerberos login failure : " + e + "; continuing without Kerberos authentication.");
         }
         return subject;
     }
@@ -319,7 +320,7 @@ public class ZooKeeperMain {
 
     public ZooKeeperMain(String args[]) throws IOException, InterruptedException {
         cl.parseOptions(args);
-        Subject subject = LoginToKDC();
+        subject = LoginToKDC();
         System.out.println("Connecting to " + cl.getOption("server"));
         connectToZK(cl.getOption("server"));
         //zk = new ZooKeeper(cl.getOption("server"),
