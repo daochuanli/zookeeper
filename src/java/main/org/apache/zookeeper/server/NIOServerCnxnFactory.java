@@ -153,6 +153,10 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         }
     }
 
+    public Subject getSubject() {
+        return zkServerSubject;
+    }
+
     /** {@inheritDoc} */
     public int getMaxClientCnxnsPerHost() {
         return maxClientCnxns;
