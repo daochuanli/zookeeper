@@ -73,7 +73,7 @@ public class NIOServerCnxn extends ServerCnxn {
 
     boolean initialized;
 
-    private enum ClientSaslState {
+    public enum ClientSaslState {
       Connecting, Authenticating, Authenticated, AuthenticationFailed;
     };
 
