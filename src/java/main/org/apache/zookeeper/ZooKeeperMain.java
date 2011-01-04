@@ -40,6 +40,24 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 
+import javax.security.auth.Subject;
+import javax.security.auth.login.LoginContext;
+import javax.security.auth.login.LoginException;
+import javax.security.sasl.SaslException;
+
+import javax.security.sasl.Sasl;
+import javax.security.sasl.AuthorizeCallback;
+import javax.security.sasl.SaslClient;
+import java.security.PrivilegedExceptionAction;
+
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.NameCallback;
+import javax.security.auth.callback.PasswordCallback;
+import javax.security.auth.callback.UnsupportedCallbackException;
+
+
+
 /**
  * The command line client to ZooKeeper.
  *
@@ -271,8 +289,37 @@ public class ZooKeeperMain {
         main.run();
     }
 
+    public Subject LoginToKDC() {
+        Subject subject = null;
+        try {
+            // <Constants>
+            final String JAAS_CONF_FILE_NAME = "/Users/ekoontz/zookeeper/jaas.conf";
+            final String HOST_NAME = "ekoontz"; // The hostname that the client (this code) is running on. (might be fully qualified, or not)
+            final String CLIENT_PRINCIPAL_NAME = "testclient"; // The client principal.
+            final String SERVICE_PRINCIPAL_NAME = "testserver"; // The service principal.
+            final String CLIENT_SECTION_OF_JAAS_CONF_FILE = "Client"; // The section (of the JAAS configuration file named $JAAS_CONF_FILE_NAME)
+            // that will be used to configure relevant parameters to do Kerberos authentication.
+            // </Constants>
+
+            System.setProperty( "java.security.auth.login.config", JAAS_CONF_FILE_NAME);
+            LoginContext loginCtx = null;
+            String password = "password";
+            loginCtx = new LoginContext(CLIENT_SECTION_OF_JAAS_CONF_FILE,
+                    new LoginCallbackHandler( CLIENT_PRINCIPAL_NAME, password));
+            loginCtx.login();
+            subject = loginCtx.getSubject();
+        }
+        catch (LoginException e) {
+            System.err.println("Kerberos login failure : " + e);
+            System.exit(-1);
+        }
+        return subject;
+    }
+
+
     public ZooKeeperMain(String args[]) throws IOException, InterruptedException {
         cl.parseOptions(args);
+        Subject subject = LoginToKDC();
         System.out.println("Connecting to " + cl.getOption("server"));
         connectToZK(cl.getOption("server"));
         //zk = new ZooKeeper(cl.getOption("server"),
@@ -837,4 +884,51 @@ public class ZooKeeperMain {
         }
         return acl;
     }
+
+
+    private class LoginCallbackHandler implements CallbackHandler {
+
+        public LoginCallbackHandler() {
+            super();
+        }
+
+        public LoginCallbackHandler( String name, String password) {
+            super();
+            this.username = name;
+            this.password = password;
+        }
+
+        public LoginCallbackHandler( String password) {
+            super();
+            this.password = password;
+        }
+
+        private String password;
+        private String username;
+
+        /**
+         * Handles the callbacks, and sets the user/password detail.
+         * @param callbacks the callbacks to handle
+         * @throws IOException if an input or output error occurs.
+         */
+        public void handle( Callback[] callbacks)
+                throws IOException, UnsupportedCallbackException {
+
+            for ( int i=0; i<callbacks.length; i++) {
+                if ( callbacks[i] instanceof NameCallback && username != null) {
+                    NameCallback nc = (NameCallback) callbacks[i];
+                    nc.setName( username);
+                }
+                else if ( callbacks[i] instanceof PasswordCallback) {
+                    PasswordCallback pc = (PasswordCallback) callbacks[i];
+                    pc.setPassword( password.toCharArray());
+                }
+                else {
+                    throw new UnsupportedCallbackException(
+                            callbacks[i], "Unrecognized Callback");
+                }
+            }
+        }
+    }
 }
+
