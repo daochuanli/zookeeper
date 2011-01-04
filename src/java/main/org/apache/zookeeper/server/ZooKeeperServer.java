@@ -806,6 +806,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     }
 
     public void readSaslToken(ServerCnxn cnxn, ByteBuffer incomingBuffer) throws IOException {
+        LOG.info("Reading SASL token from ZK client..");
         BinaryInputArchive bia = BinaryInputArchive.getArchive(new ByteBufferInputStream(incomingBuffer));
         SaslClientToken saslClientToken = new SaslClientToken();
         saslClientToken.deserialize(bia,"sasltoken");
