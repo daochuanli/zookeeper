@@ -340,14 +340,10 @@ public class ClientCnxn {
         connectTimeout = sessionTimeout / hostProvider.size();
         readTimeout = sessionTimeout * 2 / 3;
 
-        sendThread = new SendThread(clientCnxnSocket);
-        eventThread = new EventThread();
-        this.subject = subject;
-
         // Create SASL client.
         this.sc = null;
         try {
-            sc = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
+            this.sc = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
                 public SaslClient run() throws SaslException {
 
                     System.out.println("CREATING SASL CLIENT OBJECT NOW...");
@@ -367,6 +363,11 @@ public class ClientCnxn {
         catch (Exception e) {
             e.printStackTrace();
         }
+
+        sendThread = new SendThread(clientCnxnSocket,sc);
+        eventThread = new EventThread();
+        this.subject = subject;
+
 
 
 
@@ -676,6 +677,7 @@ public class ClientCnxn {
         private final ClientCnxnSocket clientCnxnSocket;
         private Random r = new Random(System.nanoTime());        
         private boolean isFirstConnect = true;
+        private SaslClient saslClient;
 
         void readResponse(ByteBuffer incomingBuffer) throws IOException {
             ByteBufferInputStream bbis = new ByteBufferInputStream(
@@ -736,6 +738,7 @@ public class ClientCnxn {
                 return;
             }
             Packet packet;
+
             synchronized (pendingQueue) {
                 if (pendingQueue.size() == 0) {
                     throw new IOException("Nothing in the queue, but got "
@@ -743,6 +746,7 @@ public class ClientCnxn {
                 }
                 packet = pendingQueue.remove();
             }
+
             /*
              * Since requests are processed in order, we better get a response
              * to the first request!
@@ -779,10 +783,11 @@ public class ClientCnxn {
             }
         }
 
-        SendThread(ClientCnxnSocket clientCnxnSocket) {
+        SendThread(ClientCnxnSocket clientCnxnSocket, SaslClient sc) {
             super(makeThreadName("-SendThread()"));
             state = States.CONNECTING;
             this.clientCnxnSocket = clientCnxnSocket;
+            this.saslClient = sc;
             setUncaughtExceptionHandler(uncaughtExceptionHandler);
             setDaemon(true);
         }
