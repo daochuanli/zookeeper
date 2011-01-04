@@ -757,6 +757,7 @@ public class ClientCnxn {
 
 
         void doSaslAuthentication() {
+            // Create initial token and send to server.
             SaslClientToken saslClientToken = new SaslClientToken();
             outgoingQueue.addFirst((new Packet(null, null, saslClientToken, null,
                         null)));
