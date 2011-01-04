@@ -260,6 +260,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 if (sc.finishConnect()) {
                     updateLastSendAndHeard();
                     sendThread.primeConnection();
+                    sendThread.doSaslAuthentication();
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
                 if (outgoingQueue.size() > 0) {

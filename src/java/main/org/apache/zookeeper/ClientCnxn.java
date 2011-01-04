@@ -58,6 +58,7 @@ import org.apache.zookeeper.proto.GetChildrenResponse;
 import org.apache.zookeeper.proto.GetDataResponse;
 import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.RequestHeader;
+import org.apache.zookeeper.proto.SaslClientToken;
 import org.apache.zookeeper.proto.SetACLResponse;
 import org.apache.zookeeper.proto.SetDataResponse;
 import org.apache.zookeeper.proto.SetWatches;
@@ -752,6 +753,13 @@ public class ClientCnxn {
 
         ClientCnxnSocket getClientCnxnSocket() {
             return clientCnxnSocket;
+        }
+
+
+        void doSaslAuthentication() {
+            SaslClientToken saslClientToken = new SaslClientToken();
+            outgoingQueue.addFirst((new Packet(null, null, saslClientToken, null,
+                        null)));
         }
 
         void primeConnection() throws IOException {
