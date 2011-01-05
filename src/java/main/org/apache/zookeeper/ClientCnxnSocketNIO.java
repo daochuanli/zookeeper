@@ -101,19 +101,25 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     packetReceived = true;
                     initialized = true;
                     this.clientSaslState = NIOServerCnxn.ClientSaslState.Authenticating;
-                } else {
+                    if (saslClient.hasInitialResponse() == true) {
+                        this.saslToken = readSaslToken(saslClient,subject,this.saslToken);
+                        // TODO: put on outgoingQueue.
 
+                    }
+                } else {
                     if (saslClient.isComplete() == true) {
                         this.clientSaslState = NIOServerCnxn.ClientSaslState.Authenticated;
                     }
-
                     LOG.info("ClientCnxnSocketNIO:doIO:ClientSaslState="+clientSaslState);
                     if (this.clientSaslState == NIOServerCnxn.ClientSaslState.Authenticating) {
                         LOG.info("ClientCnxnSocketNIO:doIO:ClientSaslState="+this.clientSaslState+":readSaslToken()");
                         this.saslToken = readSaslToken(saslClient,subject,this.saslToken);
 
-                        // TODO: put saslToken on sendThread (similar to 'sendThread.readResponse(incomingBuffer)' below.
-
+                        sendThread.readResponse(incomingBuffer);
+                        LOG.info("ClientCnxnSocketNIO:doIO:ClientSaslState="+this.clientSaslState+":/readResponse()");
+                        lenBuffer.clear();
+                        incomingBuffer = lenBuffer;
+                        packetReceived = true;
 
 
                         LOG.info("ClientCnxnSocketNIO:doIO:ClientSaslState="+this.clientSaslState+":/readSaslToken()");
@@ -176,7 +182,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             return retval;
         }
         catch (Exception e) {
-            LOG.warn("error in constructing SASL initial token creation.");
+            LOG.warn("error in handling SASL token.");
         }
         return null;
     }
