@@ -37,6 +37,8 @@ import org.apache.zookeeper.ZooKeeper.States;
 import org.apache.zookeeper.server.NIOServerCnxn;
 
 import javax.security.sasl.SaslClient;
+import java.security.PrivilegedExceptionAction;
+import javax.security.auth.Subject;
 
 public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     private static final Logger LOG = Logger
@@ -65,7 +67,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
      * @throws InterruptedException
      * @throws IOException
      */
-    boolean doIO(List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue,SaslClient saslClient) throws InterruptedException, IOException {
+    boolean doIO(List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue, final SaslClient saslClient, Subject subject) throws InterruptedException, IOException {
         boolean packetReceived = false;
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
@@ -90,32 +92,30 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     LOG.info("ClientCnxnSocketNIO:doIO:initialized="+initialized+":/readConnectResult()");
 
 
-                    // send initial SASL token (if any - depends on saslClient setup).
+                    // send initial SASL token (if any - depends on saslClient's configuration).
                     this.clientSaslState = NIOServerCnxn.ClientSaslState.Authenticating;
-
                     try {
-                        Object result;
-                        result = Subject.doAs(subject, new PrivilegedExceptionAction<Object>() {
-                            public Object run() {
-                                try {
-                                    byte[] saslToken = new byte[0];
-
-                                    if (saslClient.hasInitialResponse()) {
-                                        System.out.println("evaluating initial response:");
-                                        saslToken = saslClient.evaluateChallenge(saslToken);
-                                        System.out.println("evaluateChallenge(): response has length : " + saslToken.length);
-                                        Hexdump.hexdump(System.out,saslToken,0,saslToken.length);
+                        final byte[] saslToken =
+                                Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
+                                    public byte[] run() {
+                                        byte[] retvalSaslToken = new byte[0];
+                                        try {
+                                            if (saslClient.hasInitialResponse()) {
+                                                LOG.info("ClientCnxnSocketNIO:doIO:saslclient: evaluating initial response:");
+                                                return saslClient.evaluateChallenge(retvalSaslToken);
+                                            }
+                                        }
+                                        catch (Exception e) {
+                                            LOG.warn("error in evaluating initial SASL challenge:",e);
+                                        }
+                                        return retvalSaslToken;
                                     }
-                                }
-                                catch (Exception e) {
-                                    LOG.warn("error in evaluating initial SASL challenge:",e);
-                                }
-                            }
-                        }
-                        catch (Exception e) {
-                            LOG.warn("error in evaluating initial SASL challenge.")
-                        }
-
+                                });
+                        LOG.info("Successfully created token with length:"+saslToken.length);
+                    }
+                    catch (Exception e) {
+                        LOG.warn("error in constructing SASL initial token creation.");
+                    }
                     enableRead();
                     if (!outgoingQueue.isEmpty()) {
                         enableWrite();
@@ -296,7 +296,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     }
     
     @Override
-    void doTransport(int waitTimeOut, List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue, SaslClient saslClient)
+    void doTransport(int waitTimeOut, List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue, SaslClient saslClient, Subject subject)
             throws IOException, InterruptedException {
         selector.select(waitTimeOut);
         Set<SelectionKey> selected;
@@ -320,7 +320,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     // as if we do the send now.
                     updateLastSend();
                 }
-                if (doIO(pendingQueue, outgoingQueue, saslClient)) {
+                if (doIO(pendingQueue, outgoingQueue, saslClient, subject)) {
                     updateLastHeard();
                 }
             }

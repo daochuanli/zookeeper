@@ -31,6 +31,7 @@ import org.apache.zookeeper.ClientCnxn.Packet;
 import org.apache.zookeeper.proto.ConnectResponse;
 import org.apache.zookeeper.server.ByteBufferInputStream;
 
+import javax.security.auth.Subject;
 import javax.security.sasl.SaslClient;
 
 /**
@@ -153,7 +154,7 @@ abstract class ClientCnxnSocket {
     abstract void enableReadWriteOnly();
 
     abstract void doTransport(int waitTimeOut, List<Packet> pendingQueue,
-                              LinkedList<Packet> outgoingQueue, SaslClient saslClient) throws IOException,
+                              LinkedList<Packet> outgoingQueue, SaslClient saslClient, Subject subject) throws IOException,
             InterruptedException;
 
     abstract void testableCloseSocket() throws IOException;

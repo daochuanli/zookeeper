@@ -927,7 +927,7 @@ public class ClientCnxn {
                         }
                     }
 
-                    clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue, saslClient);
+                    clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue, saslClient, subject);
 
                 } catch (Exception e) {
                     if (closing) {
