@@ -73,6 +73,7 @@ import org.apache.zookeeper.proto.SetDataResponse;
 import org.apache.zookeeper.proto.SetWatches;
 import org.apache.zookeeper.proto.WatcherEvent;
 import org.apache.zookeeper.server.ByteBufferInputStream;
+import org.apache.zookeeper.server.NIOServerCnxn;
 import org.apache.zookeeper.server.ZooTrace;
 
 /**
@@ -110,6 +111,9 @@ public class ClientCnxn {
 
         byte data[];
     }
+
+    // TODO: either in here or in ClientCnxnSocketNIO; not both.
+    NIOServerCnxn.ClientSaslState clientSaslState = NIOServerCnxn.ClientSaslState.Connecting;
 
     private final CopyOnWriteArraySet<AuthData> authInfo = new CopyOnWriteArraySet<AuthData>();
 
@@ -813,8 +817,13 @@ public class ClientCnxn {
         void doSaslAuthentication() {
             // Create initial token and send to server.
             SaslClientToken saslClientToken = new SaslClientToken();
+
+            // receive initial token from server.
+
+
+
             outgoingQueue.addFirst((new Packet(null, null, saslClientToken, null,
-                        null)));
+                    null)));
         }
 
         void primeConnection() throws IOException {

@@ -34,6 +34,7 @@ import org.apache.zookeeper.ClientCnxn.EndOfStreamException;
 import org.apache.zookeeper.ClientCnxn.Packet;
 import org.apache.zookeeper.ZooDefs.OpCode;
 import org.apache.zookeeper.ZooKeeper.States;
+import org.apache.zookeeper.server.NIOServerCnxn;
 
 public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     private static final Logger LOG = Logger
@@ -42,6 +43,11 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     private final Selector selector = Selector.open();
 
     private SelectionKey sockKey;
+
+    // TODO: either in here or in ClientCnxn; not both.
+    NIOServerCnxn.ClientSaslState clientSaslState = NIOServerCnxn.ClientSaslState.Connecting;
+
+
 
     ClientCnxnSocketNIO() throws IOException {
         super();
@@ -87,10 +93,16 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     packetReceived = true;
                     initialized = true;
                 } else {
-                    sendThread.readResponse(incomingBuffer);
-                    lenBuffer.clear();
-                    incomingBuffer = lenBuffer;
-                    packetReceived = true;
+                    if (this.clientSaslState == NIOServerCnxn.ClientSaslState.Authenticating) {
+                        // read a SASL token from the client.
+                        readSaslToken();
+                    }
+                    else {
+                        sendThread.readResponse(incomingBuffer);
+                        lenBuffer.clear();
+                        incomingBuffer = lenBuffer;
+                        packetReceived = true;
+                    }
                 }
             }
         }
@@ -117,6 +129,10 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             enableWrite();
         }
         return packetReceived;
+    }
+
+    void readSaslToken() {
+        // TODO: implement.
     }
 
     @Override
@@ -260,7 +276,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 if (sc.finishConnect()) {
                     updateLastSendAndHeard();
                     sendThread.primeConnection();
-                    sendThread.doSaslAuthentication();
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
                 if (outgoingQueue.size() > 0) {
