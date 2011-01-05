@@ -48,6 +48,8 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
 
     private SelectionKey sockKey;
 
+    private byte[] saslToken = new byte[0];
+
     // TODO: either in here or in ClientCnxn; not both.
     NIOServerCnxn.ClientSaslState clientSaslState = NIOServerCnxn.ClientSaslState.Connecting;
 
@@ -90,32 +92,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     LOG.info("ClientCnxnSocketNIO:doIO:initialized="+initialized+":readConnectResult()");
                     readConnectResult();
                     LOG.info("ClientCnxnSocketNIO:doIO:initialized="+initialized+":/readConnectResult()");
-
-
-                    // send initial SASL token (if any - depends on saslClient's configuration).
-                    this.clientSaslState = NIOServerCnxn.ClientSaslState.Authenticating;
-                    try {
-                        final byte[] saslToken =
-                                Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
-                                    public byte[] run() {
-                                        byte[] retvalSaslToken = new byte[0];
-                                        try {
-                                            if (saslClient.hasInitialResponse()) {
-                                                LOG.info("ClientCnxnSocketNIO:doIO:saslclient: evaluating initial response:");
-                                                return saslClient.evaluateChallenge(retvalSaslToken);
-                                            }
-                                        }
-                                        catch (Exception e) {
-                                            LOG.warn("error in evaluating initial SASL challenge:",e);
-                                        }
-                                        return retvalSaslToken;
-                                    }
-                                });
-                        LOG.info("Successfully created token with length:"+saslToken.length);
-                    }
-                    catch (Exception e) {
-                        LOG.warn("error in constructing SASL initial token creation.");
-                    }
                     enableRead();
                     if (!outgoingQueue.isEmpty()) {
                         enableWrite();
@@ -124,12 +100,22 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     incomingBuffer = lenBuffer;
                     packetReceived = true;
                     initialized = true;
+                    this.clientSaslState = NIOServerCnxn.ClientSaslState.Authenticating;
                 } else {
+
+                    if (saslClient.isComplete() == true) {
+                        this.clientSaslState = NIOServerCnxn.ClientSaslState.Authenticated;
+                    }
+
                     LOG.info("ClientCnxnSocketNIO:doIO:ClientSaslState="+clientSaslState);
                     if (this.clientSaslState == NIOServerCnxn.ClientSaslState.Authenticating) {
-                        // read a SASL token from the client.
                         LOG.info("ClientCnxnSocketNIO:doIO:ClientSaslState="+this.clientSaslState+":readSaslToken()");
-                        readSaslToken();
+                        this.saslToken = readSaslToken(saslClient,subject,this.saslToken);
+
+                        // TODO: put saslToken on sendThread (similar to 'sendThread.readResponse(incomingBuffer)' below.
+
+
+
                         LOG.info("ClientCnxnSocketNIO:doIO:ClientSaslState="+this.clientSaslState+":/readSaslToken()");
                     }
                     else {
@@ -168,8 +154,31 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         return packetReceived;
     }
 
-    void readSaslToken() {
-        // TODO: implement.
+    byte[] readSaslToken(final SaslClient saslClient, Subject subject, final byte[] saslToken) {
+        try {
+            final byte[] retval =
+                    Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
+                        public byte[] run() {
+                            byte[] retvalSaslToken = new byte[0];
+                            try {
+                                if (saslClient.hasInitialResponse()) {
+                                    LOG.info("ClientCnxnSocketNIO:doIO:saslclient: evaluating initial response:");
+                                    return saslClient.evaluateChallenge(saslToken);
+                                }
+                            }
+                            catch (Exception e) {
+                                LOG.warn("error in evaluating initial SASL challenge:",e);
+                            }
+                            return null;
+                        }
+                    });
+            LOG.info("Successfully created token with length:"+retval.length);
+            return retval;
+        }
+        catch (Exception e) {
+            LOG.warn("error in constructing SASL initial token creation.");
+        }
+        return null;
     }
 
     @Override
