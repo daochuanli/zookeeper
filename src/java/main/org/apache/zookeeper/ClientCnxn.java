@@ -813,19 +813,6 @@ public class ClientCnxn {
             return clientCnxnSocket;
         }
 
-
-        void doSaslAuthentication() {
-            // Create initial token and send to server.
-            SaslClientToken saslClientToken = new SaslClientToken();
-
-            // receive initial token from server.
-
-
-
-            outgoingQueue.addFirst((new Packet(null, null, saslClientToken, null,
-                    null)));
-        }
-
         void primeConnection() throws IOException {
             LOG.info("Socket connection established to "
                     + clientCnxnSocket.getRemoteSocketAddress() + ", initiating session");
@@ -890,6 +877,7 @@ public class ClientCnxn {
                     "(" + addr.getHostName() + ":" + addr.getPort() + ")"));
 
             clientCnxnSocket.connect(addr);
+            clientSaslState = NIOServerCnxn.ClientSaslState.Authenticating;
         }
 
         private static final String RETRY_CONN_MSG =
@@ -939,7 +927,7 @@ public class ClientCnxn {
                         }
                     }
 
-                    clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue);
+                    clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue, saslClient);
 
                 } catch (Exception e) {
                     if (closing) {

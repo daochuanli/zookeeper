@@ -241,9 +241,12 @@ public class NIOServerCnxn extends ServerCnxn {
             packetReceived();
             incomingBuffer.flip();
             if (!initialized) {
+                LOG.info("NIOServerCnxn:readPayload(): initialized= " + initialized + " : readConnectRequest()");
                 readConnectRequest();
+                LOG.info("NIOServerCnxn:readPayload(): initialized= " + initialized + " : /readConnectRequest()");
             } else {
                 if (this.clientSaslState == ClientSaslState.Authenticating) {
+                    LOG.info("NIOServerCnxn:readPayload(): clientSaslToken() : readSaslToken()");
                     // read a SASL token from the client.
                     readSaslToken();
                 }
