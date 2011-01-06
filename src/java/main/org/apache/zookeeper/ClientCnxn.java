@@ -1075,8 +1075,14 @@ public class ClientCnxn {
             hostProvider.onConnected();
             sessionId = _sessionId;
             sessionPasswd = _sessionPasswd;
-            //state = States.CONNECTED;
-            state = States.SASL_SEND;
+            // Big Red SASL on-off switch: true -> SASL is on; false otherwise.
+            if (false) {
+                state = States.SASL_SEND;
+
+            }
+            else {
+                state = States.CONNECTED;
+            }
             LOG.info("Session establishment complete on server "
                     + clientCnxnSocket.getRemoteSocketAddress() + ", sessionid = 0x"
                     + Long.toHexString(sessionId) + ", negotiated timeout = "
@@ -1180,6 +1186,7 @@ public class ClientCnxn {
                 if (h.getType() == OpCode.closeSession) {
                     closing = true;
                 }
+                LOG.info("queuePacket: queued packet of type: " + h.getType());
                 outgoingQueue.add(packet);
             }
         }
