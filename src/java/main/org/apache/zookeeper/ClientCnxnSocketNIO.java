@@ -36,10 +36,6 @@ import org.apache.zookeeper.ZooDefs.OpCode;
 import org.apache.zookeeper.ZooKeeper.States;
 import org.apache.zookeeper.server.NIOServerCnxn;
 
-import javax.security.sasl.SaslClient;
-import java.security.PrivilegedExceptionAction;
-import javax.security.auth.Subject;
-
 public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     private static final Logger LOG = Logger
             .getLogger(ClientCnxnSocketNIO.class);
@@ -47,13 +43,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     private final Selector selector = Selector.open();
 
     private SelectionKey sockKey;
-
-    private byte[] saslToken = new byte[0];
-
-    // TODO: either in here or in ClientCnxn; not both.
-    NIOServerCnxn.ClientSaslState clientSaslState = NIOServerCnxn.ClientSaslState.Connecting;
-
-
 
     ClientCnxnSocketNIO() throws IOException {
         super();
@@ -69,7 +58,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
      * @throws InterruptedException
      * @throws IOException
      */
-    boolean doIO(List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue, final SaslClient saslClient, Subject subject) throws InterruptedException, IOException {
+    boolean doIO(List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue) throws InterruptedException, IOException {
         boolean packetReceived = false;
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
@@ -100,38 +89,11 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     incomingBuffer = lenBuffer;
                     packetReceived = true;
                     initialized = true;
-                    this.clientSaslState = NIOServerCnxn.ClientSaslState.Authenticating;
-                    if (saslClient.hasInitialResponse() == true) {
-                        this.saslToken = readSaslToken(saslClient,subject,this.saslToken);
-                        // TODO: put on outgoingQueue.
-
-                    }
                 } else {
-                    if (saslClient.isComplete() == true) {
-                        this.clientSaslState = NIOServerCnxn.ClientSaslState.Authenticated;
-                    }
-                    LOG.info("ClientCnxnSocketNIO:doIO:ClientSaslState="+clientSaslState);
-                    if (this.clientSaslState == NIOServerCnxn.ClientSaslState.Authenticating) {
-                        LOG.info("ClientCnxnSocketNIO:doIO:ClientSaslState="+this.clientSaslState+":readSaslToken()");
-                        this.saslToken = readSaslToken(saslClient,subject,this.saslToken);
-
                         sendThread.readResponse(incomingBuffer);
-                        LOG.info("ClientCnxnSocketNIO:doIO:ClientSaslState="+this.clientSaslState+":/readResponse()");
                         lenBuffer.clear();
                         incomingBuffer = lenBuffer;
                         packetReceived = true;
-
-
-                        LOG.info("ClientCnxnSocketNIO:doIO:ClientSaslState="+this.clientSaslState+":/readSaslToken()");
-                    }
-                    else {
-                        LOG.info("ClientCnxnSocketNIO:doIO:ClientSaslState="+this.clientSaslState+":readResponse()");
-                        sendThread.readResponse(incomingBuffer);
-                        LOG.info("ClientCnxnSocketNIO:doIO:ClientSaslState="+this.clientSaslState+":/readResponse()");
-                        lenBuffer.clear();
-                        incomingBuffer = lenBuffer;
-                        packetReceived = true;
-                    }
                 }
             }
         }
@@ -143,6 +105,8 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     if (!pbb.hasRemaining()) {
                         sentCount++;
                         Packet p = outgoingQueue.removeFirst();
+                        // TODO: figure out why these 2 (Opcode.ping and .auth) are excluded from pendingQueue.
+                        // (in other words, figure out what pendingQueue is).
                         if (p.requestHeader != null
                                 && p.requestHeader.getType() != OpCode.ping
                                 && p.requestHeader.getType() != OpCode.auth) {
@@ -160,32 +124,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         return packetReceived;
     }
 
-    byte[] readSaslToken(final SaslClient saslClient, Subject subject, final byte[] saslToken) {
-        try {
-            final byte[] retval =
-                    Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
-                        public byte[] run() {
-                            byte[] retvalSaslToken = new byte[0];
-                            try {
-                                if (saslClient.hasInitialResponse()) {
-                                    LOG.info("ClientCnxnSocketNIO:doIO:saslclient: evaluating initial response:");
-                                    return saslClient.evaluateChallenge(saslToken);
-                                }
-                            }
-                            catch (Exception e) {
-                                LOG.warn("error in evaluating initial SASL challenge:",e);
-                            }
-                            return null;
-                        }
-                    });
-            LOG.info("Successfully created token with length:"+retval.length);
-            return retval;
-        }
-        catch (Exception e) {
-            LOG.warn("error in handling SASL token.");
-        }
-        return null;
-    }
+
 
     @Override
     void cleanup() {
@@ -311,7 +250,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     }
     
     @Override
-    void doTransport(int waitTimeOut, List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue, SaslClient saslClient, Subject subject)
+    void doTransport(int waitTimeOut, List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue)
             throws IOException, InterruptedException {
         selector.select(waitTimeOut);
         Set<SelectionKey> selected;
@@ -335,7 +274,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     // as if we do the send now.
                     updateLastSend();
                 }
-                if (doIO(pendingQueue, outgoingQueue, saslClient, subject)) {
+                if (doIO(pendingQueue, outgoingQueue)) {
                     updateLastHeard();
                 }
             }

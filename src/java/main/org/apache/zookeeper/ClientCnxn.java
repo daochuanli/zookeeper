@@ -112,9 +112,6 @@ public class ClientCnxn {
         byte data[];
     }
 
-    // TODO: either in here or in ClientCnxnSocketNIO; not both.
-    NIOServerCnxn.ClientSaslState clientSaslState = NIOServerCnxn.ClientSaslState.Connecting;
-
     private final CopyOnWriteArraySet<AuthData> authInfo = new CopyOnWriteArraySet<AuthData>();
 
     /**
@@ -169,8 +166,9 @@ public class ClientCnxn {
     private final HostProvider hostProvider;
 
     private Subject subject;
-    private SaslClient sc;
-    // <Constants>
+    private SaslClient saslClient;
+    private byte[] saslToken = new byte[0];
+    // <SASL-related Constants>
     // TODO: these are hardwired and redundant (see ZooKeeperMain.java); use zoo.cfg instead.
     final String JAAS_CONF_FILE_NAME = "/Users/ekoontz/zookeeper/jaas.conf";
     final String HOST_NAME = "ekoontz"; // The hostname that the client (this code) is running on. (might be fully qualified, or not)
@@ -178,7 +176,7 @@ public class ClientCnxn {
     final String SERVICE_PRINCIPAL_NAME = "testserver"; // The service principal.
     final String CLIENT_SECTION_OF_JAAS_CONF_FILE = "Client"; // The section (of the JAAS configuration file named $JAAS_CONF_FILE_NAME)
     // that will be used to configure relevant parameters to do Kerberos authentication.
-    // </Constants>
+    // </SASL-related Constants>
 
     public long getSessionId() {
         return sessionId;
@@ -345,9 +343,9 @@ public class ClientCnxn {
         readTimeout = sessionTimeout * 2 / 3;
 
         // Create SASL client.
-        this.sc = null;
+        this.saslClient = null;
         try {
-            this.sc = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
+            this.saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
                 public SaslClient run() throws SaslException {
 
                     System.out.println("CREATING SASL CLIENT OBJECT NOW...");
@@ -368,13 +366,9 @@ public class ClientCnxn {
             e.printStackTrace();
         }
 
-        sendThread = new SendThread(clientCnxnSocket,sc);
+        sendThread = new SendThread(clientCnxnSocket,saslClient);
         eventThread = new EventThread();
         this.subject = subject;
-
-
-
-
     }
 
     /**
@@ -632,6 +626,7 @@ public class ClientCnxn {
         case CLOSED:
             p.replyHeader.setErr(KeeperException.Code.SESSIONEXPIRED.intValue());
             break;
+        // TODO: handle state.SASL_AUTHENTICATING (if necessary)
         default:
             p.replyHeader.setErr(KeeperException.Code.CONNECTIONLOSS.intValue());
         }
@@ -682,7 +677,7 @@ public class ClientCnxn {
         private Random r = new Random(System.nanoTime());        
         private boolean isFirstConnect = true;
         private SaslClient saslClient;
-
+        private byte[] saslToken;
         void readResponse(ByteBuffer incomingBuffer) throws IOException {
             ByteBufferInputStream bbis = new ByteBufferInputStream(
                     incomingBuffer);
@@ -792,6 +787,7 @@ public class ClientCnxn {
             state = States.CONNECTING;
             this.clientCnxnSocket = clientCnxnSocket;
             this.saslClient = sc;
+            this.saslToken = new byte[0];
             setUncaughtExceptionHandler(uncaughtExceptionHandler);
             setDaemon(true);
         }
@@ -860,6 +856,39 @@ public class ClientCnxn {
             queuePacket(h, null, null, null, null, null, null, null, null);
         }
 
+        byte[] createSaslToken(final byte[] saslToken) {
+            try {
+                final byte[] retval =
+                        Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
+                            public byte[] run() {
+                                try {
+                                    if (saslClient.hasInitialResponse()) {
+                                        LOG.info("ClientCnxn:createSaslToken(): saslClient.evaluateChallenge()..");
+                                        return saslClient.evaluateChallenge(saslToken);
+                                    }
+                                }
+                                catch (Exception e) {
+                                    LOG.warn("error in evaluating initial SASL challenge:",e);
+                                }
+                                return null;
+                            }
+                        });
+                LOG.info("Successfully created initial token with length:"+retval.length);
+                return retval;
+            }
+            catch (Exception e) {
+                LOG.warn("error in handling SASL token.");
+            }
+            return null;
+        }
+
+        private void sendSaslPacket(byte[] saslToken) {
+            // modeled after addAuthInfo():
+            queuePacket(new RequestHeader(-4, OpCode.sasl), null,
+                new AuthPacket(0, "sasl", saslToken), null, null, null, null,
+                null, null);
+        }
+
         private void startConnect() throws IOException {
             if(!isFirstConnect){
                 try {
@@ -877,7 +906,6 @@ public class ClientCnxn {
                     "(" + addr.getHostName() + ":" + addr.getPort() + ")"));
 
             clientCnxnSocket.connect(addr);
-            clientSaslState = NIOServerCnxn.ClientSaslState.Authenticating;
         }
 
         private static final String RETRY_CONN_MSG =
@@ -890,6 +918,7 @@ public class ClientCnxn {
             clientCnxnSocket.updateLastSendAndHeard();
             int to;
             while (state.isAlive()) {
+                LOG.info("ClientCnxn:SendThread:run(): state="+state);
                 try {
                     if (!clientCnxnSocket.isConnected()) {
                         // don't re-establish connection if we are closing
@@ -899,7 +928,32 @@ public class ClientCnxn {
                         startConnect();
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
-                   
+
+                    if (state == States.SASL_INITIAL) {
+                        if (saslClient.isComplete() == true) {
+                            state = States.CONNECTED;
+                        }
+                        else {
+                            if (saslClient.hasInitialResponse() == true) {
+                                this.saslToken = createSaslToken(this.saslToken);
+                                sendSaslPacket(this.saslToken);
+                                state = States.SASL_SEND;
+                            }
+                        }
+                    }
+
+                    if (state == States.SASL_SEND) {
+                        if (saslClient.isComplete() == true) {
+                            state = States.CONNECTED;
+                        }
+                        else {
+                            this.saslToken = createSaslToken(this.saslToken);
+                            sendSaslPacket(this.saslToken);
+                            state = States.SASL_RECV;
+                        }
+                    }
+
+
                     if (state == States.CONNECTED) {
                         to = readTimeout - clientCnxnSocket.getIdleRecv();
                     } else {
@@ -927,7 +981,7 @@ public class ClientCnxn {
                         }
                     }
 
-                    clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue, saslClient, subject);
+                    clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue);
 
                 } catch (Exception e) {
                     if (closing) {
@@ -1021,7 +1075,8 @@ public class ClientCnxn {
             hostProvider.onConnected();
             sessionId = _sessionId;
             sessionPasswd = _sessionPasswd;
-            state = States.CONNECTED;
+            //state = States.CONNECTED;
+            state = States.SASL_SEND;
             LOG.info("Session establishment complete on server "
                     + clientCnxnSocket.getRemoteSocketAddress() + ", sessionid = 0x"
                     + Long.toHexString(sessionId) + ", negotiated timeout = "
