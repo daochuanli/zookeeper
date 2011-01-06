@@ -366,7 +366,7 @@ public class ClientCnxn {
             e.printStackTrace();
         }
 
-        sendThread = new SendThread(clientCnxnSocket,saslClient);
+        sendThread = new SendThread(clientCnxnSocket,saslClient,this);
         eventThread = new EventThread();
         this.subject = subject;
     }
@@ -679,6 +679,7 @@ public class ClientCnxn {
         private SaslClient saslClient;
         private byte[] saslToken;
         void readResponse(ByteBuffer incomingBuffer) throws IOException {
+            LOG.debug("SendThread:readResponse():incomingBuffer="+incomingBuffer.toString());
             ByteBufferInputStream bbis = new ByteBufferInputStream(
                     incomingBuffer);
             BinaryInputArchive bbia = BinaryInputArchive.getArchive(bbis);
@@ -782,12 +783,15 @@ public class ClientCnxn {
             }
         }
 
-        SendThread(ClientCnxnSocket clientCnxnSocket, SaslClient sc) {
+        final ClientCnxn cnxn;
+
+        SendThread(ClientCnxnSocket clientCnxnSocket, SaslClient sc, final ClientCnxn cnxn) {
             super(makeThreadName("-SendThread()"));
             state = States.CONNECTING;
             this.clientCnxnSocket = clientCnxnSocket;
             this.saslClient = sc;
             this.saslToken = new byte[0];
+            this.cnxn = cnxn;
             setUncaughtExceptionHandler(uncaughtExceptionHandler);
             setDaemon(true);
         }
@@ -917,7 +921,7 @@ public class ClientCnxn {
             clientCnxnSocket.updateLastSendAndHeard();
             int to;
             while (state.isAlive()) {
-                LOG.debug("ClientCnxn:SendThread:run(): state="+state);
+                LOG.debug("ClientCnxn:SendThread:run(): state="+state+";cnxn="+this.cnxn.toString());
                 try {
                     if (!clientCnxnSocket.isConnected()) {
                         // don't re-establish connection if we are closing
@@ -1088,7 +1092,7 @@ public class ClientCnxn {
             sessionId = _sessionId;
             sessionPasswd = _sessionPasswd;
             // Big Red SASL on-off switch: true -> SASL is on; false otherwise.
-            if (true) {
+            if (false) {
                 LOG.debug("ClientCnxn:onConnected():"+state+"->SASL_SEND");
                 state = States.SASL_INITIAL;
 
@@ -1199,7 +1203,7 @@ public class ClientCnxn {
                 if (h.getType() == OpCode.closeSession) {
                     closing = true;
                 }
-                LOG.info("queuePacket: queued packet of type: " + h.getType());
+                LOG.debug("queuePacket: queued packet of type: " + h.getType());
                 outgoingQueue.add(packet);
             }
         }
