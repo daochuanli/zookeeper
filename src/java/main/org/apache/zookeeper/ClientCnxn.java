@@ -747,6 +747,11 @@ public class ClientCnxn {
                 packet = pendingQueue.remove();
             }
 
+            if (packet.replyHeader == null) {
+                LOG.debug("ClientCnxn$SendThread:readResponse():replyHdr is unexpectedly NULL!! (1)");
+            }
+
+
             /*
              * Since requests are processed in order, we better get a response
              * to the first request!
@@ -764,7 +769,15 @@ public class ClientCnxn {
                             + packet );
                 }
 
-                packet.replyHeader.setXid(replyHdr.getXid());
+                if (packet.replyHeader == null) {
+                    LOG.debug("ClientCnxn$SendThread:readResponse():replyHdr is unexpectedly NULL!! (5)");
+                }
+                try {
+                    packet.replyHeader.setXid(replyHdr.getXid());
+                }
+                catch (NullPointerException e) {
+                    LOG.debug("ClientCnxn$SendThread:readResponse():caught a NPE here!!!");
+                }
                 packet.replyHeader.setErr(replyHdr.getErr());
                 packet.replyHeader.setZxid(replyHdr.getZxid());
                 if (replyHdr.getZxid() > 0) {
@@ -996,7 +1009,7 @@ public class ClientCnxn {
                             }
                         }
                     }
-
+                    LOG.debug("ClientCnxn:run():->doTransport()(state="+state+")");
                     clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue);
 
                 } catch (Exception e) {

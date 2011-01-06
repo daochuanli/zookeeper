@@ -90,10 +90,15 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     packetReceived = true;
                     initialized = true;
                 } else {
-                        sendThread.readResponse(incomingBuffer);
-                        lenBuffer.clear();
-                        incomingBuffer = lenBuffer;
-                        packetReceived = true;
+                    LOG.info("ClientCnxnSocketNIO:doIO():incomingBuffer:"+incomingBuffer);
+                    if (incomingBuffer == null) {
+                        LOG.info("ClientCnxnSocketNIO:doIO():incomingBuffer is null: probably bad.");
+                    }
+
+                    sendThread.readResponse(incomingBuffer);
+                    lenBuffer.clear();
+                    incomingBuffer = lenBuffer;
+                    packetReceived = true;
                 }
             }
         }

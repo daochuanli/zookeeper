@@ -328,6 +328,35 @@ public class FinalRequestProcessor implements RequestProcessor {
                 rsp = new GetChildren2Response(children, stat);
                 break;
             }
+            case OpCode.sasl: {
+                // client sent a SASL token: respond with our own SASL token in response.
+                LOG.debug("FinalRequestProcessor:ProcessRequest():Responding to client SASL token.");
+                lastOp = "SASL";
+                // (test with GETC):
+                GetChildrenRequest getChildrenRequest = new GetChildrenRequest();
+                ZooKeeperServer.byteBuffer2Record(request.request,
+                        getChildrenRequest);
+                DataNode n = zks.getZKDatabase().getNode(getChildrenRequest.getPath());
+                if (n == null) {
+                    throw new KeeperException.NoNodeException();
+                }
+                Long aclG;
+                synchronized(n) {
+                    aclG = n.acl;
+
+                }
+                PrepRequestProcessor.checkACL(zks, zks.getZKDatabase().convertLong(aclG),
+                        ZooDefs.Perms.READ,
+                        request.authInfo);
+                List<String> children = zks.getZKDatabase().getChildren(
+                        getChildrenRequest.getPath(), null, getChildrenRequest
+                                .getWatch() ? cnxn : null);
+                rsp = new GetChildrenResponse(children);
+                LOG.debug("FinalRequestProcessor:ProcessRequest():Responded to client SASL token with a SASL (really a GETC).");
+                break;
+
+
+            }
             }
         } catch (SessionMovedException e) {
             // session moved is a connection level error, we need to tear

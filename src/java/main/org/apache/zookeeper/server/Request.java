@@ -114,6 +114,7 @@ public class Request {
         case OpCode.ping:
         case OpCode.closeSession:
         case OpCode.setWatches:
+        case OpCode.sasl:
             return true;
         default:
             return false;
@@ -173,6 +174,8 @@ public class Request {
             return "createSession";
         case OpCode.closeSession:
             return "closeSession";
+        case OpCode.sasl:
+            return "sasl";
         case OpCode.error:
             return "error";
         default:
