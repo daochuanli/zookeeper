@@ -862,18 +862,16 @@ public class ClientCnxn {
                         Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
                             public byte[] run() {
                                 try {
-                                    if (saslClient.hasInitialResponse()) {
-                                        LOG.info("ClientCnxn:createSaslToken(): saslClient.evaluateChallenge()..");
+                                        LOG.info("ClientCnxn:createSaslToken(): ->saslClient.evaluateChallenge(len="+saslToken.length+")");
                                         return saslClient.evaluateChallenge(saslToken);
-                                    }
                                 }
                                 catch (Exception e) {
-                                    LOG.warn("error in evaluating initial SASL challenge:",e);
+                                    LOG.warn("error in evaluating SASL challenge:",e);
                                 }
                                 return null;
                             }
                         });
-                LOG.info("Successfully created initial token with length:"+retval.length);
+                LOG.debug("Successfully created initial token with length:"+retval.length);
                 return retval;
             }
             catch (Exception e) {
@@ -884,6 +882,7 @@ public class ClientCnxn {
 
         private void sendSaslPacket(byte[] saslToken) {
             // modeled after addAuthInfo():
+            LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
             queuePacket(new RequestHeader(-4, OpCode.sasl), null,
                 new AuthPacket(0, "sasl", saslToken), null, null, null, null,
                 null, null);
@@ -936,26 +935,35 @@ public class ClientCnxn {
                         else {
                             if (saslClient.hasInitialResponse() == true) {
                                 this.saslToken = createSaslToken(this.saslToken);
-//                                sendSaslPacket(this.saslToken);
-                                state = States.SASL_SEND;
+                                LOG.debug("ClientCnxn:run(): sending initial SASL token");
+                                sendSaslPacket(this.saslToken);
+                                LOG.debug("ClientCnxn:run():" + state + "->SASL_SEND");
+                                state = States.SASL_RECV;
                             }
                         }
                     }
-
                     if (state == States.SASL_SEND) {
                         if (saslClient.isComplete() == true) {
                             state = States.CONNECTED;
                         }
                         else {
                             this.saslToken = createSaslToken(this.saslToken);
-//                            sendSaslPacket(this.saslToken);
+                            sendSaslPacket(this.saslToken);
+                            // TODO: it seems that only in CONNECTED state is the
+                            // SASL packet being sent.
+                            // TODO : figure out why client is not sending packet in SASL_RECV state!
                             state = States.SASL_RECV;
                             LOG.debug("ClientCnxn:run():SASL_SEND->SASL_RECV");
                         }
                     }
                     if (state == States.SASL_RECV) {
-                        LOG.debug("ClientCnxn:run():SASL_RECV->CONNECTED");
-                        state = States.CONNECTED;
+                        if (saslClient.isComplete() == true) {
+                            state = States.CONNECTED;
+                        }
+                        else {
+                            LOG.debug("ClientCnxn:run():SASL_RECV: waiting for server SASL token..");
+                            //state = States.CONNECT;
+                        }
                     }
 
                     if (state == States.CONNECTED) {
@@ -1081,7 +1089,8 @@ public class ClientCnxn {
             sessionPasswd = _sessionPasswd;
             // Big Red SASL on-off switch: true -> SASL is on; false otherwise.
             if (true) {
-                state = States.SASL_SEND;
+                LOG.debug("ClientCnxn:onConnected():"+state+"->SASL_SEND");
+                state = States.SASL_INITIAL;
 
             }
             else {
