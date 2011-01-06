@@ -941,7 +941,7 @@ public class ClientCnxn {
                                 this.saslToken = createSaslToken(this.saslToken);
                                 LOG.debug("ClientCnxn:run(): sending initial SASL token");
                                 sendSaslPacket(this.saslToken);
-                                LOG.debug("ClientCnxn:run():" + state + "->SASL_SEND");
+                                LOG.debug("ClientCnxn:run():" + state + "->SASL_RECV");
                                 state = States.SASL_RECV;
                             }
                         }
@@ -1092,8 +1092,8 @@ public class ClientCnxn {
             sessionId = _sessionId;
             sessionPasswd = _sessionPasswd;
             // Big Red SASL on-off switch: true -> SASL is on; false otherwise.
-            if (false) {
-                LOG.debug("ClientCnxn:onConnected():"+state+"->SASL_SEND");
+            if (true) {
+                LOG.debug("ClientCnxn:onConnected():"+state+"->SASL_INITIAL");
                 state = States.SASL_INITIAL;
 
             }
@@ -1185,7 +1185,7 @@ public class ClientCnxn {
             Record response, AsyncCallback cb, String clientPath,
             String serverPath, Object ctx, WatchRegistration watchRegistration)
     {
-        Packet packet = null;
+        Packet packet;
         synchronized (outgoingQueue) {
             if (h.getType() != OpCode.ping && h.getType() != OpCode.auth) {
                 h.setXid(getXid());
