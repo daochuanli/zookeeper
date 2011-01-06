@@ -158,6 +158,7 @@ public class SyncRequestProcessor extends Thread implements RequestProcessor {
         zks.getZKDatabase().commit();
         while (!toFlush.isEmpty()) {
             Request i = toFlush.remove();
+            LOG.info("SyncRequestProcessor:flush():request="+i.toString());
             nextProcessor.processRequest(i);
         }
         if (nextProcessor instanceof Flushable) {
