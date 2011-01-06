@@ -245,14 +245,7 @@ public class NIOServerCnxn extends ServerCnxn {
                 readConnectRequest();
                 LOG.info("NIOServerCnxn:readPayload(): initialized= " + initialized + " : /readConnectRequest()");
             } else {
-                if (this.clientSaslState == ClientSaslState.Authenticating) {
-                    LOG.info("NIOServerCnxn:readPayload(): clientSaslToken() : readSaslToken()");
-                    // read a SASL token from the client.
-                    readSaslToken();
-                }
-                else {
-                    readRequest();
-                }
+                readRequest();
             }
             lenBuffer.clear();
             incomingBuffer = lenBuffer;
@@ -462,18 +455,6 @@ public class NIOServerCnxn extends ServerCnxn {
         }
         zkServer.processConnectRequest(this, incomingBuffer);
         initialized = true;
-        this.clientSaslState = ClientSaslState.Authenticating;
-    }
-
-    private void readSaslToken() {
-        LOG.info("NIOServerCnxn:readSaslToken()...");
-        try {
-            zkServer.readSaslToken(this,incomingBuffer);
-        }
-        catch (IOException e) {
-            LOG.info("Error receiving SASL token from client: continuing without authentication.");
-            this.clientSaslState = ClientSaslState.AuthenticationFailed;
-        }
     }
 
     /**
