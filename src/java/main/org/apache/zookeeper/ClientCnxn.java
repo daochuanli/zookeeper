@@ -918,7 +918,7 @@ public class ClientCnxn {
             clientCnxnSocket.updateLastSendAndHeard();
             int to;
             while (state.isAlive()) {
-                LOG.info("ClientCnxn:SendThread:run(): state="+state);
+                LOG.debug("ClientCnxn:SendThread:run(): state="+state);
                 try {
                     if (!clientCnxnSocket.isConnected()) {
                         // don't re-establish connection if we are closing
@@ -936,7 +936,7 @@ public class ClientCnxn {
                         else {
                             if (saslClient.hasInitialResponse() == true) {
                                 this.saslToken = createSaslToken(this.saslToken);
-                                sendSaslPacket(this.saslToken);
+//                                sendSaslPacket(this.saslToken);
                                 state = States.SASL_SEND;
                             }
                         }
@@ -948,11 +948,15 @@ public class ClientCnxn {
                         }
                         else {
                             this.saslToken = createSaslToken(this.saslToken);
-                            sendSaslPacket(this.saslToken);
+//                            sendSaslPacket(this.saslToken);
                             state = States.SASL_RECV;
+                            LOG.debug("ClientCnxn:run():SASL_SEND->SASL_RECV");
                         }
                     }
-
+                    if (state == States.SASL_RECV) {
+                        LOG.debug("ClientCnxn:run():SASL_RECV->CONNECTED");
+                        state = States.CONNECTED;
+                    }
 
                     if (state == States.CONNECTED) {
                         to = readTimeout - clientCnxnSocket.getIdleRecv();
@@ -1076,7 +1080,7 @@ public class ClientCnxn {
             sessionId = _sessionId;
             sessionPasswd = _sessionPasswd;
             // Big Red SASL on-off switch: true -> SASL is on; false otherwise.
-            if (false) {
+            if (true) {
                 state = States.SASL_SEND;
 
             }
