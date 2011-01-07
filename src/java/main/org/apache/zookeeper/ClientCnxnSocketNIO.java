@@ -64,7 +64,9 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         if (sock == null) {
             throw new IOException("Socket is null!");
         }
+        LOG.debug("ClientCnxnSocketNIO:doIO():checking connection to server..");
         if (sockKey.isReadable()) {
+            LOG.debug("ClientCnxnSocketNIO:doIO():server is readable.");
             int rc = sock.read(incomingBuffer);
             if (rc < 0) {
                 throw new EndOfStreamException(
@@ -103,8 +105,10 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             }
         }
         if (sockKey.isWritable()) {
+            LOG.debug("ClientCnxnSocketNIO:doIO():Server is writable: checking outgoingQueue for something to send.");
             synchronized (outgoingQueue) {
                 if (!outgoingQueue.isEmpty()) {
+                    LOG.debug("ClientCnxnSocketNIO:doIO():outgoingQueue is not empty: sending it one thing off the queue.");
                     ByteBuffer pbb = outgoingQueue.getFirst().bb;
                     sock.write(pbb);
                     if (!pbb.hasRemaining()) {
