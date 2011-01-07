@@ -22,20 +22,18 @@ package org.apache.zookeeper.proto;
 import java.util.*;
 import org.apache.jute.*;
 
-public class SaslClientToken implements Record {
+public class SaslRequest implements Record {
   private byte[] token;
-  public SaslClientToken() {
+  public SaslRequest() {
   }
-  public SaslClientToken(byte[] clientToken) {
+  public SaslRequest(byte[] clientToken) {
     this.token = clientToken;
   }
 
-  public byte[] getClientToken() {
+  public byte[] getToken() {
     return token;
   }
-  public void setPasswd(byte[] clientToken) {
-    token = clientToken;
-  }
+
   public void serialize(OutputArchive a_, String tag) throws java.io.IOException {
     a_.startRecord(this,tag);
     a_.writeBuffer(token,"clienttoken");
@@ -73,7 +71,7 @@ public class SaslClientToken implements Record {
     if (!(peer_ instanceof SaslClientToken)) {
       throw new ClassCastException("Comparing different types of records.");
     }
-    SaslClientToken peer = (SaslClientToken) peer_;
+    SaslRequest peer = (SaslRequest) peer_;
     int ret = 0;
 
     byte[] my = token;
@@ -85,13 +83,13 @@ public class SaslClientToken implements Record {
   }
 
   public boolean equals(Object peer_) {
-    if (!(peer_ instanceof SaslClientToken)) {
+    if (!(peer_ instanceof SaslRequest)) {
       return false;
     }
     if (peer_ == this) {
       return true;
     }
-    SaslClientToken peer = (SaslClientToken) peer_;
+    SaslRequest peer = (SaslRequest) peer_;
     boolean ret = false;
     ret = org.apache.jute.Utils.bufEquals(token,peer.token);
     if (!ret) return ret;
@@ -105,6 +103,7 @@ public class SaslClientToken implements Record {
     return result;
   }
   public static String signature() {
-    return "LConnectRequest(B)";
+    // TODO: figure out this encoding.
+    return "LSaslRequest(B)";
   }
 }

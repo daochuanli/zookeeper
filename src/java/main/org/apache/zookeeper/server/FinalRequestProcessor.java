@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import org.apache.jute.Record;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
@@ -43,6 +44,8 @@ import org.apache.zookeeper.proto.GetChildrenResponse;
 import org.apache.zookeeper.proto.GetDataRequest;
 import org.apache.zookeeper.proto.GetDataResponse;
 import org.apache.zookeeper.proto.ReplyHeader;
+import org.apache.zookeeper.proto.SaslRequest;
+import org.apache.zookeeper.proto.SaslResponse;
 import org.apache.zookeeper.proto.SetACLResponse;
 import org.apache.zookeeper.proto.SetDataResponse;
 import org.apache.zookeeper.proto.SetWatches;
@@ -332,27 +335,16 @@ public class FinalRequestProcessor implements RequestProcessor {
                 // client sent a SASL token: respond with our own SASL token in response.
                 LOG.debug("FinalRequestProcessor:ProcessRequest():Responding to client SASL token.");
                 lastOp = "SASL";
-                // (test with GETC):
-                GetChildrenRequest getChildrenRequest = new GetChildrenRequest();
-                ZooKeeperServer.byteBuffer2Record(request.request,
-                        getChildrenRequest);
-                DataNode n = zks.getZKDatabase().getNode(getChildrenRequest.getPath());
-                if (n == null) {
-                    throw new KeeperException.NoNodeException();
-                }
-                Long aclG;
-                synchronized(n) {
-                    aclG = n.acl;
 
-                }
-                PrepRequestProcessor.checkACL(zks, zks.getZKDatabase().convertLong(aclG),
-                        ZooDefs.Perms.READ,
-                        request.authInfo);
-                List<String> children = zks.getZKDatabase().getChildren(
-                        getChildrenRequest.getPath(), null, getChildrenRequest
-                                .getWatch() ? cnxn : null);
-                rsp = new GetChildrenResponse(children);
-                LOG.debug("FinalRequestProcessor:ProcessRequest():Responded to client SASL token with a SASL (really a GETC).");
+                SaslRequest clientTokenRecord = new SaslRequest();
+                ZooKeeperServer.byteBuffer2Record(request.request,clientTokenRecord);
+
+                byte[] clientToken = clientTokenRecord.getToken();
+
+                byte[] responseToken = ComputeSaslResponse(clientToken);// TODO: pass along subject and saslclient.
+
+                rsp = new SaslResponse(responseToken);
+                LOG.debug("FinalRequestProcessor:ProcessRequest():Responded to client SASL token with a SASL response.");
                 break;
 
 
@@ -401,6 +393,12 @@ public class FinalRequestProcessor implements RequestProcessor {
             LOG.error("FIXMSG",e);
         }
     }
+
+    public byte[] ComputeSaslResponse(final byte[] clientToken) {
+        byte[] response = "foobar".getBytes();
+        return response;
+    }
+
 
     public void shutdown() {
         // we are the final link in the chain
