@@ -34,6 +34,10 @@ public class SaslRequest implements Record {
     return token;
   }
 
+  public void setToken(byte[] clientToken) {
+      this.token = clientToken;
+  }
+
   public void serialize(OutputArchive a_, String tag) throws java.io.IOException {
     a_.startRecord(this,tag);
     a_.writeBuffer(token,"clienttoken");
