@@ -131,4 +131,9 @@ public abstract class ServerCnxnFactory {
 
     }
 
+    public byte[] ComputeSaslResponse(final byte[] clientToken) {
+        return "abstractfoobar".getBytes();
+    }
+
+
 }

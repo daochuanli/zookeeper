@@ -670,9 +670,12 @@ public class ClientCnxn {
 
     class ServerSaslResponseCallback implements DataCallback {
         public void processResult(int rc, String path, Object ctx, byte data[], Stat stat) {
-            int foo = 42;
-            foo++;
-            return;
+            // data[] contains the Zookeeper's SASL response.
+            // ctx is the ClientCnxn object.
+            ClientCnxn cnxn = (ClientCnxn)ctx;
+            cnxn.saslToken = data;
+            cnxn.setState(States.SASL_SEND);
+            LOG.debug("ServerSaslResponseCallback(): set saslToken to server response (length="+data.length+"); state is now SASL_SEND.");
         }
     }
 
@@ -923,13 +926,15 @@ public class ClientCnxn {
             RequestHeader h = new RequestHeader();
             h.setType(ZooDefs.OpCode.sasl);
             GetDataRequest request = new GetDataRequest();
+            // overloading the 'path' value of the GetDataRequest to hold the client saslToken.
+            request.setPath(new String(saslToken));
             GetDataResponse response = new GetDataResponse();
 
             ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
 
             ReplyHeader r = new ReplyHeader();
             Packet packet = queuePacket(h, r, request, response, cb, null, null,
-                    null, null);
+                    cnxn, null);
         }
 
         private void startConnect() throws IOException {
@@ -1263,6 +1268,13 @@ public class ClientCnxn {
         return state;
     }
 
+    // needed by
+    void setState(States newState) {
+        state = newState;
+    }
+
+    // CallbackHandler here refers to javax.security.auth.callback.CallbackHandler.
+    // (not to be confused with packet callbacks like ServerSaslResponseCallback, defined above).
     private static class ClientCallbackHandler implements CallbackHandler {
       @Override
       public void handle(Callback[] callbacks) throws

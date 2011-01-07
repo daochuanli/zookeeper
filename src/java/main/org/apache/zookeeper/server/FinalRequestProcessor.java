@@ -44,8 +44,6 @@ import org.apache.zookeeper.proto.GetChildrenResponse;
 import org.apache.zookeeper.proto.GetDataRequest;
 import org.apache.zookeeper.proto.GetDataResponse;
 import org.apache.zookeeper.proto.ReplyHeader;
-import org.apache.zookeeper.proto.SaslRequest;
-import org.apache.zookeeper.proto.SaslResponse;
 import org.apache.zookeeper.proto.SetACLResponse;
 import org.apache.zookeeper.proto.SetDataResponse;
 import org.apache.zookeeper.proto.SetWatches;
@@ -336,14 +334,17 @@ public class FinalRequestProcessor implements RequestProcessor {
                 LOG.debug("FinalRequestProcessor:ProcessRequest():Responding to client SASL token.");
                 lastOp = "SASL";
 
-                SaslRequest clientTokenRecord = new SaslRequest();
+                GetDataRequest clientTokenRecord = new GetDataRequest();
                 ZooKeeperServer.byteBuffer2Record(request.request,clientTokenRecord);
 
-                byte[] clientToken = clientTokenRecord.getToken();
+                // Overloading GetDataRequest()'s path field to hold the client token.
+                byte[] clientToken = clientTokenRecord.getPath().getBytes();
 
-                byte[] responseToken = ComputeSaslResponse(clientToken);// TODO: pass along subject and saslclient.
+                byte[] responseToken = zks.ComputeSaslResponse(clientToken);
 
-                rsp = new SaslResponse(responseToken);
+                GetDataResponse rspData = new GetDataResponse();
+                rspData.setData(responseToken);
+                rsp = rspData;
                 LOG.debug("FinalRequestProcessor:ProcessRequest():Responded to client SASL token with a SASL response.");
                 break;
 
@@ -393,12 +394,6 @@ public class FinalRequestProcessor implements RequestProcessor {
             LOG.error("FIXMSG",e);
         }
     }
-
-    public byte[] ComputeSaslResponse(final byte[] clientToken) {
-        byte[] response = "foobar".getBytes();
-        return response;
-    }
-
 
     public void shutdown() {
         // we are the final link in the chain
