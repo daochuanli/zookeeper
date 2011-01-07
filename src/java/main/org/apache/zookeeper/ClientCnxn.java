@@ -900,9 +900,34 @@ public class ClientCnxn {
         private void sendSaslPacket(byte[] saslToken) {
             // modeled after addAuthInfo():
             LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
-            queuePacket(new RequestHeader(-4, OpCode.sasl), null,
-                new AuthPacket(0, "sasl", saslToken), null, null, null, null,
-                null, null);
+
+
+            // adopted from Zookeeper:create():
+            RequestHeader h = new RequestHeader();
+            h.setType(ZooDefs.OpCode.sasl);
+            SaslRequest request = new SaslRequest();
+            SaslResponse response = new SaslResponse();
+            request.setToken(saslToken);
+            //request.setFlags(createMode.toFlag());
+            //request.setPath(serverPath);
+            //if (acl != null && acl.size() == 0) {
+            //    throw new KeeperException.InvalidACLException();
+            //}
+            //request.setAcl(acl);
+            try {
+                ReplyHeader r = cnxn.submitRequest(h, request, response, null);
+            } catch (InterruptedException e) {
+                LOG.warn("InterruptedException when calling submitRequest() from sendSaslPacket(): "+e.getStackTrace());
+            }
+            //if (r.getErr() != 0) {
+             //   throw KeeperException.create(KeeperException.Code.get(r.getErr()),
+             //           clientPath);
+            //}
+
+            // old pre-adopted version:
+            //queuePacket(new RequestHeader(-4, OpCode.sasl), null,
+            //    new AuthPacket(0, "sasl", saslToken), null, null, null, null,
+            //    null, null);
         }
 
         private void startConnect() throws IOException {
