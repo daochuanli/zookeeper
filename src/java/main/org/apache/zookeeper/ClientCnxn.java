@@ -915,11 +915,9 @@ public class ClientCnxn {
             //    throw new KeeperException.InvalidACLException();
             //}
             //request.setAcl(acl);
-            try {
-                ReplyHeader r = cnxn.submitRequest(h, request, response, null);
-            } catch (InterruptedException e) {
-                LOG.warn("InterruptedException when calling submitRequest() from sendSaslPacket(): "+e.getStackTrace());
-            }
+            ReplyHeader r = new ReplyHeader();
+            Packet packet = queuePacket(h, r, request, response, null, null, null,
+                    null, null);
             //if (r.getErr() != 0) {
              //   throw KeeperException.create(KeeperException.Code.get(r.getErr()),
              //           clientPath);
