@@ -65,17 +65,15 @@ import org.apache.zookeeper.proto.ExistsResponse;
 import org.apache.zookeeper.proto.GetACLResponse;
 import org.apache.zookeeper.proto.GetChildren2Response;
 import org.apache.zookeeper.proto.GetChildrenResponse;
+import org.apache.zookeeper.proto.GetDataRequest;
 import org.apache.zookeeper.proto.GetDataResponse;
 import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.RequestHeader;
-import org.apache.zookeeper.proto.SaslRequest;
-import org.apache.zookeeper.proto.SaslResponse;
 import org.apache.zookeeper.proto.SetACLResponse;
 import org.apache.zookeeper.proto.SetDataResponse;
 import org.apache.zookeeper.proto.SetWatches;
 import org.apache.zookeeper.proto.WatcherEvent;
 import org.apache.zookeeper.server.ByteBufferInputStream;
-import org.apache.zookeeper.server.NIOServerCnxn;
 import org.apache.zookeeper.server.ZooTrace;
 
 /**
@@ -924,9 +922,8 @@ public class ClientCnxn {
             // adopted from Zookeeper:create():
             RequestHeader h = new RequestHeader();
             h.setType(ZooDefs.OpCode.sasl);
-            SaslRequest request = new SaslRequest();
+            GetDataRequest request = new GetDataRequest();
             GetDataResponse response = new GetDataResponse();
-            request.setToken(saslToken);
 
             ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
 
