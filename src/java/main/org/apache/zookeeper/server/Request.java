@@ -199,6 +199,7 @@ public class Request {
         if (type != OpCode.createSession
                 && type != OpCode.setWatches
                 && type != OpCode.closeSession
+                && type != OpCode.sasl
                 && request != null
                 && request.remaining() >= 4)
         {
