@@ -57,6 +57,7 @@ import org.apache.zookeeper.ZooDefs.OpCode;
 import org.apache.zookeeper.ZooKeeper.States;
 import org.apache.zookeeper.ZooKeeper.WatchRegistration;
 import org.apache.zookeeper.client.HostProvider;
+import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.AuthPacket;
 import org.apache.zookeeper.proto.ConnectRequest;
 import org.apache.zookeeper.proto.CreateResponse;
@@ -668,6 +669,15 @@ public class ClientCnxn {
     public static final int packetLen = Integer.getInteger("jute.maxbuffer",
             4096 * 1024);
 
+
+    class ServerSaslResponseCallback implements DataCallback {
+        public void processResult(int rc, String path, Object ctx, byte data[], Stat stat) {
+            int foo = 42;
+            foo++;
+            return;
+        }
+    }
+
     /**
      * This class services the outgoing request queue and generates the heart
      * beats. It also spawns the ReadThread.
@@ -749,6 +759,7 @@ public class ClientCnxn {
                 packet = pendingQueue.remove();
             }
 
+            // this check added in course of debugging; can be removed.
             if (packet.replyHeader == null) {
                 LOG.debug("ClientCnxn$SendThread:readResponse():replyHdr is unexpectedly NULL!! (1)");
             }
@@ -771,6 +782,7 @@ public class ClientCnxn {
                             + packet );
                 }
 
+                // this check added in course of debugging; can be removed.
                 if (packet.replyHeader == null) {
                     LOG.debug("ClientCnxn$SendThread:readResponse():replyHdr is unexpectedly NULL!! (5)");
                 }
@@ -799,17 +811,6 @@ public class ClientCnxn {
                 }
 
                 LOG.debug("ClientCnxn:ReadResponse(): Finished reading server reply packet:" + packet);
-
-                LOG.debug("Checking packet type..");
-
-                // ok is there a callback mechanism to do this?
-                /* if (packet.type == SASL) {
-                     saslToken = getSaslTokenFromPacketBody(packet);
-                     saslToken = saslClient.evaluate(saslToken);
-                     state = States.SASL_SEND;
-                 }
-                  */
-
 
             } finally {
                 finishPacket(packet);
@@ -924,11 +925,13 @@ public class ClientCnxn {
             RequestHeader h = new RequestHeader();
             h.setType(ZooDefs.OpCode.sasl);
             SaslRequest request = new SaslRequest();
-            SaslResponse response = new SaslResponse();
+            GetDataResponse response = new GetDataResponse();
             request.setToken(saslToken);
 
+            ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
+
             ReplyHeader r = new ReplyHeader();
-            Packet packet = queuePacket(h, r, request, response, null, null, null,
+            Packet packet = queuePacket(h, r, request, response, cb, null, null,
                     null, null);
         }
 
@@ -995,6 +998,7 @@ public class ClientCnxn {
                             sendSaslPacket(this.saslToken);
                             state = States.SASL_RECV;
                             LOG.debug("ClientCnxn:run():SASL_SEND->SASL_RECV");
+                            // the callback to the packet sent by sendSaslPacket() should change the state from SASL_RECV to SASL_SEND.
                         }
                     }
                     if (state == States.SASL_RECV) {
