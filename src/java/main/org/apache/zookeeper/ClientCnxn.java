@@ -627,7 +627,7 @@ public class ClientCnxn {
         case CLOSED:
             p.replyHeader.setErr(KeeperException.Code.SESSIONEXPIRED.intValue());
             break;
-        // TODO: handle state.SASL_AUTHENTICATING (if necessary)
+        // TODO: handle state.SASL_* states (if necessary)
         default:
             p.replyHeader.setErr(KeeperException.Code.CONNECTIONLOSS.intValue());
         }
@@ -679,6 +679,7 @@ public class ClientCnxn {
         private boolean isFirstConnect = true;
         private SaslClient saslClient;
         private byte[] saslToken;
+
         void readResponse(ByteBuffer incomingBuffer) throws IOException {
             LOG.debug("SendThread:readResponse():incomingBuffer="+incomingBuffer.toString());
             ByteBufferInputStream bbis = new ByteBufferInputStream(
@@ -773,6 +774,10 @@ public class ClientCnxn {
                 if (packet.replyHeader == null) {
                     LOG.debug("ClientCnxn$SendThread:readResponse():replyHdr is unexpectedly NULL!! (5)");
                 }
+                // This try { .. } catch { .. } was added by me for SASL-debugging purposes; remove for final patch.
+                // (just have bare 'packet.replyHeader...' with no try { .. } catch { .. } wrapper.
+                // During development work on SASL was causing NPE's here, but in further work, eliminated them.
+                // So no remaining motivation to modify code to catch NullPointerException here.
                 try {
                     packet.replyHeader.setXid(replyHdr.getXid());
                 }
@@ -792,6 +797,20 @@ public class ClientCnxn {
                     LOG.debug("Reading reply sessionid:0x"
                             + Long.toHexString(sessionId) + ", packet:: " + packet);
                 }
+
+                LOG.debug("ClientCnxn:ReadResponse(): Finished reading server reply packet:" + packet);
+
+                LOG.debug("Checking packet type..");
+
+                // ok is there a callback mechanism to do this?
+                /* if (packet.type == SASL) {
+                     saslToken = getSaslTokenFromPacketBody(packet);
+                     saslToken = saslClient.evaluate(saslToken);
+                     state = States.SASL_SEND;
+                 }
+                  */
+
+
             } finally {
                 finishPacket(packet);
             }
@@ -899,9 +918,7 @@ public class ClientCnxn {
         }
 
         private void sendSaslPacket(byte[] saslToken) {
-            // modeled after addAuthInfo():
             LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
-
 
             // adopted from Zookeeper:create():
             RequestHeader h = new RequestHeader();
@@ -909,24 +926,10 @@ public class ClientCnxn {
             SaslRequest request = new SaslRequest();
             SaslResponse response = new SaslResponse();
             request.setToken(saslToken);
-            //request.setFlags(createMode.toFlag());
-            //request.setPath(serverPath);
-            //if (acl != null && acl.size() == 0) {
-            //    throw new KeeperException.InvalidACLException();
-            //}
-            //request.setAcl(acl);
+
             ReplyHeader r = new ReplyHeader();
             Packet packet = queuePacket(h, r, request, response, null, null, null,
                     null, null);
-            //if (r.getErr() != 0) {
-             //   throw KeeperException.create(KeeperException.Code.get(r.getErr()),
-             //           clientPath);
-            //}
-
-            // old pre-adopted version:
-            //queuePacket(new RequestHeader(-4, OpCode.sasl), null,
-            //    new AuthPacket(0, "sasl", saslToken), null, null, null, null,
-            //    null, null);
         }
 
         private void startConnect() throws IOException {
