@@ -993,9 +993,6 @@ public class ClientCnxn {
                         else {
                             this.saslToken = createSaslToken(this.saslToken);
                             sendSaslPacket(this.saslToken);
-                            // TODO: it seems that only in CONNECTED state is the
-                            // SASL packet being sent.
-                            // TODO : figure out why client is not sending packet in SASL_RECV state!
                             state = States.SASL_RECV;
                             LOG.debug("ClientCnxn:run():SASL_SEND->SASL_RECV");
                         }
