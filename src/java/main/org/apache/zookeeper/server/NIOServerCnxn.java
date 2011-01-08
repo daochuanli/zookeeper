@@ -102,8 +102,6 @@ public class NIOServerCnxn extends ServerCnxn {
 
     static long nextSessionId = 1;
     int outstandingLimit = 1;
-    private SaslServer saslServer = null;
-
 
     public NIOServerCnxn(ZooKeeperServer zk, SocketChannel sock,
             SelectionKey sk, NIOServerCnxnFactory factory) throws IOException {

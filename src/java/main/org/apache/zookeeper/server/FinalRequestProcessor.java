@@ -54,6 +54,9 @@ import org.apache.zookeeper.server.ZooKeeperServer.ChangeRecord;
 import org.apache.zookeeper.txn.CreateSessionTxn;
 import org.apache.zookeeper.txn.ErrorTxn;
 
+import javax.security.sasl.SaslException;
+import javax.security.sasl.SaslServer;
+
 /**
  * This Request processor actually applies any transaction associated with a
  * request and services any queries. It is always at the end of a
@@ -339,16 +342,26 @@ public class FinalRequestProcessor implements RequestProcessor {
 
                 // Overloading GetDataRequest()'s path field to hold the client token.
                 byte[] clientToken = clientTokenRecord.getPath().getBytes();
+                byte[] responseToken = null;
 
-                byte[] responseToken = zks.ComputeSaslResponse(clientToken);
+                SaslServer saslServer = cnxn.saslServer;
+                if (saslServer.isComplete()) {
+                    LOG.info("SASL authentication with client is complete.");
+                }
+                else {
+                    try {
+                        responseToken = saslServer.evaluateResponse(clientToken);
+                    }
+                    catch (SaslException e) {
+                        LOG.error("saslServer.evaluateResponse() error:" + e.getStackTrace());
+                    }
+                }
 
                 GetDataResponse rspData = new GetDataResponse();
                 rspData.setData(responseToken);
                 rsp = rspData;
                 LOG.debug("FinalRequestProcessor:ProcessRequest():Responded to client SASL token with a SASL response.");
                 break;
-
-
             }
             }
         } catch (SessionMovedException e) {

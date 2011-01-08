@@ -813,10 +813,6 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         saslClientToken.deserialize(bia,"sasltoken");
     }
 
-    public byte[] ComputeSaslResponse(final byte[] clientToken) {
-        return serverCnxnFactory.ComputeSaslResponse(clientToken);
-    }
-
     public boolean shouldThrottle(long outStandingCount) {
         if (getGlobalOutstandingLimit() < getInProcess()) {
             return outStandingCount > 0;

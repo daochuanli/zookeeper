@@ -31,6 +31,8 @@ import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import javax.security.sasl.AuthorizeCallback;
+import javax.security.sasl.SaslException;
+import javax.security.sasl.SaslServer;
 
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.jmx.MBeanRegistry;
@@ -147,9 +149,7 @@ public abstract class ServerCnxnFactory {
 
     }
 
-    public byte[] ComputeSaslResponse(final byte[] clientToken) {
-        return "abstractfoobar".getBytes();
-    }
+
 
     protected void authenticateServer() {
         // Should be called only once, at server startup time.
