@@ -24,6 +24,13 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 
 import javax.management.JMException;
+import javax.security.auth.Subject;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.auth.login.LoginContext;
+import javax.security.auth.login.LoginException;
+import javax.security.sasl.AuthorizeCallback;
 
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.jmx.MBeanRegistry;
@@ -35,7 +42,16 @@ public abstract class ServerCnxnFactory {
     public interface PacketProcessor {
         public void processPacket(ByteBuffer packet, ServerCnxn src);
     }
-    
+
+    // SASL/Kerberos-related constants:
+    // TODO: less hard-wired; more configurable from zoo.cfg.
+    final String JAAS_CONF_FILE_NAME = "jaas.conf";
+    final String HOST_NAME = "ekoontz";
+    final String SERVICE_PRINCIPAL_NAME = "testserver";
+    final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
+    final String KEY_TAB_FILE_NAME = "conf/testserver.keytab";
+    Subject zkServerSubject;
+
     Logger LOG = Logger.getLogger(ServerCnxnFactory.class);
 
     /**
@@ -135,5 +151,82 @@ public abstract class ServerCnxnFactory {
         return "abstractfoobar".getBytes();
     }
 
+    protected void authenticateServer() {
+        // Should be called only once, at server startup time.
+        System.setProperty("javax.security.sasl.level","FINEST");
+        System.setProperty("handlers", "java.util.logging.ConsoleHandler");
 
+
+        System.setProperty( "java.security.auth.login.config", JAAS_CONF_FILE_NAME);
+
+        //
+        // The file given in JAAS_CONF_FILE_NAME must have :
+        //
+        // $SERVICE_SECTION_OF_JAAS_CONF_FILE {
+        //   com.sun.security.auth.module.Krb5LoginModule required
+        //   useKeyTab=true
+        //   keyTab="$KEY_TAB_FILE_NAME"
+        //   doNotPrompt=true
+        //   useTicketCache=false
+        //   storeKey=true
+        //   debug=true
+        //   principal="$SERVICE_NAME/$HOST_NAME";
+        // };
+
+        try {
+            // 1. Login to Kerberos.
+            LoginContext loginCtx = null;
+            LOG.info("Authenticating using '" + SERVICE_SECTION_OF_JAAS_CONF_FILE + "' section of '" + JAAS_CONF_FILE_NAME + "'...");
+            loginCtx = new LoginContext(SERVICE_SECTION_OF_JAAS_CONF_FILE);
+            loginCtx.login();
+            zkServerSubject = loginCtx.getSubject();
+            LOG.info("Authenticated successfully with Kerberos server.");
+        }
+        catch (LoginException e) {
+            System.err.println("LoginException: : " + e);
+            e.printStackTrace();
+            System.exit(-1);
+        }
+    }
+
+    public Subject getSubject() {
+        return zkServerSubject;
+    }
+
+}
+
+class ServerCallbackHandler implements CallbackHandler {
+    @Override
+    public void handle(Callback[] callbacks) throws
+            UnsupportedCallbackException {
+        System.out.println("ServerCallbackHandler::handle()");
+        AuthorizeCallback ac = null;
+        for (Callback callback : callbacks) {
+            if (callback instanceof AuthorizeCallback) {
+                ac = (AuthorizeCallback) callback;
+            } else {
+                throw new UnsupportedCallbackException(callback,
+                        "Unrecognized SASL GSSAPI Callback");
+            }
+        }
+        if (ac != null) {
+            String authid = ac.getAuthenticationID();
+            String authzid = ac.getAuthorizationID();
+
+            if (authid.equals(authzid)) {
+                ac.setAuthorized(true);
+            } else {
+                if (true) {
+                    System.out.println("authid != authzid; setting to authorized anyway.");
+                    ac.setAuthorized(true);
+                }
+                else {
+                    ac.setAuthorized(false);
+                }
+            }
+            if (ac.isAuthorized()) {
+                ac.setAuthorizedID(authzid);
+            }
+        }
+    }
 }
