@@ -178,6 +178,14 @@ public class ClientCnxn {
     // that will be used to configure relevant parameters to do Kerberos authentication.
     // </SASL-related Constants>
 
+
+    public void setSaslServerResponse(byte[] serverToken) {
+        saslToken = serverToken;
+        state = States.SASL_SEND;
+        LOG.debug("ClientCnxn:setSaslServerResponse(): set saslToken to server response (length="+serverToken.length+"); state is now SASL_SEND.");
+
+    }
+
     public long getSessionId() {
         return sessionId;
     }
@@ -538,6 +546,15 @@ public class ClientCnxn {
                       } else {
                           cb.processResult(rc, clientPath, p.ctx, null);
                       }
+                  } else if (p.cb instanceof ServerSaslResponseCallback) {
+                      // have to put this BEFORE GetDataResponse, because we're using GetDataResponse as
+                      // a transport container (TODO: create custom container for SASL instead of using GetData{Request/Response}.)
+                      ServerSaslResponseCallback cb = (ServerSaslResponseCallback) p.cb;
+                      GetDataResponse rsp = (GetDataResponse) p.response;
+                      // TODO : check rc (== 0, etc) as with other packet types.
+                      // FIXME: replace these nulls with the actual values.
+                      ClientCnxn foo = (ClientCnxn) p.ctx;
+                      cb.processResult(rc,null,p.ctx,rsp.getData(),null);
                   } else if (p.response instanceof GetDataResponse) {
                       DataCallback cb = (DataCallback) p.cb;
                       GetDataResponse rsp = (GetDataResponse) p.response;
@@ -592,6 +609,7 @@ public class ClientCnxn {
                       VoidCallback cb = (VoidCallback) p.cb;
                       cb.processResult(rc, clientPath, p.ctx);
                   }
+
               }
           } catch (Throwable t) {
               LOG.error("Caught unexpected throwable", t);
@@ -673,9 +691,8 @@ public class ClientCnxn {
             // data[] contains the Zookeeper's SASL response.
             // ctx is the ClientCnxn object.
             ClientCnxn cnxn = (ClientCnxn)ctx;
-            cnxn.saslToken = data;
-            cnxn.setState(States.SASL_SEND);
-            LOG.debug("ServerSaslResponseCallback(): set saslToken to server response (length="+data.length+"); state is now SASL_SEND.");
+            LOG.debug("ServerSaslResponseCallback(): saslToken server response: (length="+data.length+")");
+            cnxn.setSaslServerResponse(data);
         }
     }
 
@@ -689,7 +706,6 @@ public class ClientCnxn {
         private Random r = new Random(System.nanoTime());        
         private boolean isFirstConnect = true;
         private SaslClient saslClient;
-        private byte[] saslToken;
 
         void readResponse(ByteBuffer incomingBuffer) throws IOException {
             LOG.debug("SendThread:readResponse():incomingBuffer="+incomingBuffer.toString());
@@ -811,7 +827,7 @@ public class ClientCnxn {
                             + Long.toHexString(sessionId) + ", packet:: " + packet);
                 }
 
-                LOG.debug("ClientCnxn:ReadResponse(): Finished reading server reply packet:" + packet);
+                //LOG.debug("ClientCnxn:ReadResponse(): Finished reading server reply packet:" + packet);
 
             } finally {
                 finishPacket(packet);
@@ -825,7 +841,6 @@ public class ClientCnxn {
             state = States.CONNECTING;
             this.clientCnxnSocket = clientCnxnSocket;
             this.saslClient = sc;
-            this.saslToken = new byte[0];
             this.cnxn = cnxn;
             setUncaughtExceptionHandler(uncaughtExceptionHandler);
             setDaemon(true);
@@ -896,6 +911,9 @@ public class ClientCnxn {
         }
 
         byte[] createSaslToken(final byte[] saslToken) {
+            if (saslToken == null) {
+                LOG.warn("ClientCnxn:createSaslToken():saslToken is null.");
+            }
             try {
                 final byte[] retval =
                         Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
@@ -966,7 +984,7 @@ public class ClientCnxn {
             clientCnxnSocket.updateLastSendAndHeard();
             int to;
             while (state.isAlive()) {
-                LOG.debug("ClientCnxn:SendThread:run(): state="+state+";cnxn="+this.cnxn.toString());
+                LOG.debug("ClientCnxn:SendThread:run(): state="+state+";cnxn="+this.cnxn.toString()+";saslToken length>>>>>>"+cnxn.saslToken.length);
                 try {
                     if (!clientCnxnSocket.isConnected()) {
                         // don't re-establish connection if we are closing
@@ -983,9 +1001,9 @@ public class ClientCnxn {
                         }
                         else {
                             if (saslClient.hasInitialResponse() == true) {
-                                this.saslToken = createSaslToken(this.saslToken);
+                                cnxn.saslToken = createSaslToken(cnxn.saslToken);
                                 LOG.debug("ClientCnxn:run(): sending initial SASL token");
-                                sendSaslPacket(this.saslToken);
+                                sendSaslPacket(cnxn.saslToken);
                                 LOG.debug("ClientCnxn:run():" + state + "->SASL_RECV");
                                 state = States.SASL_RECV;
                             }
@@ -996,8 +1014,8 @@ public class ClientCnxn {
                             state = States.CONNECTED;
                         }
                         else {
-                            this.saslToken = createSaslToken(this.saslToken);
-                            sendSaslPacket(this.saslToken);
+                            cnxn.saslToken = createSaslToken(cnxn.saslToken);
+                            sendSaslPacket(cnxn.saslToken);
                             state = States.SASL_RECV;
                             LOG.debug("ClientCnxn:run():SASL_SEND->SASL_RECV");
                             // the callback to the packet sent by sendSaslPacket() should change the state from SASL_RECV to SASL_SEND.
