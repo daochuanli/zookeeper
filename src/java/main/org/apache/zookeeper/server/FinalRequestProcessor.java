@@ -357,9 +357,11 @@ public class FinalRequestProcessor implements RequestProcessor {
                     }
                 }
 
-                GetDataResponse rspData = new GetDataResponse();
-                rspData.setData(responseToken);
-                rsp = rspData;
+                // TODO: we are employing GetDataRequest/Response for SASL information.
+                // instead, we should use a purpose-made Proto class (which would not have a
+                // useless (for SASL purposes) Stat field).
+                Stat dummy_stat = new Stat();
+                rsp = new GetDataResponse(responseToken,dummy_stat);
                 LOG.debug("FinalRequestProcessor:ProcessRequest():Responded to client SASL token with a SASL response.");
                 break;
             }
