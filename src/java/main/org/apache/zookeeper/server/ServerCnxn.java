@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.jute.Record;
+import org.apache.log4j.Logger;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.data.Id;
@@ -40,6 +41,10 @@ import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.RequestHeader;
 
 import javax.security.auth.Subject;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
@@ -476,6 +481,41 @@ public abstract class ServerCnxn implements Stats, Watcher {
         }
         return null;
     }
-
-
 }
+
+class ServerCallbackHandler implements CallbackHandler {
+    private static final Logger LOG = Logger.getLogger(ServerCallbackHandler.class);
+    @Override
+    public void handle(Callback[] callbacks) throws
+            UnsupportedCallbackException {
+        LOG.debug("ServerCallbackHandler::handle()");
+        AuthorizeCallback ac = null;
+        for (Callback callback : callbacks) {
+            if (callback instanceof AuthorizeCallback) {
+                ac = (AuthorizeCallback) callback;
+            } else {
+                throw new UnsupportedCallbackException(callback,
+                        "Unrecognized SASL GSSAPI Callback");
+            }
+        }
+        if (ac != null) {
+            String authenticationID = ac.getAuthenticationID();
+            String authorizationID = ac.getAuthorizationID();
+
+            LOG.info("Successfully authenticated client: authenticationID=" + authenticationID + ";  authorizationID=" + authorizationID + ".");
+            if (authenticationID.equals(authorizationID)) {
+                LOG.debug("setAuthorized(true) since " + authenticationID + "==" + authorizationID);
+                ac.setAuthorized(true);
+            } else {
+                LOG.debug("setAuthorized(false) since " + authenticationID + "!=" + authorizationID);
+                ac.setAuthorized(false);
+            }
+            if (ac.isAuthorized()) {
+                LOG.debug("isAuthorized() since ac.isAuthorized() == true");
+                ac.setAuthorizedID(authorizationID);
+            }
+        }
+    }
+}
+
+

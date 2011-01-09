@@ -25,14 +25,8 @@ import java.util.HashMap;
 
 import javax.management.JMException;
 import javax.security.auth.Subject;
-import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
-import javax.security.sasl.AuthorizeCallback;
-import javax.security.sasl.SaslException;
-import javax.security.sasl.SaslServer;
 
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.jmx.MBeanRegistry;
@@ -194,39 +188,4 @@ public abstract class ServerCnxnFactory {
         return zkServerSubject;
     }
 
-    class ServerCallbackHandler implements CallbackHandler {
-        @Override
-        public void handle(Callback[] callbacks) throws
-                UnsupportedCallbackException {
-            System.out.println("ServerCallbackHandler::handle()");
-            AuthorizeCallback ac = null;
-            for (Callback callback : callbacks) {
-                if (callback instanceof AuthorizeCallback) {
-                    ac = (AuthorizeCallback) callback;
-                } else {
-                    throw new UnsupportedCallbackException(callback,
-                            "Unrecognized SASL GSSAPI Callback");
-                }
-            }
-            if (ac != null) {
-                String authid = ac.getAuthenticationID();
-                String authzid = ac.getAuthorizationID();
-
-                if (authid.equals(authzid)) {
-                    ac.setAuthorized(true);
-                } else {
-                    if (true) {
-                        System.out.println("authid != authzid; setting to authorized anyway.");
-                        ac.setAuthorized(true);
-                    }
-                    else {
-                        ac.setAuthorized(false);
-                    }
-                }
-                if (ac.isAuthorized()) {
-                    ac.setAuthorizedID(authzid);
-                }
-            }
-        }
-    }
 }
