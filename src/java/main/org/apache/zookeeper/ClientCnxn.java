@@ -736,7 +736,7 @@ public class ClientCnxn {
     class ServerSaslResponseCallback implements DataCallback {
         public void processResult(int rc, String path, Object ctx, byte data[], Stat stat) {
             // data[] contains the Zookeeper Server's SASL token.
-            // ctx is the ClientCnxn object. We use this object's setSaslServerResponse() method
+            // ctx is the ClientCnxn object. We use this object's prepareSaslResponseToServer() method
             // to reply to the Zookeeper Server's SASL token
             ClientCnxn cnxn = (ClientCnxn)ctx;
             byte[] usedata = data;
