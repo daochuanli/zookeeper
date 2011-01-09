@@ -179,11 +179,66 @@ public class ClientCnxn {
     // </SASL-related Constants>
 
 
-    public void setSaslServerResponse(byte[] serverToken) {
+    public void prepareSaslResponseToServer(byte[] serverToken) {
         saslToken = serverToken;
-        state = States.SASL_SEND;
-        LOG.debug("ClientCnxn:setSaslServerResponse(): set saslToken to server response (length="+serverToken.length+"); state is now SASL_SEND.");
 
+        if (saslClient.isComplete() == true) {
+            LOG.debug("ClientCnxn:run(): SASL negotiation COMPLETE*****! SASL_SEND->CONNECTED.");
+            updateState(States.CONNECTED);
+        }
+        else {
+            LOG.debug("prepareSaslResponseToServer():createSaslToken()->");
+            saslToken = createSaslToken(saslToken);
+            LOG.debug("prepareSaslResponseToServer():<-createSaslToken()");
+            queueSaslPacket(saslToken);
+            updateState(States.SASL_RECV);
+//                            LOG.debug("ClientCnxn:run():SASL_SEND->SASL_RECV");
+            // the callback to the packet sent by sendSaslPacket() should change the state from SASL_RECV to SASL_SEND.
+        }
+    }
+
+    byte[] createSaslToken(final byte[] saslToken) {
+        if (saslToken == null) {
+            LOG.warn("ClientCnxn:createSaslToken():saslToken is null.");
+        }
+        try {
+            final byte[] retval =
+                    Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
+                        public byte[] run() {
+                            try {
+                                LOG.info("ClientCnxn:createSaslToken(): ->saslClient.evaluateChallenge(len="+saslToken.length+")");
+                                return saslClient.evaluateChallenge(saslToken);
+                            }
+                            catch (Exception e) {
+                                LOG.warn("error in evaluating SASL challenge:",e);
+                            }
+                            return null;
+                        }
+                    });
+            LOG.debug("Successfully created initial token with length:"+retval.length);
+            return retval;
+        }
+        catch (Exception e) {
+            LOG.warn("error in handling SASL token.");
+        }
+        return null;
+    }
+
+    private void queueSaslPacket(byte[] saslToken) {
+        LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
+
+        // adopted from Zookeeper:create():
+        RequestHeader h = new RequestHeader();
+        h.setType(ZooDefs.OpCode.sasl);
+        GetDataRequest request = new GetDataRequest();
+        // overloading the 'path' value of the GetDataRequest to hold the client saslToken.
+        request.setPath(new String(saslToken));
+        GetDataResponse response = new GetDataResponse();
+
+        ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
+
+        ReplyHeader r = new ReplyHeader();
+        Packet packet = queuePacket(h, r, request, response, cb, null, null, this, null);
     }
 
     public long getSessionId() {
@@ -483,11 +538,15 @@ public class ClientCnxn {
            try {
               isRunning = true;
               while (true) {
+                 LOG.debug("EventThread:run():take()->");
                  Object event = waitingEvents.take();
+                 LOG.debug("EventThread:run():<-take()");
                  if (event == eventOfDeath) {
                     wasKilled = true;
                  } else {
+                     LOG.debug("EventThread:run():processEvent()->");
                     processEvent(event);
+                     LOG.debug("EventThread:run():<-processEvent()");
                  }
                  if (wasKilled)
                     synchronized (waitingEvents) {
@@ -548,12 +607,11 @@ public class ClientCnxn {
                       }
                   } else if (p.cb instanceof ServerSaslResponseCallback) {
                       // have to put this BEFORE GetDataResponse, because we're using GetDataResponse as
-                      // a transport container (TODO: create custom container for SASL instead of using GetData{Request/Response}.)
+                      // a transport container.
+                      // (TODO: create custom container for SASL instead of using GetData{Request/Response}.)
                       ServerSaslResponseCallback cb = (ServerSaslResponseCallback) p.cb;
                       GetDataResponse rsp = (GetDataResponse) p.response;
                       // TODO : check rc (== 0, etc) as with other packet types.
-                      // FIXME: replace these nulls with the actual values.
-                      ClientCnxn foo = (ClientCnxn) p.ctx;
                       cb.processResult(rc,null,p.ctx,rsp.getData(),null);
                   } else if (p.response instanceof GetDataResponse) {
                       DataCallback cb = (DataCallback) p.cb;
@@ -688,11 +746,19 @@ public class ClientCnxn {
 
     class ServerSaslResponseCallback implements DataCallback {
         public void processResult(int rc, String path, Object ctx, byte data[], Stat stat) {
-            // data[] contains the Zookeeper's SASL response.
-            // ctx is the ClientCnxn object.
+            // data[] contains the Zookeeper Server's SASL token.
+            // ctx is the ClientCnxn object. We use this object's setSaslServerResponse() method
+            // to reply to the Zookeeper Server's SASL token
             ClientCnxn cnxn = (ClientCnxn)ctx;
-            LOG.debug("ServerSaslResponseCallback(): saslToken server response: (length="+data.length+")");
-            cnxn.setSaslServerResponse(data);
+            byte[] usedata = data;
+            if (data != null) {
+                LOG.debug("ServerSaslResponseCallback(): saslToken server response: (length="+usedata.length+")");
+            }
+            else {
+                usedata = new byte[0];
+                LOG.debug("ServerSaslResponseCallback(): using empty data[] as server response (length="+usedata.length+")");
+            }
+            cnxn.prepareSaslResponseToServer(usedata);
         }
     }
 
@@ -908,51 +974,6 @@ public class ClientCnxn {
             queuePacket(h, null, null, null, null, null, null, null, null);
         }
 
-        byte[] createSaslToken(final byte[] saslToken) {
-            if (saslToken == null) {
-                LOG.warn("ClientCnxn:createSaslToken():saslToken is null.");
-            }
-            try {
-                final byte[] retval =
-                        Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
-                            public byte[] run() {
-                                try {
-                                        LOG.info("ClientCnxn:createSaslToken(): ->saslClient.evaluateChallenge(len="+saslToken.length+")");
-                                        return saslClient.evaluateChallenge(saslToken);
-                                }
-                                catch (Exception e) {
-                                    LOG.warn("error in evaluating SASL challenge:",e);
-                                }
-                                return null;
-                            }
-                        });
-                LOG.debug("Successfully created initial token with length:"+retval.length);
-                return retval;
-            }
-            catch (Exception e) {
-                LOG.warn("error in handling SASL token.");
-            }
-            return null;
-        }
-
-        private void sendSaslPacket(byte[] saslToken) {
-            LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
-
-            // adopted from Zookeeper:create():
-            RequestHeader h = new RequestHeader();
-            h.setType(ZooDefs.OpCode.sasl);
-            GetDataRequest request = new GetDataRequest();
-            // overloading the 'path' value of the GetDataRequest to hold the client saslToken.
-            request.setPath(new String(saslToken));
-            GetDataResponse response = new GetDataResponse();
-
-            ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
-
-            ReplyHeader r = new ReplyHeader();
-            Packet packet = queuePacket(h, r, request, response, cb, null, null,
-                    cnxn, null);
-        }
-
         private void startConnect() throws IOException {
             if(!isFirstConnect){
                 try {
@@ -1000,32 +1021,31 @@ public class ClientCnxn {
                         else {
                             if (saslClient.hasInitialResponse() == true) {
                                 cnxn.saslToken = createSaslToken(cnxn.saslToken);
-                                LOG.debug("ClientCnxn:run(): sending initial SASL token");
-                                sendSaslPacket(cnxn.saslToken);
-                                LOG.debug("ClientCnxn:run():" + state + "->SASL_RECV");
-                                state = States.SASL_RECV;
+                                LOG.debug("ClientCnxn:run(): queueing initial SASL token to send to server.");
+                                queueSaslPacket(cnxn.saslToken);
                             }
+                            else {
+                                LOG.debug("ClientCnxn:run(): no initial SASL token to be sent to server.");
+                            }
+                            LOG.debug("ClientCnxn:run():" + state + "->SASL_RECV");
+                            state = States.SASL_RECV;
                         }
                     }
                     if (state == States.SASL_SEND) {
-                        if (saslClient.isComplete() == true) {
-                            state = States.CONNECTED;
-                        }
-                        else {
-                            cnxn.saslToken = createSaslToken(cnxn.saslToken);
-                            sendSaslPacket(cnxn.saslToken);
-                            state = States.SASL_RECV;
-                            LOG.debug("ClientCnxn:run():SASL_SEND->SASL_RECV");
-                            // the callback to the packet sent by sendSaslPacket() should change the state from SASL_RECV to SASL_SEND.
-                        }
+                        // ... nothing..
                     }
-                    if (state == States.SASL_RECV) {
-                        if (saslClient.isComplete() == true) {
-                            state = States.CONNECTED;
-                        }
-                        else {
-                            LOG.debug("ClientCnxn:run():SASL_RECV: waiting for server SASL token..");
-                            //state = States.CONNECT;
+                    else {
+                        if (state == States.SASL_RECV) {
+                            LOG.debug("run():state="+state);
+                            if (saslClient.isComplete() == true) {
+                                LOG.debug("ClientCnxn:run(): SASL negotiation COMPLETE*****! SASL_RECV->CONNECTED.");
+                                updateState(States.CONNECTED);
+                            }
+                            else {
+                                LOG.debug("ClientCnxn:run():SASL_RECV: not complete: waiting for server SASL token..");
+                                // Event thread (defined above) will change ClientCnxn state to SASL_SEND (or to CONNECTED)
+                                // after the event thread processes the Server's response.
+                            }
                         }
                     }
 
@@ -1055,8 +1075,9 @@ public class ClientCnxn {
                             }
                         }
                     }
-                    LOG.debug("ClientCnxn:run():->doTransport()(state="+state+")");
+                    LOG.debug("ClientCnxn:run():doTransport()->(state="+state+")");
                     clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue);
+                    LOG.debug("ClientCnxn:run():<-doTransport()(state="+state+")");
 
                 } catch (Exception e) {
                     if (closing) {
@@ -1285,8 +1306,11 @@ public class ClientCnxn {
     }
 
     // needed by
-    void setState(States newState) {
-        state = newState;
+    void updateState(States newState) {
+        synchronized (state) {
+            LOG.debug("updateState(): "+ state + " -> " + newState);
+            state = newState;
+        }
     }
 
     // CallbackHandler here refers to javax.security.auth.callback.CallbackHandler.
