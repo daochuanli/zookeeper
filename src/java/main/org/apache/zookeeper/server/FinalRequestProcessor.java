@@ -341,20 +341,22 @@ public class FinalRequestProcessor implements RequestProcessor {
                 byte[] clientToken = clientTokenRecord.getPath().getBytes();
                 byte[] responseToken = null;
 
-                // TODO: handle cnxn.saslServer being null (must not have been initialized properly by cnxn).
-                SaslServer saslServer = cnxn.saslServer;
-                if (saslServer.isComplete()) {
-                    LOG.info("SASL authentication with client is complete.");
-                    cnxn.addAuthInfo(new Id("sasl", "foo"));
-                }
-                else {
+                try {
+                    SaslServer saslServer = cnxn.saslServer;
                     try {
                         responseToken = saslServer.evaluateResponse(clientToken);
+
+                        if (saslServer.isComplete() == true) {
+                            cnxn.addAuthInfo(new Id("sasl",saslServer.getAuthorizationID()));
+                        }
                     }
                     catch (SaslException e) {
                         LOG.error("saslServer.evaluateResponse() saslException:");
-                        e.printStackTrace();
                     }
+
+                }
+                catch (NullPointerException e) {
+                    LOG.error("cnxn.saslServer is null: cnxn object did not initialize its saslServer properly.");
                 }
 
                 Stat dummy_stat = new Stat();
