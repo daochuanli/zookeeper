@@ -183,12 +183,12 @@ public class ClientCnxn {
 
         if (saslClient.isComplete() == true) {
             LOG.debug("*****ClientCnxn:run(): SASL negotiation COMPLETE*****");
-            updateState(States.CONNECTED);
+            state = States.CONNECTED;
         }
         else {
             saslToken = createSaslToken(saslToken);
             queueSaslPacket(saslToken);
-            updateState(States.SASL);
+            state = States.SASL;
         }
     }
 
@@ -994,7 +994,7 @@ public class ClientCnxn {
                     if (state == States.SASL) {
                         if (saslClient.isComplete() == true) {
                             LOG.debug("ClientCnxn:run(): SASL negotiation COMPLETE*****! SASL->CONNECTED.");
-                            updateState(States.CONNECTED);
+                            state = States.CONNECTED;
                         }
                     }
 
@@ -1248,14 +1248,6 @@ public class ClientCnxn {
 
     States getState() {
         return state;
-    }
-
-    // TODO: remove: added during sasl work but not needed - can just directly modify a ClientCnxn's state.
-    void updateState(States newState) {
-        synchronized (state) {
-            LOG.debug("updateState(): "+ state + " -> " + newState);
-            state = newState;
-        }
     }
 
     // CallbackHandler here refers to javax.security.auth.callback.CallbackHandler.
