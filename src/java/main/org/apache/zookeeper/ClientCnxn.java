@@ -183,7 +183,7 @@ public class ClientCnxn {
         saslToken = serverToken;
 
         if (saslClient.isComplete() == true) {
-            LOG.debug("ClientCnxn:run(): SASL negotiation COMPLETE*****! SASL_SEND->CONNECTED.");
+            LOG.debug("*****ClientCnxn:run(): SASL negotiation COMPLETE*****");
             updateState(States.CONNECTED);
         }
         else {
@@ -191,9 +191,7 @@ public class ClientCnxn {
             saslToken = createSaslToken(saslToken);
             LOG.debug("prepareSaslResponseToServer():<-createSaslToken()");
             queueSaslPacket(saslToken);
-            updateState(States.SASL_RECV);
-//                            LOG.debug("ClientCnxn:run():SASL_SEND->SASL_RECV");
-            // the callback to the packet sent by sendSaslPacket() should change the state from SASL_RECV to SASL_SEND.
+            updateState(States.SASL);
         }
     }
 
@@ -1027,25 +1025,18 @@ public class ClientCnxn {
                             else {
                                 LOG.debug("ClientCnxn:run(): no initial SASL token to be sent to server.");
                             }
-                            LOG.debug("ClientCnxn:run():" + state + "->SASL_RECV");
-                            state = States.SASL_RECV;
+                            LOG.debug("ClientCnxn:run():" + state + "->SASL");
+                            state = States.SASL;
                         }
                     }
-                    if (state == States.SASL_SEND) {
-                        // ... nothing..
-                    }
-                    else {
-                        if (state == States.SASL_RECV) {
-                            LOG.debug("run():state="+state);
-                            if (saslClient.isComplete() == true) {
-                                LOG.debug("ClientCnxn:run(): SASL negotiation COMPLETE*****! SASL_RECV->CONNECTED.");
-                                updateState(States.CONNECTED);
-                            }
-                            else {
-                                LOG.debug("ClientCnxn:run():SASL_RECV: not complete: waiting for server SASL token..");
-                                // Event thread (defined above) will change ClientCnxn state to SASL_SEND (or to CONNECTED)
-                                // after the event thread processes the Server's response.
-                            }
+                    if (state == States.SASL) {
+                        LOG.debug("run():state="+state);
+                        if (saslClient.isComplete() == true) {
+                            LOG.debug("ClientCnxn:run(): SASL negotiation COMPLETE*****! SASL->CONNECTED.");
+                            updateState(States.CONNECTED);
+                        }
+                        else {
+                            LOG.debug("ClientCnxn:run():SASL: not complete: waiting for server SASL token..");
                         }
                     }
 

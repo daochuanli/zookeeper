@@ -301,7 +301,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             ||
             (sendThread.getZkState() == States.SASL_INITIAL)
             ||
-            (sendThread.getZkState() == States.SASL_RECV)) {
+            (sendThread.getZkState() == States.SASL)) {
             if (outgoingQueue.size() > 0) {
                 enableWrite();
             } else {
