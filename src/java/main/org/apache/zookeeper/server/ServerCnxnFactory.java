@@ -27,8 +27,12 @@ import java.util.HashMap;
 
 import javax.management.JMException;
 import javax.security.auth.Subject;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
+import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
@@ -215,7 +219,7 @@ public abstract class ServerCnxnFactory {
                 public SaslServer run() {
                     try {
                         SaslServer saslServer;
-                        saslServer = Sasl.createSaslServer(mech, principalName, hostName, null, new ServerCallbackHandler());
+                        saslServer = Sasl.createSaslServer(mech, principalName, hostName, null, new SaslServerCallbackHandler());
                         return saslServer;
                     }
                     catch (SaslException e) {
@@ -232,5 +236,41 @@ public abstract class ServerCnxnFactory {
         }
         return null;
     }
-
 }
+
+class SaslServerCallbackHandler implements CallbackHandler {
+    private static final Logger LOG = Logger.getLogger(ServerCallbackHandler.class);
+
+    public void handle(Callback[] callbacks) throws
+            UnsupportedCallbackException {
+        LOG.debug("ServerCallbackHandler::handle()");
+        AuthorizeCallback ac = null;
+        for (Callback callback : callbacks) {
+            if (callback instanceof AuthorizeCallback) {
+                ac = (AuthorizeCallback) callback;
+            } else {
+                throw new UnsupportedCallbackException(callback,
+                        "Unrecognized SASL GSSAPI Callback");
+            }
+        }
+        if (ac != null) {
+            String authenticationID = ac.getAuthenticationID();
+            String authorizationID = ac.getAuthorizationID();
+
+            LOG.info("Successfully authenticated client: authenticationID=" + authenticationID + ";  authorizationID=" + authorizationID + ".");
+            if (authenticationID.equals(authorizationID)) {
+                LOG.debug("setAuthorized(true) since " + authenticationID + "==" + authorizationID);
+                ac.setAuthorized(true);
+            } else {
+                LOG.debug("setAuthorized(true), even though " + authenticationID + "!=" + authorizationID + ".");
+                ac.setAuthorized(true);
+            }
+            if (ac.isAuthorized()) {
+                LOG.debug("isAuthorized() since ac.isAuthorized() == true");
+                ac.setAuthorizedID(authorizationID);
+            }
+        }
+    }
+}
+
+
