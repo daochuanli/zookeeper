@@ -331,6 +331,8 @@ public class FinalRequestProcessor implements RequestProcessor {
                 LOG.debug("FinalRequestProcessor:ProcessRequest():Responding to client SASL token.");
                 lastOp = "SASL";
 
+                // Overloading SASL tokens inside GetDataRequest/Response objects.
+                // TODO: use purpose-made Proto classes such as "Sasl{Request/Response}" or similar.
                 GetDataRequest clientTokenRecord = new GetDataRequest();
                 ZooKeeperServer.byteBuffer2Record(request.request,clientTokenRecord);
 
@@ -351,9 +353,6 @@ public class FinalRequestProcessor implements RequestProcessor {
                     }
                 }
 
-                // TODO: we are employing GetDataRequest/Response for SASL information.
-                // instead, we should use a purpose-made Proto class (which would not have a
-                // useless (for SASL purposes) Stat field).
                 Stat dummy_stat = new Stat();
                 rsp = new GetDataResponse(responseToken,dummy_stat);
                 break;
