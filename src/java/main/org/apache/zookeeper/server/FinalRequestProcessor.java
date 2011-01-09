@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import org.apache.jute.Record;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
@@ -76,10 +75,6 @@ public class FinalRequestProcessor implements RequestProcessor {
     }
 
     public void processRequest(Request request) {
-
-
-        LOG.info("FinalRequestProcessor:ProcessRequest():Request="+request);
-
         if (LOG.isDebugEnabled()) {
             LOG.debug("Processing request:: " + request);
         }
@@ -241,7 +236,6 @@ public class FinalRequestProcessor implements RequestProcessor {
             }
             case OpCode.getData: {
                 lastOp = "GETD";
-                LOG.info("FinalRequestProcessor:ProcessRequest():opCode.getData");
                 GetDataRequest getDataRequest = new GetDataRequest();
                 ZooKeeperServer.byteBuffer2Record(request.request,
                         getDataRequest);
@@ -362,7 +356,6 @@ public class FinalRequestProcessor implements RequestProcessor {
                 // useless (for SASL purposes) Stat field).
                 Stat dummy_stat = new Stat();
                 rsp = new GetDataResponse(responseToken,dummy_stat);
-                LOG.debug("FinalRequestProcessor:ProcessRequest():Responded to client SASL token with a SASL response.");
                 break;
             }
             }

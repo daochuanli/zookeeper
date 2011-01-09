@@ -63,9 +63,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         if (sock == null) {
             throw new IOException("Socket is null!");
         }
-        LOG.debug("ClientCnxnSocketNIO:doIO():checking connection to server..");
         if (sockKey.isReadable()) {
-            LOG.debug("ClientCnxnSocketNIO:doIO():server is readable.");
             int rc = sock.read(incomingBuffer);
             if (rc < 0) {
                 throw new EndOfStreamException(
@@ -97,10 +95,8 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             }
         }
         if (sockKey.isWritable()) {
-            LOG.debug("ClientCnxnSocketNIO:doIO():Server is writable: checking outgoingQueue for something to send.");
             synchronized (outgoingQueue) {
                 if (!outgoingQueue.isEmpty()) {
-                    LOG.debug("ClientCnxnSocketNIO:doIO():outgoingQueue is not empty: sending it one thing off the queue.");
                     ByteBuffer pbb = outgoingQueue.getFirst().bb;
                     sock.write(pbb);
                     if (!pbb.hasRemaining()) {
@@ -124,8 +120,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         }
         return packetReceived;
     }
-
-
 
     @Override
     void cleanup() {
@@ -253,22 +247,16 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     @Override
     void doTransport(int waitTimeOut, List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue)
             throws IOException, InterruptedException {
-        LOG.debug("doTransport() select()->");
         selector.select(waitTimeOut);
-        LOG.debug("doTransport() <-select()");
-        LOG.debug("doTransport() 2");
         Set<SelectionKey> selected;
         synchronized (this) {
             selected = selector.selectedKeys();
         }
-        LOG.debug("doTransport() updateNow()->");
         // Everything below and until we get back to the select is
         // non blocking, so time is effectively a constant. That is
         // Why we just have to do this once, here
         updateNow();
-        LOG.debug("doTransport() <-updateNow()");
         for (SelectionKey k : selected) {
-            LOG.debug("doTransport() : doing key="+k);
             SocketChannel sc = ((SocketChannel) k.channel());
             if ((k.readyOps() & SelectionKey.OP_CONNECT) != 0) {
                 if (sc.finishConnect()) {
@@ -286,8 +274,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 }
             }
         }
-
-        LOG.debug("ClientCnxnSocketNIO:doTransport():getZkState()="+sendThread.getZkState());
 
         if ((sendThread.getZkState() == States.CONNECTED)
             ||

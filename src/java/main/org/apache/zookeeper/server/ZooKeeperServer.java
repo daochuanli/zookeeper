@@ -626,13 +626,12 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             touch(si.cnxn);
             boolean validpacket = Request.isValid(si.type);
             if (validpacket) {
-                LOG.debug("ZooKeeperServer: processing request :" + si);
                 firstProcessor.processRequest(si);
                 if (si.cnxn != null) {
                     incInProcess();
                 }
             } else {
-                LOG.warn("Dropping packet at server of invalid type " + si.type);
+                LOG.warn("Dropping packet at server of type " + si.type);
                 // if invalid packet drop the packet.
             }
         } catch (MissingSessionException e) {
@@ -788,7 +787,6 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         // We don't want to receive any packets until we are sure that the
         // session is setup
         cnxn.disableRecv();
-
         long sessionId = connReq.getSessionId();
         if (sessionId != 0) {
             long clientSessionId = connReq.getSessionId();
