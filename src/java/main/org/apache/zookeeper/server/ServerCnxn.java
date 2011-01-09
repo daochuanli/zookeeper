@@ -23,6 +23,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -37,6 +39,9 @@ import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.RequestHeader;
 
+import javax.security.auth.Subject;
+import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
 /**
@@ -87,7 +92,7 @@ public abstract class ServerCnxn implements Stats, Watcher {
 
     abstract void setSessionTimeout(int sessionTimeout);
 
-    public SaslServer saslServer = null;
+    protected SaslServer saslServer = null;
 
     protected static class CloseRequestException extends IOException {
         private static final long serialVersionUID = -7854505709816442681L;
@@ -432,5 +437,45 @@ public abstract class ServerCnxn implements Stats, Watcher {
             }
         }
     }
+
+
+    public SaslServer createSaslServer(Subject subject) {
+
+        // SASL/Kerberos-related constants:
+        // TODO: these are hardwired and redundant (see ZooKeeperMain.java and ClientCnxn.java); use zoo.cfg instead.
+        final String JAAS_CONF_FILE_NAME = "jaas.conf";
+        final String HOST_NAME = "ekoontz";
+        final String SERVICE_PRINCIPAL_NAME = "testserver";
+        final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
+        final String KEY_TAB_FILE_NAME = "conf/testserver.keytab";
+
+        final String mech = "GSSAPI";   // TODO: should depend on zoo.cfg specified mechs.
+        // or figure out how to mock up a Kerberos server.
+        final String principalName = SERVICE_PRINCIPAL_NAME;
+        final String hostName = HOST_NAME;
+
+        try {
+            return Subject.doAs(subject,new PrivilegedExceptionAction<SaslServer>() {
+                public SaslServer run() {
+                    try {
+                        SaslServer saslServer;
+                        saslServer = Sasl.createSaslServer(mech,principalName,hostName,null,new ServerCallbackHandler());
+                        return saslServer;
+                    }
+                    catch (SaslException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                }
+            }
+            );
+        }
+        catch (PrivilegedActionException e) {
+            // TODO: exit server at this point(?)
+            e.printStackTrace();
+        }
+        return null;
+    }
+
 
 }

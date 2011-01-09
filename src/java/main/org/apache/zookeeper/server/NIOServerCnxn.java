@@ -31,17 +31,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
-import javax.security.sasl.Sasl;
-import javax.security.sasl.SaslException;
-import javax.security.sasl.SaslServer;
-import javax.security.auth.Subject;
-
 import org.apache.jute.BinaryInputArchive;
 import org.apache.jute.BinaryOutputArchive;
 import org.apache.jute.Record;
@@ -103,7 +96,7 @@ public class NIOServerCnxn extends ServerCnxn {
         this.sock = sock;
         this.sk = sk;
         this.factory = factory;
-        this.saslServer = createSaslServer();
+        this. saslServer = createSaslServer(factory.getSubject());
 
         if (zk != null) { 
             outstandingLimit = zk.getGlobalOutstandingLimit();
@@ -114,36 +107,6 @@ public class NIOServerCnxn extends ServerCnxn {
                 .getRemoteSocketAddress()).getAddress();
         authInfo.add(new Id("ip", addr.getHostAddress()));
         sk.interestOps(SelectionKey.OP_READ);
-    }
-
-    public SaslServer createSaslServer() {
-        final Subject subject = factory.getSubject();
-        final String mech = "GSSAPI";   // TODO: should depend on zoo.cfg specified mechs.
-        // or figure out how to mock up a Kerberos server.
-        final String principalName = factory.SERVICE_PRINCIPAL_NAME;
-        final String hostName = factory.HOST_NAME;
-
-        try {
-            return Subject.doAs(subject,new PrivilegedExceptionAction<SaslServer>() {
-                public SaslServer run() {
-                    try {
-                        SaslServer saslServer;
-                        saslServer = Sasl.createSaslServer(mech,principalName,hostName,null,new ServerCallbackHandler());
-                        return saslServer;
-                    }
-                    catch (SaslException e) {
-                        e.printStackTrace();
-                        return null;
-                    }
-                }
-            }
-            );
-        }
-        catch (PrivilegedActionException e) {
-            // TODO: exit server at this point(?)
-            e.printStackTrace();
-        }
-        return null;
     }
 
     /* Send close connection packet to the client, doIO will eventually

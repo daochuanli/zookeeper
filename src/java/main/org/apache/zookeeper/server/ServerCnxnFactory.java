@@ -45,15 +45,6 @@ public abstract class ServerCnxnFactory {
         public void processPacket(ByteBuffer packet, ServerCnxn src);
     }
 
-    // SASL/Kerberos-related constants:
-    // TODO: these are hardwired and redundant (see ZooKeeperMain.java and ClientCnxn.java); use zoo.cfg instead.
-    final String JAAS_CONF_FILE_NAME = "jaas.conf";
-    final String HOST_NAME = "ekoontz";
-    final String SERVICE_PRINCIPAL_NAME = "testserver";
-    final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
-    final String KEY_TAB_FILE_NAME = "conf/testserver.keytab";
-    Subject zkServerSubject;
-
     Logger LOG = Logger.getLogger(ServerCnxnFactory.class);
 
     /**
@@ -149,15 +140,25 @@ public abstract class ServerCnxnFactory {
 
     }
 
-
+    Subject zkServerSubject;
 
     protected void authenticateServer() {
         // Should be called only once, at server startup time.
         System.setProperty("javax.security.sasl.level","FINEST");
         System.setProperty("handlers", "java.util.logging.ConsoleHandler");
 
+        // SASL/Kerberos-related constants:
+        // TODO: these are hardwired and redundant (see ZooKeeperMain.java and ClientCnxn.java); use zoo.cfg instead.
+        final String JAAS_CONF_FILE_NAME = "jaas.conf";
+        final String HOST_NAME = "ekoontz";
+        final String SERVICE_PRINCIPAL_NAME = "testserver";
+        final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
+        final String KEY_TAB_FILE_NAME = "conf/testserver.keytab";
 
-        System.setProperty( "java.security.auth.login.config", JAAS_CONF_FILE_NAME);
+        final String mech = "GSSAPI";   // TODO: should depend on zoo.cfg specified mechs.
+
+
+        System.setProperty("java.security.auth.login.config", JAAS_CONF_FILE_NAME);
 
         //
         // The file given in JAAS_CONF_FILE_NAME must have :
@@ -193,39 +194,38 @@ public abstract class ServerCnxnFactory {
         return zkServerSubject;
     }
 
-}
-
-class ServerCallbackHandler implements CallbackHandler {
-    @Override
-    public void handle(Callback[] callbacks) throws
-            UnsupportedCallbackException {
-        System.out.println("ServerCallbackHandler::handle()");
-        AuthorizeCallback ac = null;
-        for (Callback callback : callbacks) {
-            if (callback instanceof AuthorizeCallback) {
-                ac = (AuthorizeCallback) callback;
-            } else {
-                throw new UnsupportedCallbackException(callback,
-                        "Unrecognized SASL GSSAPI Callback");
+    class ServerCallbackHandler implements CallbackHandler {
+        @Override
+        public void handle(Callback[] callbacks) throws
+                UnsupportedCallbackException {
+            System.out.println("ServerCallbackHandler::handle()");
+            AuthorizeCallback ac = null;
+            for (Callback callback : callbacks) {
+                if (callback instanceof AuthorizeCallback) {
+                    ac = (AuthorizeCallback) callback;
+                } else {
+                    throw new UnsupportedCallbackException(callback,
+                            "Unrecognized SASL GSSAPI Callback");
+                }
             }
-        }
-        if (ac != null) {
-            String authid = ac.getAuthenticationID();
-            String authzid = ac.getAuthorizationID();
+            if (ac != null) {
+                String authid = ac.getAuthenticationID();
+                String authzid = ac.getAuthorizationID();
 
-            if (authid.equals(authzid)) {
-                ac.setAuthorized(true);
-            } else {
-                if (true) {
-                    System.out.println("authid != authzid; setting to authorized anyway.");
+                if (authid.equals(authzid)) {
                     ac.setAuthorized(true);
+                } else {
+                    if (true) {
+                        System.out.println("authid != authzid; setting to authorized anyway.");
+                        ac.setAuthorized(true);
+                    }
+                    else {
+                        ac.setAuthorized(false);
+                    }
                 }
-                else {
-                    ac.setAuthorized(false);
+                if (ac.isAuthorized()) {
+                    ac.setAuthorizedID(authzid);
                 }
-            }
-            if (ac.isAuthorized()) {
-                ac.setAuthorizedID(authzid);
             }
         }
     }
