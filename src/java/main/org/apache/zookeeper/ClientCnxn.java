@@ -178,7 +178,6 @@ public class ClientCnxn {
     // that will be used to configure relevant parameters to do Kerberos authentication.
     // </SASL-related Constants>
 
-
     public void prepareSaslResponseToServer(byte[] serverToken) {
         saslToken = serverToken;
 
