@@ -125,7 +125,7 @@ public class NIOServerCnxn extends ServerCnxn {
 
     public SaslServer createSaslServer() {
         final Subject subject = factory.getSubject();
-        final String mech = "GSSAPI";   // TODO: allow other mechs besides GSSAPI to make test-writing easier.
+        final String mech = "GSSAPI";   // TODO: should depend on zoo.cfg specified mechs.
         // or figure out how to mock up a Kerberos server.
         final String principalName = factory.SERVICE_PRINCIPAL_NAME;
         final String hostName = factory.HOST_NAME;
@@ -135,13 +135,11 @@ public class NIOServerCnxn extends ServerCnxn {
                 public SaslServer run() {
                     try {
                         SaslServer saslServer;
-                        System.out.println("creating SaslServer with service subject..");
                         saslServer = Sasl.createSaslServer(mech,principalName,hostName,null,new ServerCallbackHandler());
                         System.out.println("..done.");
                         return saslServer;
                     }
                     catch (SaslException e) {
-                        System.err.println("Error creating SaslServer.");
                         e.printStackTrace();
                         return null;
                     }
@@ -150,7 +148,7 @@ public class NIOServerCnxn extends ServerCnxn {
             );
         }
         catch (PrivilegedActionException e) {
-            System.err.println("Error creating SaslServer object while calling doAs((principal='" + principalName + "'),..)");
+            // TODO: exit server at this point(?)
             e.printStackTrace();
         }
         return null;

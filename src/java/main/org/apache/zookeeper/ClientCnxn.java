@@ -408,8 +408,7 @@ public class ClientCnxn {
         try {
             this.saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
                 public SaslClient run() throws SaslException {
-
-                    System.out.println("CREATING SASL CLIENT OBJECT NOW...");
+                    // TODO: should depend on zoo.cfg configuration options.
                     String[] mechs = {"GSSAPI"};
                     SaslClient saslClient = Sasl.createSaslClient(mechs,
                             CLIENT_PRINCIPAL_NAME,
@@ -417,8 +416,6 @@ public class ClientCnxn {
                             HOST_NAME,
                             null,
                             new ClientCallbackHandler());
-
-                    System.out.println("DONE CREATING SASL CLIENT OBJECT.");
                     return saslClient;
                 }
             });
