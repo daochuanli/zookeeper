@@ -96,7 +96,7 @@ public class NIOServerCnxn extends ServerCnxn {
         this.sock = sock;
         this.sk = sk;
         this.factory = factory;
-        this. saslServer = createSaslServer(factory.getSubject());
+        this.saslServer = factory.createSaslServer();
 
         if (zk != null) { 
             outstandingLimit = zk.getGlobalOutstandingLimit();

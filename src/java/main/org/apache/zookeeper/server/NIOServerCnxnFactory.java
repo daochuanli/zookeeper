@@ -95,7 +95,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         ss.register(selector, SelectionKey.OP_ACCEPT);
 
         // should only be called once, at server startup-time.
-        authenticateServer();
+        setupSubject();
     }
 
 

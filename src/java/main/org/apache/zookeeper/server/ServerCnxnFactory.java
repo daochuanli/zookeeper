@@ -21,12 +21,17 @@ package org.apache.zookeeper.server;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 
 import javax.management.JMException;
 import javax.security.auth.Subject;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
+import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslException;
+import javax.security.sasl.SaslServer;
 
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.jmx.MBeanRegistry;
@@ -134,9 +139,14 @@ public abstract class ServerCnxnFactory {
 
     }
 
-    Subject zkServerSubject;
+    private Subject zkServerSubject;
 
-    protected void authenticateServer() {
+    public Subject getSubject() {
+        return zkServerSubject;
+    }
+
+    protected void setupSubject() {
+        // This initializes zkServerSubject.
         // Should be called only once, at server startup time.
         System.setProperty("javax.security.sasl.level","FINEST");
         System.setProperty("handlers", "java.util.logging.ConsoleHandler");
@@ -184,8 +194,43 @@ public abstract class ServerCnxnFactory {
         }
     }
 
-    public Subject getSubject() {
-        return zkServerSubject;
+    public SaslServer createSaslServer() {
+        Subject subject = getSubject();
+
+        // SASL/Kerberos-related constants:
+        // TODO: these are hardwired and redundant (see ZooKeeperMain.java and ClientCnxn.java); use zoo.cfg instead.
+        final String JAAS_CONF_FILE_NAME = "jaas.conf";
+        final String HOST_NAME = "ekoontz";
+        final String SERVICE_PRINCIPAL_NAME = "testserver";
+        final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
+        final String KEY_TAB_FILE_NAME = "conf/testserver.keytab";
+
+        final String mech = "GSSAPI";   // TODO: should depend on zoo.cfg specified mechs.
+        // or figure out how to mock up a Kerberos server.
+        final String principalName = SERVICE_PRINCIPAL_NAME;
+        final String hostName = HOST_NAME;
+
+        try {
+            return Subject.doAs(subject,new PrivilegedExceptionAction<SaslServer>() {
+                public SaslServer run() {
+                    try {
+                        SaslServer saslServer;
+                        saslServer = Sasl.createSaslServer(mech, principalName, hostName, null, new ServerCallbackHandler());
+                        return saslServer;
+                    }
+                    catch (SaslException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                }
+            }
+            );
+        }
+        catch (PrivilegedActionException e) {
+            // TODO: exit server at this point(?)
+            e.printStackTrace();
+        }
+        return null;
     }
 
 }

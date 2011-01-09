@@ -443,44 +443,6 @@ public abstract class ServerCnxn implements Stats, Watcher {
         }
     }
 
-
-    public SaslServer createSaslServer(Subject subject) {
-
-        // SASL/Kerberos-related constants:
-        // TODO: these are hardwired and redundant (see ZooKeeperMain.java and ClientCnxn.java); use zoo.cfg instead.
-        final String JAAS_CONF_FILE_NAME = "jaas.conf";
-        final String HOST_NAME = "ekoontz";
-        final String SERVICE_PRINCIPAL_NAME = "testserver";
-        final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
-        final String KEY_TAB_FILE_NAME = "conf/testserver.keytab";
-
-        final String mech = "GSSAPI";   // TODO: should depend on zoo.cfg specified mechs.
-        // or figure out how to mock up a Kerberos server.
-        final String principalName = SERVICE_PRINCIPAL_NAME;
-        final String hostName = HOST_NAME;
-
-        try {
-            return Subject.doAs(subject,new PrivilegedExceptionAction<SaslServer>() {
-                public SaslServer run() {
-                    try {
-                        SaslServer saslServer;
-                        saslServer = Sasl.createSaslServer(mech,principalName,hostName,null,new ServerCallbackHandler());
-                        return saslServer;
-                    }
-                    catch (SaslException e) {
-                        e.printStackTrace();
-                        return null;
-                    }
-                }
-            }
-            );
-        }
-        catch (PrivilegedActionException e) {
-            // TODO: exit server at this point(?)
-            e.printStackTrace();
-        }
-        return null;
-    }
 }
 
 class ServerCallbackHandler implements CallbackHandler {
