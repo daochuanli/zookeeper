@@ -349,7 +349,8 @@ public class FinalRequestProcessor implements RequestProcessor {
                         responseToken = saslServer.evaluateResponse(clientToken);
                     }
                     catch (SaslException e) {
-                        LOG.error("saslServer.evaluateResponse() error:" + e.getStackTrace());
+                        LOG.error("saslServer.evaluateResponse() saslException:");
+                        e.printStackTrace();
                     }
                 }
 

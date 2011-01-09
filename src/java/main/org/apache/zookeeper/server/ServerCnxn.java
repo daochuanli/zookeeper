@@ -469,8 +469,8 @@ class ServerCallbackHandler implements CallbackHandler {
                 LOG.debug("setAuthorized(true) since " + authenticationID + "==" + authorizationID);
                 ac.setAuthorized(true);
             } else {
-                LOG.debug("setAuthorized(false) since " + authenticationID + "!=" + authorizationID);
-                ac.setAuthorized(false);
+                LOG.debug("setAuthorized(true), even though " + authenticationID + "!=" + authorizationID + ".");
+                ac.setAuthorized(true);
             }
             if (ac.isAuthorized()) {
                 LOG.debug("isAuthorized() since ac.isAuthorized() == true");
