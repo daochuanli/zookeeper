@@ -129,7 +129,6 @@ public class NIOServerCnxn extends ServerCnxn {
                     try {
                         SaslServer saslServer;
                         saslServer = Sasl.createSaslServer(mech,principalName,hostName,null,new ServerCallbackHandler());
-                        System.out.println("..done.");
                         return saslServer;
                     }
                     catch (SaslException e) {
@@ -230,9 +229,7 @@ public class NIOServerCnxn extends ServerCnxn {
             packetReceived();
             incomingBuffer.flip();
             if (!initialized) {
-                LOG.info("NIOServerCnxn:readPayload(): initialized= " + initialized + " : readConnectRequest()");
                 readConnectRequest();
-                LOG.info("NIOServerCnxn:readPayload(): initialized= " + initialized + " : /readConnectRequest()");
             } else {
                 readRequest();
             }

@@ -186,9 +186,7 @@ public class ClientCnxn {
             updateState(States.CONNECTED);
         }
         else {
-            LOG.debug("prepareSaslResponseToServer():createSaslToken()->");
             saslToken = createSaslToken(saslToken);
-            LOG.debug("prepareSaslResponseToServer():<-createSaslToken()");
             queueSaslPacket(saslToken);
             updateState(States.SASL);
         }
@@ -533,15 +531,11 @@ public class ClientCnxn {
            try {
               isRunning = true;
               while (true) {
-                 LOG.debug("EventThread:run():take()->");
                  Object event = waitingEvents.take();
-                 LOG.debug("EventThread:run():<-take()");
                  if (event == eventOfDeath) {
                     wasKilled = true;
                  } else {
-                     LOG.debug("EventThread:run():processEvent()->");
                     processEvent(event);
-                     LOG.debug("EventThread:run():<-processEvent()");
                  }
                  if (wasKilled)
                     synchronized (waitingEvents) {
@@ -836,12 +830,6 @@ public class ClientCnxn {
                 packet = pendingQueue.remove();
             }
 
-            // this check added in course of debugging; can be removed.
-            if (packet.replyHeader == null) {
-                LOG.debug("ClientCnxn$SendThread:readResponse():replyHdr is unexpectedly NULL!! (1)");
-            }
-
-
             /*
              * Since requests are processed in order, we better get a response
              * to the first request!
@@ -859,20 +847,7 @@ public class ClientCnxn {
                             + packet );
                 }
 
-                // this check added in course of debugging; can be removed.
-                if (packet.replyHeader == null) {
-                    LOG.debug("ClientCnxn$SendThread:readResponse():replyHdr is unexpectedly NULL!! (5)");
-                }
-                // This try { .. } catch { .. } was added by me for SASL-debugging purposes; remove for final patch.
-                // (just have bare 'packet.replyHeader...' with no try { .. } catch { .. } wrapper.
-                // During development work on SASL was causing NPE's here, but in further work, eliminated them.
-                // So no remaining motivation to modify code to catch NullPointerException here.
-                try {
-                    packet.replyHeader.setXid(replyHdr.getXid());
-                }
-                catch (NullPointerException e) {
-                    LOG.debug("ClientCnxn$SendThread:readResponse():caught a NPE here!!!");
-                }
+                packet.replyHeader.setXid(replyHdr.getXid());
                 packet.replyHeader.setErr(replyHdr.getErr());
                 packet.replyHeader.setZxid(replyHdr.getZxid());
                 if (replyHdr.getZxid() > 0) {
@@ -886,9 +861,6 @@ public class ClientCnxn {
                     LOG.debug("Reading reply sessionid:0x"
                             + Long.toHexString(sessionId) + ", packet:: " + packet);
                 }
-
-                //LOG.debug("ClientCnxn:ReadResponse(): Finished reading server reply packet:" + packet);
-
             } finally {
                 finishPacket(packet);
             }
@@ -998,7 +970,6 @@ public class ClientCnxn {
             clientCnxnSocket.updateLastSendAndHeard();
             int to;
             while (state.isAlive()) {
-                LOG.debug("ClientCnxn:SendThread:run(): state="+state+";cnxn="+this.cnxn.toString()+";saslToken length>>>>>>"+cnxn.saslToken.length);
                 try {
                     if (!clientCnxnSocket.isConnected()) {
                         // don't re-establish connection if we are closing
@@ -1016,11 +987,7 @@ public class ClientCnxn {
                         else {
                             if (saslClient.hasInitialResponse() == true) {
                                 cnxn.saslToken = createSaslToken(cnxn.saslToken);
-                                LOG.debug("ClientCnxn:run(): queueing initial SASL token to send to server.");
                                 queueSaslPacket(cnxn.saslToken);
-                            }
-                            else {
-                                LOG.debug("ClientCnxn:run(): no initial SASL token to be sent to server.");
                             }
                             LOG.debug("ClientCnxn:run():" + state + "->SASL");
                             state = States.SASL;
@@ -1031,9 +998,6 @@ public class ClientCnxn {
                         if (saslClient.isComplete() == true) {
                             LOG.debug("ClientCnxn:run(): SASL negotiation COMPLETE*****! SASL->CONNECTED.");
                             updateState(States.CONNECTED);
-                        }
-                        else {
-                            LOG.debug("ClientCnxn:run():SASL: not complete: waiting for server SASL token..");
                         }
                     }
 
@@ -1063,9 +1027,7 @@ public class ClientCnxn {
                             }
                         }
                     }
-                    LOG.debug("ClientCnxn:run():doTransport()->(state="+state+")");
                     clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue);
-                    LOG.debug("ClientCnxn:run():<-doTransport()(state="+state+")");
 
                 } catch (Exception e) {
                     if (closing) {
@@ -1161,7 +1123,6 @@ public class ClientCnxn {
             sessionPasswd = _sessionPasswd;
             // Big Red SASL on-off switch: true -> SASL is on; false otherwise.
             if (true) {
-                LOG.debug("ClientCnxn:onConnected():"+state+"->SASL_INITIAL");
                 state = States.SASL_INITIAL;
 
             }
@@ -1271,7 +1232,6 @@ public class ClientCnxn {
                 if (h.getType() == OpCode.closeSession) {
                     closing = true;
                 }
-                LOG.debug("queuePacket: queued packet of type: " + h.getType());
                 outgoingQueue.add(packet);
             }
         }
@@ -1293,7 +1253,7 @@ public class ClientCnxn {
         return state;
     }
 
-    // needed by
+    // TODO: remove: added during sasl work but not needed - can just directly modify a ClientCnxn's state.
     void updateState(States newState) {
         synchronized (state) {
             LOG.debug("updateState(): "+ state + " -> " + newState);
@@ -1310,7 +1270,6 @@ public class ClientCnxn {
         System.out.println("ClientCallbackHandler::handle()");
         AuthorizeCallback ac = null;
         for (Callback callback : callbacks) {
-          System.out.println("ClientCallbackHandler::handle()::each callback");
           if (callback instanceof AuthorizeCallback) {
             ac = (AuthorizeCallback) callback;
           } else {

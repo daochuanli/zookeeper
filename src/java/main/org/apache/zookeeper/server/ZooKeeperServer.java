@@ -632,7 +632,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                     incInProcess();
                 }
             } else {
-                LOG.warn("Dropping packet at server of invalid type " + si.type);
+                LOG.warn("Dropping packet at server of type " + si.type);
                 // if invalid packet drop the packet.
             }
         } catch (MissingSessionException e) {
