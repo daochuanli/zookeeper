@@ -30,6 +30,7 @@ import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.KeeperException.SessionMovedException;
 import org.apache.zookeeper.ZooDefs.OpCode;
 import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.CreateResponse;
 import org.apache.zookeeper.proto.ExistsRequest;
@@ -340,9 +341,11 @@ public class FinalRequestProcessor implements RequestProcessor {
                 byte[] clientToken = clientTokenRecord.getPath().getBytes();
                 byte[] responseToken = null;
 
+                // TODO: handle cnxn.saslServer being null (must not have been initialized properly by cnxn).
                 SaslServer saslServer = cnxn.saslServer;
                 if (saslServer.isComplete()) {
                     LOG.info("SASL authentication with client is complete.");
+                    cnxn.addAuthInfo(new Id("sasl", "foo"));
                 }
                 else {
                     try {
