@@ -169,7 +169,7 @@ public class ClientCnxn {
     private SaslClient saslClient;
     private byte[] saslToken = new byte[0];
     // <SASL-related Constants>
-    // TODO: these are hardwired and redundant (see ZooKeeperMain.java); use zoo.cfg instead.
+    // TODO: these are hardwired and redundant (see ZooKeeperMain.java and ServerCnxnFactory.java); use zoo.cfg instead.
     final String JAAS_CONF_FILE_NAME = "/Users/ekoontz/zookeeper/jaas.conf";
     final String HOST_NAME = "ekoontz"; // The hostname that the client (this code) is running on. (might be fully qualified, or not)
     final String CLIENT_PRINCIPAL_NAME = "testclient"; // The client principal.

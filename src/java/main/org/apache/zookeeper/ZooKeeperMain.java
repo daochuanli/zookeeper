@@ -295,6 +295,7 @@ public class ZooKeeperMain {
         Subject subject = null;
         try {
             // <Constants>
+            // TODO: these are hardwired and redundant (see ClientCnxn.java and ServerCnxnFactory.java); use zoo.cfg instead.
             final String JAAS_CONF_FILE_NAME = "/Users/ekoontz/zookeeper/jaas.conf";
             final String HOST_NAME = "ekoontz"; // The hostname that the client (this code) is running on. (might be fully qualified, or not)
             final String CLIENT_PRINCIPAL_NAME = "testclient"; // The client principal.

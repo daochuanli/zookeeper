@@ -46,7 +46,7 @@ public abstract class ServerCnxnFactory {
     }
 
     // SASL/Kerberos-related constants:
-    // TODO: less hard-wired; more configurable from zoo.cfg.
+    // TODO: these are hardwired and redundant (see ZooKeeperMain.java and ClientCnxn.java); use zoo.cfg instead.
     final String JAAS_CONF_FILE_NAME = "jaas.conf";
     final String HOST_NAME = "ekoontz";
     final String SERVICE_PRINCIPAL_NAME = "testserver";
