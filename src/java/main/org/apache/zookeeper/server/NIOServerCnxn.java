@@ -73,12 +73,6 @@ public class NIOServerCnxn extends ServerCnxn {
 
     boolean initialized;
 
-    public enum ClientSaslState {
-      Connecting, Authenticating, Authenticated, AuthenticationFailed;
-    };
-
-    ClientSaslState clientSaslState;
-
     ByteBuffer lenBuffer = ByteBuffer.allocate(4);
 
     ByteBuffer incomingBuffer = lenBuffer;
@@ -109,7 +103,6 @@ public class NIOServerCnxn extends ServerCnxn {
         this.sock = sock;
         this.sk = sk;
         this.factory = factory;
-        this.clientSaslState = ClientSaslState.Connecting;
         this.saslServer = createSaslServer();
 
         if (zk != null) { 
