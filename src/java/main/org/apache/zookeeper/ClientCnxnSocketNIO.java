@@ -80,9 +80,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     recvCount++;
                     readLength();
                 } else if (!initialized) {
-                    LOG.info("ClientCnxnSocketNIO:doIO:initialized="+initialized+":readConnectResult()");
                     readConnectResult();
-                    LOG.info("ClientCnxnSocketNIO:doIO:initialized="+initialized+":/readConnectResult()");
                     enableRead();
                     if (!outgoingQueue.isEmpty()) {
                         enableWrite();
@@ -92,11 +90,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     packetReceived = true;
                     initialized = true;
                 } else {
-                    LOG.info("ClientCnxnSocketNIO:doIO():incomingBuffer:"+incomingBuffer);
-                    if (incomingBuffer == null) {
-                        LOG.info("ClientCnxnSocketNIO:doIO():incomingBuffer is null: probably bad.");
-                    }
-
                     sendThread.readResponse(incomingBuffer);
                     lenBuffer.clear();
                     incomingBuffer = lenBuffer;

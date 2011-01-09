@@ -203,10 +203,11 @@ public class ClientCnxn {
                     Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
                         public byte[] run() {
                             try {
-                                LOG.info("ClientCnxn:createSaslToken(): ->saslClient.evaluateChallenge(len="+saslToken.length+")");
+                                LOG.debug("ClientCnxn:createSaslToken(): ->saslClient.evaluateChallenge(len="+saslToken.length+")");
                                 return saslClient.evaluateChallenge(saslToken);
                             }
                             catch (Exception e) {
+                                // TODO: cause ClientCnxn to go into AUTH_FAILED state.
                                 LOG.warn("error in evaluating SASL challenge:",e);
                             }
                             return null;
