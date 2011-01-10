@@ -4,7 +4,6 @@ package org.apache.zookeeper.server.auth;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.server.ServerCnxn;
-import sun.util.LocaleServiceProviderPool;
 
 public class SASLAuthenticationProvider implements AuthenticationProvider {
     public String getScheme() {
@@ -32,7 +31,7 @@ public class SASLAuthenticationProvider implements AuthenticationProvider {
 
     public boolean isValid(String id) {
         return true;
-    }
+   }
 
 
 }
