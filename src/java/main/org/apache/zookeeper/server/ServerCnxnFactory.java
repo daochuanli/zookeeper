@@ -239,7 +239,7 @@ public abstract class ServerCnxnFactory {
 }
 
 class SaslServerCallbackHandler implements CallbackHandler {
-    private static final Logger LOG = Logger.getLogger(ServerCallbackHandler.class);
+    private static final Logger LOG = Logger.getLogger(CallbackHandler.class);
 
     public void handle(Callback[] callbacks) throws
             UnsupportedCallbackException {
