@@ -168,14 +168,6 @@ public class ClientCnxn {
     private Subject subject;
     private SaslClient saslClient;
     private byte[] saslToken = new byte[0];
-    // <SASL-related Constants>
-    // TODO: these are hardwired and redundant (see ZooKeeperMain.java and ServerCnxnFactory.java); use zoo.cfg instead.
-    final String JAAS_CONF_FILE_NAME = "/Users/ekoontz/zookeeper/jaas.conf";
-    final String HOST_NAME = "ekoontz"; // The hostname that the client (this code) is running on. (might be fully qualified, or not)
-    final String SERVICE_PRINCIPAL_NAME = "testserver"; // The service principal.
-    final String CLIENT_SECTION_OF_JAAS_CONF_FILE = "Client"; // The section (of the JAAS configuration file named $JAAS_CONF_FILE_NAME)
-    // that will be used to configure relevant parameters to do Kerberos authentication.
-    // </SASL-related Constants>
 
     public void prepareSaslResponseToServer(byte[] serverToken) {
         saslToken = serverToken;
