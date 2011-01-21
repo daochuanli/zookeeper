@@ -409,9 +409,9 @@ public class ClientCnxn {
                     // TODO: should depend on zoo.cfg configuration options.
                     String[] mechs = {"GSSAPI"};
                     SaslClient saslClient = Sasl.createSaslClient(mechs,
-                            CLIENT_PRINCIPAL_NAME,
-                            SERVICE_PRINCIPAL_NAME,
-                            HOST_NAME,
+                                                                  "testclient",
+                                                                  "testserver",
+                                                                  "ekoontz",
                             null,
                             new ClientCallbackHandler());
                     return saslClient;

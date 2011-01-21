@@ -508,7 +508,31 @@ public class ZooKeeper {
 
         String client_principal = "testclient";
         String server_principal = "testserver";
-        SaslClient saslClient = createSaslClient(subject,client_principal,server_principal,"192.168.0.103");
+
+        // Create SASL client.
+        SaslClient saslClient = null;
+
+        final String CLIENT_PRINCIPAL_NAME = "testclient";
+        final String SERVICE_PRINCIPAL_NAME = "testserver";
+        final String HOST_NAME = "ekoontz";
+        try {
+          saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
+              public SaslClient run() throws SaslException {
+                // TODO: should depend on zoo.cfg configuration options.
+                String[] mechs = {"GSSAPI"};
+                SaslClient saslClient = Sasl.createSaslClient(mechs,
+                                                              CLIENT_PRINCIPAL_NAME,
+                                                              SERVICE_PRINCIPAL_NAME,
+                                                              HOST_NAME,
+                                                              null,
+                                                              new ClientCallbackHandler());
+                return saslClient;
+              }
+            });
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
 
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                               hostProvider, sessionTimeout, this, watchManager,
