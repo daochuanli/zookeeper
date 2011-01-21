@@ -289,6 +289,7 @@ public class ZooKeeperMain {
                  Integer.parseInt(cl.getOption("timeout")),
                  new MyWatcher(),
                  this.subject,
+                 cl.getOption("server_princ"),
                  cl.getOption("client_princ"));
     }
     
