@@ -302,17 +302,24 @@ public class ZooKeeperMain {
         main.run();
     }
 
-    public Subject LoginToKDC() {
+    public Subject JAASLogin() {
         Subject subject = null;
         try {
-            final String JAAS_CONF_FILE_NAME = cl.getOption("jaas");
             final String CLIENT_SECTION_OF_JAAS_CONF_FILE = "Client"; // The section (of the JAAS configuration file named $JAAS_CONF_FILE_NAME)
 
-            if (JAAS_CONF_FILE_NAME == null) {
-                LOG.error("No JAAS conf file supplied; continuing without SASL authentication.");
-                return null;
+            if (System.getProperty("java.security.auth.login.config") != null) {
+                LOG.info("Using JAAS configuration file: " + System.getProperty("java.security.auth.login.config"));
             }
-            System.setProperty( "java.security.auth.login.config", JAAS_CONF_FILE_NAME);
+            else {
+                if (cl.getOption("jaas") != null) {
+                    System.setProperty("java.security.auth.login.config",cl.getOption("jaas"));
+                }
+                else {
+                    LOG.warn("No JAAS conf file supplied: continuing without SASL authentication.");
+                    return null;
+                }
+
+            }
             LoginContext loginCtx = null;
             String password = "password";
             loginCtx = new LoginContext(CLIENT_SECTION_OF_JAAS_CONF_FILE,
@@ -329,7 +336,7 @@ public class ZooKeeperMain {
 
     public ZooKeeperMain(String args[]) throws IOException, InterruptedException {
         cl.parseOptions(args);
-        subject = LoginToKDC();
+        subject = JAASLogin();
         System.out.println("Connecting to " + cl.getOption("server"));
         connectToZK(cl.getOption("server"));
         //zk = new ZooKeeper(cl.getOption("server"),
