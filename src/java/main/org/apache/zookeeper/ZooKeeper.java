@@ -383,7 +383,7 @@ public class ZooKeeper {
      *             if an invalid chroot path is specified
      */
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher, Subject subject,
-                     String server_principal, String service_principal_hostname)
+                     String service_principal)
         throws IOException
     {
         LOG.info("Initiating client connection, connectString=" + connectString
@@ -391,12 +391,17 @@ public class ZooKeeper {
 
         watchManager.defaultWatcher = watcher;
 
+        int indexOf = service_principal.indexOf("/");
+
+        String service_principal_name = service_principal.substring(0, indexOf);
+        String service_principal_hostname = service_principal.substring(indexOf+1,service_principal.length());
+
         ConnectStringParser connectStringParser = new ConnectStringParser(
                 connectString);
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        SaslClient saslClient = createSaslClient(subject,server_principal,service_principal_hostname);
+        SaslClient saslClient = createSaslClient(subject,service_principal_name,service_principal_hostname);
 
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
@@ -514,33 +519,39 @@ public class ZooKeeper {
         cnxn.start();
     }
 
-    private static SaslClient createSaslClient(Subject subject, final String server, final String service_principal_hostname) {
+    private static SaslClient createSaslClient(Subject subject, final String serviceName, final String serviceHostname) {
 
         // determine client principal from subject.
-        final Object[] principals = subject.getPrincipals().toArray();
-        final Principal clientPrincipal = (Principal)principals[0];
-        final String clientPrincipalName = clientPrincipal.getName();
-
-        SaslClient saslClient = null;
         try {
-            saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
-                public SaslClient run() throws SaslException {
-                    // TODO: should depend on CLI arguments.
-                    String[] mechs = {"GSSAPI"};
-                    LOG.debug("creating sasl client: client="+clientPrincipalName+";server="+server+";service_principal_hostname="+service_principal_hostname);
-                    SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,server,service_principal_hostname,null,new ClientCallbackHandler());
-                    return saslClient;
-                }
-            });
-            return saslClient;
+            final Object[] principals = subject.getPrincipals().toArray();
+            final Principal clientPrincipal = (Principal)principals[0];
+            final String clientPrincipalName = clientPrincipal.getName();
+
+            SaslClient saslClient = null;
+            try {
+                saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
+                    public SaslClient run() throws SaslException {
+                        // TODO: should depend on CLI arguments.
+                        String[] mechs = {"GSSAPI"};
+                        LOG.debug("creating sasl client: client="+clientPrincipalName+";service="+serviceName+";serviceHostname="+serviceHostname);
+                        SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,serviceName,serviceHostname,null,new ClientCallbackHandler());
+                        return saslClient;
+                    }
+                });
+                return saslClient;
+            }
+            catch (Exception e) {
+                LOG.error("Error creating SASL client:" + e);
+                e.printStackTrace();
+                return null;
+            }
         }
-        catch (Exception e) {
-            LOG.error("Error creating SASL client:" + e);
-            e.printStackTrace();
+        catch (NullPointerException e) {
+            LOG.error("Fatal zookeeper client error: no principals found for server.");
+            System.exit(-1);
             return null;
         }
     }
-
     /**
      * The session id for this ZooKeeper client instance. The value returned is
      * not valid until the client connects to a server and may change after a

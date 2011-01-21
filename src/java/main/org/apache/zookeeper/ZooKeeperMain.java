@@ -208,12 +208,6 @@ public class ZooKeeperMain {
                         options.put("timeout", it.next());
                     } else if (opt.equals("-jaas")) {
                         options.put("jaas", it.next());
-                    } else if (opt.equals("-client_princ")) {
-                        options.put("client_princ",it.next());
-                    } else if (opt.equals("-service_princ")) {
-                        options.put("service_princ",it.next());
-                    } else if (opt.equals("-host")) {
-                        options.put("host",it.next());
                     }
                 } catch (NoSuchElementException e){
                     System.err.println("Error: no argument found for option "
@@ -278,20 +272,21 @@ public class ZooKeeperMain {
         if (zk != null && zk.getState().isAlive()) {
             zk.close();
         }
-        host = newHost;
 
         this.subject = JAASLogin();
 
-        // default service principal name is zookeeper/zookeeper (service name/host name)
-        String servicePrincipalName = "zookeeper/zookeeper";
-        if (cl.getOption("service_princ") != null) {
-            servicePrincipalName = cl.getOption("service_princ");
-        }
-        zk = new ZooKeeper(host,
+        int indexOf = newHost.indexOf(":");
+
+        String zkHostname = newHost.substring(0,indexOf);
+
+        // default service principal name is zookeeper/ (service name/host name)
+        String servicePrincipalName = "zookeeper/"+zkHostname;
+
+        zk = new ZooKeeper(newHost,
                  Integer.parseInt(cl.getOption("timeout")),
                  new MyWatcher(),
                  this.subject,
-                 servicePrincipalName,cl.getOption("host"));
+                 servicePrincipalName);
     }
     
     public static void main(String args[])
