@@ -282,15 +282,19 @@ public class ZooKeeperMain {
 
         subject = JAASLogin();
         System.out.println("Connecting to " + cl.getOption("server"));
-        Object[] principals = subject.getPrincipals().toArray();
-        Principal clientPrincipal = (Principal)principals[0];
+        final Object[] principals = subject.getPrincipals().toArray();
+        final Principal clientPrincipal = (Principal)principals[0];
 
-
+        // default principal name is zookeeper/zookeeper (service name/host name)
+        String serverPrincipalName = "zookeeper/zookeeper";
+        if (cl.getOption("server_princ") != null) {
+            serverPrincipalName = cl.getOption("server_princ");
+        }
         zk = new ZooKeeper(host,
                  Integer.parseInt(cl.getOption("timeout")),
                  new MyWatcher(),
                  this.subject,
-                 cl.getOption("server_princ"),clientPrincipal.getName(),
+                 serverPrincipalName,clientPrincipal.getName(),
                  cl.getOption("host"));
     }
     
