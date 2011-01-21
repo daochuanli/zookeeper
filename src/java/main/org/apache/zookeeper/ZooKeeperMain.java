@@ -302,14 +302,8 @@ public class ZooKeeperMain {
     public Subject LoginToKDC() {
         Subject subject = null;
         try {
-            // <Constants>
-            // TODO: these are hardwired and redundant (see ClientCnxn.java and ServerCnxnFactory.java); use zoo.cfg instead.
             final String JAAS_CONF_FILE_NAME = cl.getOption("jaas");
-            final String HOST_NAME = "ekoontz"; // The hostname that the client (this code) is running on. (might be fully qualified, or not)
-            final String SERVICE_PRINCIPAL_NAME = "testserver"; // The service principal.
             final String CLIENT_SECTION_OF_JAAS_CONF_FILE = "Client"; // The section (of the JAAS configuration file named $JAAS_CONF_FILE_NAME)
-            // that will be used to configure relevant parameters to do Kerberos authentication.
-            // </Constants>
 
             if (JAAS_CONF_FILE_NAME == null) {
                 LOG.error("No JAAS conf file supplied; continuing without SASL authentication.");
@@ -905,7 +899,8 @@ public class ZooKeeperMain {
             super();
         }
 
-        // no callbacks supported: use the ticket cache instead (command line 'kinit'; and set useTicketCache=true in your jaas.conf).
+        // no callbacks supported: use the ticket cache instead.
+        // (command line 'kinit'; and set useTicketCache=true in your JAAS configuration file).
         public void handle( Callback[] callbacks)
                 throws IOException, UnsupportedCallbackException {
 
