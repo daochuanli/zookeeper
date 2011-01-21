@@ -219,6 +219,8 @@ public class ZooKeeperMain {
                         options.put("client_princ",it.next());
                     } else if (opt.equals("-server_princ")) {
                         options.put("server_princ",it.next());
+                    } else if (opt.equals("-host")) {
+                        options.put("host",it.next());
                     }
                 } catch (NoSuchElementException e){
                     System.err.println("Error: no argument found for option "
