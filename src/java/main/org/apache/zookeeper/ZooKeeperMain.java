@@ -213,6 +213,12 @@ public class ZooKeeperMain {
                         options.put("server", it.next());
                     } else if (opt.equals("-timeout")) {
                         options.put("timeout", it.next());
+                    } else if (opt.equals("-jaas")) {
+                        options.put("jaas", it.next());
+                    } else if (opt.equals("-client_princ")) {
+                        options.put("client_princ",it.next());
+                    } else if (opt.equals("-server_princ")) {
+                        options.put("server_princ",it.next());
                     }
                 } catch (NoSuchElementException e){
                     System.err.println("Error: no argument found for option "
