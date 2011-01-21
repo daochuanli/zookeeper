@@ -292,7 +292,7 @@ public class ZooKeeperMain {
                  new MyWatcher(),
                  this.subject,
                  cl.getOption("server_princ"),
-                 cl.getOption("client_princ"));
+                 cl.getOption("client_princ"), cl.getOption("host"));
     }
     
     public static void main(String args[])

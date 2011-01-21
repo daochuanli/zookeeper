@@ -382,7 +382,7 @@ public class ZooKeeper {
      *             if an invalid chroot path is specified
      */
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher, Subject subject,
-                     String server_principal, String client_principal_name)
+                     String server_principal, String client_principal_name, String service_principal_hostname)
         throws IOException
     {
         LOG.info("Initiating client connection, connectString=" + connectString
@@ -395,8 +395,7 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        String HOST_NAME = "ekoontz";
-        SaslClient saslClient = createSaslClient(subject,client_principal_name,server_principal,HOST_NAME);
+        SaslClient saslClient = createSaslClient(subject,client_principal_name,server_principal,service_principal_hostname);
 
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
@@ -489,8 +488,7 @@ public class ZooKeeper {
      */
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
             long sessionId, byte[] sessionPasswd, Subject subject,
-            String server_principal,
-            String client_principal)
+            String server_principal,String client_principal, String service_principal_hostname)
         throws IOException
     {
         LOG.info("Initiating client connection, connectString=" + connectString
@@ -507,8 +505,7 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        String HOST_NAME = "ekoontz";
-        SaslClient saslClient = createSaslClient(subject,client_principal,server_principal,HOST_NAME);
+        SaslClient saslClient = createSaslClient(subject,client_principal,server_principal,service_principal_hostname);
 
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                               hostProvider, sessionTimeout, this, watchManager,
@@ -516,15 +513,15 @@ public class ZooKeeper {
         cnxn.start();
     }
 
-    private static SaslClient createSaslClient(Subject subject, final String client, final String server, final String hostname) {
+    private static SaslClient createSaslClient(Subject subject, final String client, final String server, final String service_principal_hostname) {
         SaslClient saslClient = null;
         try {
             saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
                 public SaslClient run() throws SaslException {
                     // TODO: should depend on CLI arguments.
                     String[] mechs = {"GSSAPI"};
-                    LOG.debug("creating sasl client: client="+client+";server="+server+";hostname="+hostname);
-                    SaslClient saslClient = Sasl.createSaslClient(mechs,client,server,hostname,null,new ClientCallbackHandler());
+                    LOG.debug("creating sasl client: client="+client+";server="+server+";service_principal_hostname="+service_principal_hostname);
+                    SaslClient saslClient = Sasl.createSaslClient(mechs,client,server,service_principal_hostname,null,new ClientCallbackHandler());
                     return saslClient;
                 }
             });
