@@ -284,6 +284,7 @@ public class ZooKeeperMain {
             zk.close();
         }
         host = newHost;
+
         zk = new ZooKeeper(host,
                  Integer.parseInt(cl.getOption("timeout")),
                  new MyWatcher(),
@@ -314,7 +315,7 @@ public class ZooKeeperMain {
             LoginContext loginCtx = null;
             String password = "password";
             loginCtx = new LoginContext(CLIENT_SECTION_OF_JAAS_CONF_FILE,
-                    new LoginCallbackHandler( cl.getOption("client_princ"), password));
+                    new LoginCallbackHandler());
             loginCtx.login();
             subject = loginCtx.getSubject();
         }
@@ -900,43 +901,16 @@ public class ZooKeeperMain {
             super();
         }
 
-        public LoginCallbackHandler( String name, String password) {
-            super();
-            this.username = name;
-            this.password = password;
-        }
-
-        public LoginCallbackHandler( String password) {
-            super();
-            this.password = password;
-        }
-
-        private String password;
-        private String username;
-
-        /**
-         * Handles the callbacks, and sets the user/password detail.
-         * @param callbacks the callbacks to handle
-         * @throws IOException if an input or output error occurs.
-         */
+        // no callbacks supported: use the ticket cache instead (command line 'kinit'; and set useTicketCache=true in your jaas.conf).
         public void handle( Callback[] callbacks)
                 throws IOException, UnsupportedCallbackException {
 
             for ( int i=0; i<callbacks.length; i++) {
-                if ( callbacks[i] instanceof NameCallback && username != null) {
-                    NameCallback nc = (NameCallback) callbacks[i];
-                    nc.setName( username);
-                }
-                else if ( callbacks[i] instanceof PasswordCallback) {
-                    PasswordCallback pc = (PasswordCallback) callbacks[i];
-                    pc.setPassword( password.toCharArray());
-                }
-                else {
                     throw new UnsupportedCallbackException(
                             callbacks[i], "Unrecognized Callback");
-                }
             }
         }
+
     }
 }
 
