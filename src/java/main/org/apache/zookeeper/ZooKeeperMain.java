@@ -210,8 +210,8 @@ public class ZooKeeperMain {
                         options.put("jaas", it.next());
                     } else if (opt.equals("-client_princ")) {
                         options.put("client_princ",it.next());
-                    } else if (opt.equals("-server_princ")) {
-                        options.put("server_princ",it.next());
+                    } else if (opt.equals("-service_princ")) {
+                        options.put("service_princ",it.next());
                     } else if (opt.equals("-host")) {
                         options.put("host",it.next());
                     }
@@ -280,22 +280,18 @@ public class ZooKeeperMain {
         }
         host = newHost;
 
-        subject = JAASLogin();
-        System.out.println("Connecting to " + cl.getOption("server"));
-        final Object[] principals = subject.getPrincipals().toArray();
-        final Principal clientPrincipal = (Principal)principals[0];
+        this.subject = JAASLogin();
 
-        // default principal name is zookeeper/zookeeper (service name/host name)
-        String serverPrincipalName = "zookeeper/zookeeper";
-        if (cl.getOption("server_princ") != null) {
-            serverPrincipalName = cl.getOption("server_princ");
+        // default service principal name is zookeeper/zookeeper (service name/host name)
+        String servicePrincipalName = "zookeeper/zookeeper";
+        if (cl.getOption("service_princ") != null) {
+            servicePrincipalName = cl.getOption("service_princ");
         }
         zk = new ZooKeeper(host,
                  Integer.parseInt(cl.getOption("timeout")),
                  new MyWatcher(),
                  this.subject,
-                 serverPrincipalName,clientPrincipal.getName(),
-                 cl.getOption("host"));
+                 servicePrincipalName,cl.getOption("host"));
     }
     
     public static void main(String args[])

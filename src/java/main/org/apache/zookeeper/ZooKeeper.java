@@ -20,6 +20,7 @@ package org.apache.zookeeper;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -382,7 +383,7 @@ public class ZooKeeper {
      *             if an invalid chroot path is specified
      */
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher, Subject subject,
-                     String server_principal, String client_principal_name, String service_principal_hostname)
+                     String server_principal, String service_principal_hostname)
         throws IOException
     {
         LOG.info("Initiating client connection, connectString=" + connectString
@@ -395,7 +396,7 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        SaslClient saslClient = createSaslClient(subject,client_principal_name,server_principal,service_principal_hostname);
+        SaslClient saslClient = createSaslClient(subject,server_principal,service_principal_hostname);
 
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
@@ -505,7 +506,7 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        SaslClient saslClient = createSaslClient(subject,client_principal,server_principal,service_principal_hostname);
+        SaslClient saslClient = createSaslClient(subject,server_principal,service_principal_hostname);
 
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                               hostProvider, sessionTimeout, this, watchManager,
@@ -513,15 +514,21 @@ public class ZooKeeper {
         cnxn.start();
     }
 
-    private static SaslClient createSaslClient(Subject subject, final String client, final String server, final String service_principal_hostname) {
+    private static SaslClient createSaslClient(Subject subject, final String server, final String service_principal_hostname) {
+
+        // determine client principal from subject.
+        final Object[] principals = subject.getPrincipals().toArray();
+        final Principal clientPrincipal = (Principal)principals[0];
+        final String clientPrincipalName = clientPrincipal.getName();
+
         SaslClient saslClient = null;
         try {
             saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
                 public SaslClient run() throws SaslException {
                     // TODO: should depend on CLI arguments.
                     String[] mechs = {"GSSAPI"};
-                    LOG.debug("creating sasl client: client="+client+";server="+server+";service_principal_hostname="+service_principal_hostname);
-                    SaslClient saslClient = Sasl.createSaslClient(mechs,client,server,service_principal_hostname,null,new ClientCallbackHandler());
+                    LOG.debug("creating sasl client: client="+clientPrincipalName+";server="+server+";service_principal_hostname="+service_principal_hostname);
+                    SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,server,service_principal_hostname,null,new ClientCallbackHandler());
                     return saslClient;
                 }
             });
