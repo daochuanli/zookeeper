@@ -185,7 +185,9 @@ public class ClientCnxn {
 
     byte[] createSaslToken(final byte[] saslToken) {
         if (saslToken == null) {
-            LOG.warn("ClientCnxn:createSaslToken():saslToken is null.");
+            // TODO: introspect about runtime environment (such as jaas.conf)
+            LOG.error("Experienced a fatal error in authenticating with a Zookeeper Quorum member: the quorum member's saslToken is null:");
+            System.exit(-1);
         }
         try {
             final byte[] retval =
@@ -195,10 +197,13 @@ public class ClientCnxn {
                                 LOG.debug("ClientCnxn:createSaslToken(): ->saslClient.evaluateChallenge(len="+saslToken.length+")");
                                 return saslClient.evaluateChallenge(saslToken);
                             }
-                            catch (Exception e) {
-                                // TODO: cause ClientCnxn to go into AUTH_FAILED state.
-                                LOG.warn("error in evaluating SASL challenge:",e);
+                            catch (NullPointerException e) {
+                                LOG.error("Quorum Member's SASL challenge was null: client will go to AUTH_FAILED state.",e);
                             }
+                            catch (SaslException e) {
+                                LOG.error("Quorum Member's SASL challenge caused a SASLException: client will go to AUTH_FAILED state.",e);
+                            }
+                            // returning null here will result in client going to AUTH_FAILED.
                             return null;
                         }
                     });
@@ -206,7 +211,9 @@ public class ClientCnxn {
             return retval;
         }
         catch (Exception e) {
-            LOG.warn("error in handling SASL token.");
+            // TODO: introspect about runtime environment (such as jaas.conf)
+            // to give hints to user.
+            LOG.error("Some kind of error occurred when evaluating Zookeeper Quorum Member's received SASL token.");
         }
         return null;
     }
@@ -952,18 +959,25 @@ public class ClientCnxn {
                     if (state == States.SASL_INITIAL) {
                         if (saslClient.isComplete() == true) {
                             state = States.CONNECTED;
+                            LOG.warn("Unexpectedly, SASL negotiation is complete while client is in SASL_INITIAL state. Going to CONNECTED with no intervening SASL negotiation with Zookeeper Quorum member.");
                         }
                         else {
                             if (saslClient.hasInitialResponse() == true) {
                                 cnxn.saslToken = createSaslToken(cnxn.saslToken);
-                                queueSaslPacket(cnxn.saslToken);
+                                if (cnxn.saslToken == null) {
+                                    state = States.AUTH_FAILED;
+                                    LOG.debug("SASL negotiation with Zookeeper Quorum member failed: client state is now AUTH_FAILED.");
+                                }
+                                else {
+                                    queueSaslPacket(cnxn.saslToken);
+                                    state = States.SASL;
+                                }
                             }
-                            state = States.SASL;
                         }
                     }
                     if (state == States.SASL) {
                         if (saslClient.isComplete() == true) {
-                            LOG.debug("ClientCnxn:run(): SASL negotiation COMPLETE*****! SASL->CONNECTED.");
+                            LOG.debug("SASL negotiation COMPLETE*****! SASL->CONNECTED.");
                             state = States.CONNECTED;
                         }
                     }
