@@ -31,6 +31,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
@@ -40,20 +41,12 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 
+import java.security.Principal;
 import javax.security.auth.Subject;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
-import javax.security.sasl.SaslException;
-
-import javax.security.sasl.Sasl;
-import javax.security.sasl.AuthorizeCallback;
-import javax.security.sasl.SaslClient;
-import java.security.PrivilegedExceptionAction;
-
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.callback.NameCallback;
-import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 
 
@@ -281,7 +274,7 @@ public class ZooKeeperMain {
         System.out.println("\n"+msg);
     }
 
-    protected void connectToZK(String newHost) throws InterruptedException, IOException {
+    protected void connectToZK(String newHost, String loginPrincipal) throws InterruptedException, IOException {
         if (zk != null && zk.getState().isAlive()) {
             zk.close();
         }
@@ -291,8 +284,8 @@ public class ZooKeeperMain {
                  Integer.parseInt(cl.getOption("timeout")),
                  new MyWatcher(),
                  this.subject,
-                 cl.getOption("server_princ"),
-                 cl.getOption("client_princ"), cl.getOption("host"));
+                 cl.getOption("server_princ"),loginPrincipal,
+                 cl.getOption("host"));
     }
     
     public static void main(String args[])
@@ -321,7 +314,6 @@ public class ZooKeeperMain {
 
             }
             LoginContext loginCtx = null;
-            String password = "password";
             loginCtx = new LoginContext(CLIENT_SECTION_OF_JAAS_CONF_FILE,
                     new LoginCallbackHandler());
             loginCtx.login();
@@ -338,7 +330,10 @@ public class ZooKeeperMain {
         cl.parseOptions(args);
         subject = JAASLogin();
         System.out.println("Connecting to " + cl.getOption("server"));
-        connectToZK(cl.getOption("server"));
+        Object[] principals = subject.getPrincipals().toArray();
+        Principal clientPrincipal = (Principal)principals[0];
+
+        connectToZK(cl.getOption("server"),clientPrincipal.getName());
         //zk = new ZooKeeper(cl.getOption("server"),
 //                Integer.parseInt(cl.getOption("timeout")), new MyWatcher());
     }
@@ -710,9 +705,11 @@ public class ZooKeeperMain {
             }
         } else if (cmd.equals("connect")) {
             if (args.length >=2) {
-                connectToZK(args[1]);
+                // if args[2] is supplied, it's the name of a principal that will be used to authenticate
+                // with a ZK quorum member.
+                connectToZK(args[1],args[2]);
             } else {
-                connectToZK(host);                
+                connectToZK(host,null);
             }
         } 
         
