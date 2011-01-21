@@ -397,31 +397,10 @@ public class ClientCnxn {
         this.sessionTimeout = sessionTimeout;
         this.hostProvider = hostProvider;
         this.chrootPath = chrootPath;
+        this.saslClient = saslClient;
 
         connectTimeout = sessionTimeout / hostProvider.size();
         readTimeout = sessionTimeout * 2 / 3;
-
-        // Create SASL client.
-        this.saslClient = null;
-        try {
-            this.saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
-                public SaslClient run() throws SaslException {
-                    // TODO: should depend on zoo.cfg configuration options.
-                    String[] mechs = {"GSSAPI"};
-                    SaslClient saslClient = Sasl.createSaslClient(mechs,
-                                                                  "testclient",
-                                                                  "testserver",
-                                                                  "ekoontz",
-                            null,
-                            new ClientCallbackHandler());
-                    return saslClient;
-                }
-            });
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
         sendThread = new SendThread(clientCnxnSocket,this);
         eventThread = new EventThread();
         this.subject = subject;
