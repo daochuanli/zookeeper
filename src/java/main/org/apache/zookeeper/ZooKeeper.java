@@ -20,6 +20,7 @@ package org.apache.zookeeper;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
@@ -65,6 +66,13 @@ import org.apache.zookeeper.proto.SyncRequest;
 import org.apache.zookeeper.proto.SyncResponse;
 import org.apache.zookeeper.server.DataTree;
 import javax.security.auth.Subject;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.sasl.AuthorizeCallback;
+import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslClient;
+import javax.security.sasl.SaslException;
 
 /**
  * This is the main class of ZooKeeper client library. To use a ZooKeeper
@@ -385,10 +393,46 @@ public class ZooKeeper {
                 connectString);
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
+
+        String client_principal = "testclient";
+        String server_principal = "testserver";
+        SaslClient saslClient = createSaslClient(subject,client_principal,server_principal,"192.168.0.103");
+
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
-                getClientCnxnSocket(),subject);
+                              getClientCnxnSocket(),subject, saslClient);
         cnxn.start();
+    }
+
+    // CallbackHandler here refers to javax.security.auth.callback.CallbackHandler.
+    // (not to be confused with packet callbacks like ServerSaslResponseCallback, defined above).
+    private static class ClientCallbackHandler implements CallbackHandler {
+      @Override
+      public void handle(Callback[] callbacks) throws
+              UnsupportedCallbackException {
+        System.out.println("ClientCallbackHandler::handle()");
+        AuthorizeCallback ac = null;
+        for (Callback callback : callbacks) {
+          if (callback instanceof AuthorizeCallback) {
+            ac = (AuthorizeCallback) callback;
+          } else {
+            throw new UnsupportedCallbackException(callback,
+                "Unrecognized SASL GSSAPI Callback");
+          }
+        }
+        if (ac != null) {
+          String authid = ac.getAuthenticationID();
+          String authzid = ac.getAuthorizationID();
+          if (authid.equals(authzid)) {
+            ac.setAuthorized(true);
+          } else {
+            ac.setAuthorized(false);
+          }
+          if (ac.isAuthorized()) {
+            ac.setAuthorizedID(authzid);
+          }
+        }
+      }
     }
 
     /**
@@ -460,10 +504,37 @@ public class ZooKeeper {
                 connectString);
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
+
+
+        String client_principal = "testclient";
+        String server_principal = "testserver";
+        SaslClient saslClient = createSaslClient(subject,client_principal,server_principal,"192.168.0.103");
+
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
-                hostProvider, sessionTimeout, this, watchManager,
-                getClientCnxnSocket(), sessionId, sessionPasswd, subject);
+                              hostProvider, sessionTimeout, this, watchManager,
+                              getClientCnxnSocket(), sessionId, sessionPasswd, subject, saslClient);
         cnxn.start();
+    }
+
+    private static SaslClient createSaslClient(Subject subject, final String client, final String server, final String hostname) {
+        SaslClient saslClient = null;
+        try {
+            saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
+                public SaslClient run() throws SaslException {
+                    // TODO: should depend on CLI arguments.
+                    String[] mechs = {"GSSAPI"};
+                    LOG.debug("creating sasl client: client="+client+";server="+server+";hostname="+hostname);
+                    SaslClient saslClient = Sasl.createSaslClient(mechs,client,server,hostname,null,new ClientCallbackHandler());
+                    return saslClient;
+                }
+            });
+            return saslClient;
+        }
+        catch (Exception e) {
+            LOG.error("Error creating SASL client:" + e);
+            e.printStackTrace();
+            return null;
+        }
     }
 
     /**

@@ -363,9 +363,9 @@ public class ClientCnxn {
      * @throws IOException
      */
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
-            ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, Subject subject)
+                      ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, Subject subject, SaslClient saslClient)
             throws IOException {
-        this(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher, clientCnxnSocket, 0, new byte[16], subject);
+      this(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher, clientCnxnSocket, 0, new byte[16], subject, saslClient);
     }
 
     /**
@@ -389,7 +389,7 @@ public class ClientCnxn {
      */
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
             ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket,
-            long sessionId, byte[] sessionPasswd, Subject subject) {
+                      long sessionId, byte[] sessionPasswd, Subject subject, SaslClient saslClient) {
         this.zooKeeper = zooKeeper;
         this.watcher = watcher;
         this.sessionId = sessionId;
