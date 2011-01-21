@@ -304,13 +304,17 @@ public class ZooKeeperMain {
         try {
             // <Constants>
             // TODO: these are hardwired and redundant (see ClientCnxn.java and ServerCnxnFactory.java); use zoo.cfg instead.
-            final String JAAS_CONF_FILE_NAME = "/Users/ekoontz/zookeeper/jaas.conf";
+            final String JAAS_CONF_FILE_NAME = cl.getOption("jaas");
             final String HOST_NAME = "ekoontz"; // The hostname that the client (this code) is running on. (might be fully qualified, or not)
             final String SERVICE_PRINCIPAL_NAME = "testserver"; // The service principal.
             final String CLIENT_SECTION_OF_JAAS_CONF_FILE = "Client"; // The section (of the JAAS configuration file named $JAAS_CONF_FILE_NAME)
             // that will be used to configure relevant parameters to do Kerberos authentication.
             // </Constants>
 
+            if (JAAS_CONF_FILE_NAME == null) {
+                LOG.error("No JAAS conf file supplied; continuing without SASL authentication.");
+                return null;
+            }
             System.setProperty( "java.security.auth.login.config", JAAS_CONF_FILE_NAME);
             LoginContext loginCtx = null;
             String password = "password";
@@ -320,7 +324,7 @@ public class ZooKeeperMain {
             subject = loginCtx.getSubject();
         }
         catch (LoginException e) {
-            LOG.error("Kerberos login failure : " + e + "; continuing without Kerberos authentication.");
+            LOG.error("Kerberos login failure : " + e + "; continuing without SASL authentication.");
         }
         return subject;
     }
