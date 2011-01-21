@@ -287,7 +287,8 @@ public class ZooKeeperMain {
         zk = new ZooKeeper(host,
                  Integer.parseInt(cl.getOption("timeout")),
                  new MyWatcher(),
-                 this.subject);
+                 this.subject,
+                 cl.getOption("client_princ"));
     }
     
     public static void main(String args[])
@@ -304,7 +305,6 @@ public class ZooKeeperMain {
             // TODO: these are hardwired and redundant (see ClientCnxn.java and ServerCnxnFactory.java); use zoo.cfg instead.
             final String JAAS_CONF_FILE_NAME = "/Users/ekoontz/zookeeper/jaas.conf";
             final String HOST_NAME = "ekoontz"; // The hostname that the client (this code) is running on. (might be fully qualified, or not)
-            final String CLIENT_PRINCIPAL_NAME = "testclient"; // The client principal.
             final String SERVICE_PRINCIPAL_NAME = "testserver"; // The service principal.
             final String CLIENT_SECTION_OF_JAAS_CONF_FILE = "Client"; // The section (of the JAAS configuration file named $JAAS_CONF_FILE_NAME)
             // that will be used to configure relevant parameters to do Kerberos authentication.
@@ -314,7 +314,7 @@ public class ZooKeeperMain {
             LoginContext loginCtx = null;
             String password = "password";
             loginCtx = new LoginContext(CLIENT_SECTION_OF_JAAS_CONF_FILE,
-                    new LoginCallbackHandler( CLIENT_PRINCIPAL_NAME, password));
+                    new LoginCallbackHandler( cl.getOption("client_princ"), password));
             loginCtx.login();
             subject = loginCtx.getSubject();
         }

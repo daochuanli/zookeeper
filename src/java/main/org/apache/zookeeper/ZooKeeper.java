@@ -381,7 +381,7 @@ public class ZooKeeper {
      * @throws IllegalArgumentException
      *             if an invalid chroot path is specified
      */
-    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher, Subject subject)
+    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher, Subject subject, String client_principal_name)
         throws IOException
     {
         LOG.info("Initiating client connection, connectString=" + connectString
@@ -394,10 +394,9 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        String client_principal = "testclient";
         String server_principal = "testserver";
         String HOST_NAME = "ekoontz";
-        SaslClient saslClient = createSaslClient(subject,client_principal,server_principal,"ekoontz");
+        SaslClient saslClient = createSaslClient(subject,client_principal_name,server_principal,HOST_NAME);
 
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
@@ -489,7 +488,7 @@ public class ZooKeeper {
      * @throws IllegalArgumentException for an invalid list of ZooKeeper hosts
      */
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
-            long sessionId, byte[] sessionPasswd, Subject subject)
+            long sessionId, byte[] sessionPasswd, Subject subject, String client_principal)
         throws IOException
     {
         LOG.info("Initiating client connection, connectString=" + connectString
@@ -507,7 +506,6 @@ public class ZooKeeper {
                 connectStringParser.getServerAddresses());
 
 
-        String client_principal = "testclient";
         String server_principal = "testserver";
         String HOST_NAME = "ekoontz";
         SaslClient saslClient = createSaslClient(subject,client_principal,server_principal,HOST_NAME);
