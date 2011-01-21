@@ -198,10 +198,11 @@ public class ClientCnxn {
                                 return saslClient.evaluateChallenge(saslToken);
                             }
                             catch (NullPointerException e) {
-                                LOG.error("Quorum Member's SASL challenge was null: client will go to AUTH_FAILED state.",e);
+                                LOG.error("Quorum Member's SASL challenge was null.");
                             }
                             catch (SaslException e) {
-                                LOG.error("Quorum Member's SASL challenge caused a SASLException: client will go to AUTH_FAILED state.",e);
+                                LOG.error("Quorum Member's SASL challenge caused a SASLException:",e);
+                                e.printStackTrace();
                             }
                             // returning null here will result in client going to AUTH_FAILED.
                             return null;
@@ -213,7 +214,8 @@ public class ClientCnxn {
         catch (Exception e) {
             // TODO: introspect about runtime environment (such as jaas.conf)
             // to give hints to user.
-            LOG.error("Some kind of error occurred when evaluating Zookeeper Quorum Member's received SASL token.");
+            LOG.error("Some kind of error occurred when evaluating Zookeeper Quorum Member's received SASL token. Client will go to AUTH_FAILED state.");
+            e.printStackTrace();
         }
         return null;
     }
