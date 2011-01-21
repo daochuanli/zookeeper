@@ -189,10 +189,10 @@ public abstract class ServerCnxnFactory {
             loginCtx = new LoginContext(SERVICE_SECTION_OF_JAAS_CONF_FILE);
             loginCtx.login();
             zkServerSubject = loginCtx.getSubject();
-            LOG.info("Authenticated successfully with Kerberos server.");
+            LOG.info("Zookeeper Quorum member successfully authenticated while initializing itself.");
         }
         catch (LoginException e) {
-            System.err.println("LoginException: : " + e);
+            LOG.error("Zookeeper Quorum member failed to authenticate while initializing itself: " + e);
             e.printStackTrace();
             System.exit(-1);
         }
@@ -223,6 +223,7 @@ public abstract class ServerCnxnFactory {
                         return saslServer;
                     }
                     catch (SaslException e) {
+                        LOG.error("Zookeeper Quorum Member failed to create a SaslServer to interact with a client during session initiation: " + e);
                         e.printStackTrace();
                         return null;
                     }
