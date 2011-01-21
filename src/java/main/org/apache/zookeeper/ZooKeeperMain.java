@@ -274,17 +274,23 @@ public class ZooKeeperMain {
         System.out.println("\n"+msg);
     }
 
-    protected void connectToZK(String newHost, String loginPrincipal) throws InterruptedException, IOException {
+    protected void connectToZK(String newHost) throws InterruptedException, IOException {
         if (zk != null && zk.getState().isAlive()) {
             zk.close();
         }
         host = newHost;
 
+        subject = JAASLogin();
+        System.out.println("Connecting to " + cl.getOption("server"));
+        Object[] principals = subject.getPrincipals().toArray();
+        Principal clientPrincipal = (Principal)principals[0];
+
+
         zk = new ZooKeeper(host,
                  Integer.parseInt(cl.getOption("timeout")),
                  new MyWatcher(),
                  this.subject,
-                 cl.getOption("server_princ"),loginPrincipal,
+                 cl.getOption("server_princ"),clientPrincipal.getName(),
                  cl.getOption("host"));
     }
     
@@ -320,7 +326,7 @@ public class ZooKeeperMain {
             subject = loginCtx.getSubject();
         }
         catch (LoginException e) {
-            LOG.error("Kerberos login failure : " + e + "; continuing without SASL authentication.");
+            LOG.error("Login failure : " + e + "; continuing without SASL authentication.");
         }
         return subject;
     }
@@ -328,12 +334,8 @@ public class ZooKeeperMain {
 
     public ZooKeeperMain(String args[]) throws IOException, InterruptedException {
         cl.parseOptions(args);
-        subject = JAASLogin();
-        System.out.println("Connecting to " + cl.getOption("server"));
-        Object[] principals = subject.getPrincipals().toArray();
-        Principal clientPrincipal = (Principal)principals[0];
 
-        connectToZK(cl.getOption("server"),clientPrincipal.getName());
+        connectToZK(cl.getOption("server"));
         //zk = new ZooKeeper(cl.getOption("server"),
 //                Integer.parseInt(cl.getOption("timeout")), new MyWatcher());
     }
@@ -705,11 +707,9 @@ public class ZooKeeperMain {
             }
         } else if (cmd.equals("connect")) {
             if (args.length >=2) {
-                // if args[2] is supplied, it's the name of a principal that will be used to authenticate
-                // with a ZK quorum member.
-                connectToZK(args[1],args[2]);
+                connectToZK(args[1]);
             } else {
-                connectToZK(host,null);
+                connectToZK(host);
             }
         } 
         
