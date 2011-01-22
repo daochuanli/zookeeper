@@ -22,6 +22,9 @@ import java.io.File;
 import java.io.IOException;
 
 import javax.management.JMException;
+import javax.security.auth.Subject;
+import javax.security.auth.login.LoginContext;
+import javax.security.auth.login.LoginException;
 
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.jmx.ManagedUtil;
@@ -125,4 +128,69 @@ public class ZooKeeperServerMain {
     protected void shutdown() {
         cnxnFactory.shutdown();
     }
+
+    private Subject zkServerSubject;
+
+    public Subject getSubject() {
+        return zkServerSubject;
+    }
+
+    protected void setupSubject() {
+        // This initializes zkServerSubject.
+        // Should be called only once, at server startup time.
+        System.setProperty("javax.security.sasl.level","FINEST");
+        System.setProperty("handlers", "java.util.logging.ConsoleHandler");
+
+        // SASL/Kerberos-related constants:
+        // TODO: these are hardwired and redundant (see createSaslServer() below); use zoo.cfg instead.
+        final String JAAS_CONF_FILE_NAME = "jaas.conf";
+        final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
+
+/*        if (System.getProperty("java.security.auth.login.config") != null) {
+            LOG.info("Using JAAS configuration file: " + System.getProperty("java.security.auth.login.config"));
+        }
+        else {
+            if (cl.getOption("jaas") != null) {
+                System.setProperty("java.security.auth.login.config",cl.getOption("jaas"));
+            }
+            else {
+                LOG.warn("No JAAS conf file supplied: continuing without SASL authentication.");
+                return null;
+            }
+        }
+  */
+        System.setProperty("java.security.auth.login.config", JAAS_CONF_FILE_NAME);
+
+        //
+        // The file given in JAAS_CONF_FILE_NAME must have :
+        //
+        // $SERVICE_SECTION_OF_JAAS_CONF_FILE {
+        //   com.sun.security.auth.module.Krb5LoginModule required
+        //   useKeyTab=true
+        //   keyTab="$KEY_TAB_FILE_NAME"
+        //   doNotPrompt=true
+        //   useTicketCache=false
+        //   storeKey=true
+        //   debug=true
+        //   principal="$SERVICE_NAME/$HOST_NAME";
+        // };
+
+        try {
+            // 1. Login to Kerberos.
+            LoginContext loginCtx = null;
+            LOG.info("Authenticating using '" + SERVICE_SECTION_OF_JAAS_CONF_FILE + "' section of '" + JAAS_CONF_FILE_NAME + "'...");
+            loginCtx = new LoginContext(SERVICE_SECTION_OF_JAAS_CONF_FILE);
+            loginCtx.login();
+            zkServerSubject = loginCtx.getSubject();
+            LOG.info("Zookeeper Quorum member successfully authenticated while initializing itself.");
+        }
+        catch (LoginException e) {
+            LOG.error("Zookeeper Quorum member failed to authenticate while initializing itself: " + e);
+            e.printStackTrace();
+            System.exit(-1);
+        }
+    }
+
+
+
 }
