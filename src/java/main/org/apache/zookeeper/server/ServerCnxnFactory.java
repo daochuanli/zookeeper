@@ -156,12 +156,9 @@ public abstract class ServerCnxnFactory {
         System.setProperty("handlers", "java.util.logging.ConsoleHandler");
 
         // SASL/Kerberos-related constants:
-        // TODO: these are hardwired and redundant (see ZooKeeperMain.java and ClientCnxn.java); use zoo.cfg instead.
+        // TODO: these are hardwired and redundant (see createSaslServer() below); use zoo.cfg instead.
         final String JAAS_CONF_FILE_NAME = "jaas.conf";
-        final String HOST_NAME = "ekoontz";
-        final String SERVICE_PRINCIPAL_NAME = "testserver";
         final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
-        final String KEY_TAB_FILE_NAME = "conf/testserver.keytab";
 
         final String mech = "GSSAPI";   // TODO: should depend on zoo.cfg specified mechs.
 
@@ -203,12 +200,9 @@ public abstract class ServerCnxnFactory {
 
         // SASL/Kerberos-related constants:
         // TODO: these are hardwired and redundant (see ZooKeeperMain.java and ClientCnxn.java); use zoo.cfg instead.
-        final String JAAS_CONF_FILE_NAME = "jaas.conf";
-        final String HOST_NAME = "ekoontz";
-        final String SERVICE_PRINCIPAL_NAME = "testserver";
-        final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
-        final String KEY_TAB_FILE_NAME = "conf/testserver.keytab";
-
+        // TODO: use gethostname or something in zoo.conf.
+        final String HOST_NAME = "zookeeper1";
+        final String SERVICE_PRINCIPAL_NAME = "zookeeper";
         final String mech = "GSSAPI";   // TODO: should depend on zoo.cfg specified mechs.
         // or figure out how to mock up a Kerberos server.
         final String principalName = SERVICE_PRINCIPAL_NAME;
