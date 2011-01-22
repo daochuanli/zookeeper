@@ -71,6 +71,8 @@ public class QuorumPeerConfig {
 
     protected LearnerType peerType = LearnerType.PARTICIPANT;
 
+    protected String jaasConf;
+
     @SuppressWarnings("serial")
     public static class ConfigException extends Exception {
         public ConfigException(String msg) {
@@ -157,6 +159,8 @@ public class QuorumPeerConfig {
                 {
                     throw new ConfigException("Unrecognised peertype: " + value);
                 }
+            } else if (key.equals("jaasConf")) {
+                jaasConf = value;
             } else if (key.startsWith("server.")) {
                 int dot = key.indexOf('.');
                 long sid = Long.parseLong(key.substring(dot + 1));
@@ -377,5 +381,9 @@ public class QuorumPeerConfig {
 
     public LearnerType getPeerType() {
         return peerType;
+    }
+
+    public String getJaasConf() {
+        return jaasConf;
     }
 }
