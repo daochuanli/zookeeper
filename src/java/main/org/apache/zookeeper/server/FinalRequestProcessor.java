@@ -351,7 +351,8 @@ public class FinalRequestProcessor implements RequestProcessor {
                         }
                     }
                     catch (SaslException e) {
-                        LOG.error("saslServer.evaluateResponse() saslException:");
+                        LOG.error("saslServer.evaluateResponse() saslException:" + e);
+			e.printStackTrace();
                     }
 
                 }
