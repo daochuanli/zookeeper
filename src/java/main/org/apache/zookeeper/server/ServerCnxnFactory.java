@@ -21,6 +21,7 @@ package org.apache.zookeeper.server;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
@@ -92,37 +93,56 @@ public abstract class ServerCnxnFactory {
     }
 
     public SaslServer createSaslServer() {
-        // SASL/Kerberos-related constants:
-        // TODO: these are hardwired and redundant (see ZooKeeperMain.java and ClientCnxn.java); use zoo.cfg instead.
-        // TODO: use gethostname or something in zoo.conf.
-        final String HOST_NAME = "zookeeper1";
-        final String SERVICE_PRINCIPAL_NAME = "zookeeper";
-        final String mech = "GSSAPI";   // TODO: should depend on zoo.cfg specified mechs.
-        // or figure out how to mock up a Kerberos server.
-        final String principalName = SERVICE_PRINCIPAL_NAME;
-        final String hostName = HOST_NAME;
-
+        // determine service principal name and hostname from zk server's subject.
         try {
-            return Subject.doAs(subject,new PrivilegedExceptionAction<SaslServer>() {
-                public SaslServer run() {
-                    try {
-                        SaslServer saslServer;
-                        saslServer = Sasl.createSaslServer(mech, principalName, hostName, null, new SaslServerCallbackHandler());
-                        return saslServer;
-                    }
-                    catch (SaslException e) {
-                        LOG.error("Zookeeper Quorum Member failed to create a SaslServer to interact with a client during session initiation: " + e);
-                        e.printStackTrace();
-                        return null;
+            final Object[] principals = subject.getPrincipals().toArray();
+            final Principal servicePrincipal = (Principal)principals[0];
+
+            // e.g. servicePrincipalNameAndHostname := "zookeeper/myhost.foo.com@FOO.COM"
+            final String servicePrincipalNameAndHostname = servicePrincipal.getName();
+
+            int indexOf = servicePrincipalNameAndHostname.indexOf("/");
+
+            // e.g. servicePrincipalName := "zookeeper"
+            final String servicePrincipalName = servicePrincipalNameAndHostname.substring(0, indexOf);
+
+            // e.g. serviceHostnameAndKerbDomain := "myhost.foo.com@FOO.COM"
+            final String serviceHostnameAndKerbDomain = servicePrincipalNameAndHostname.substring(indexOf+1,servicePrincipalNameAndHostname.length());
+
+            indexOf = serviceHostnameAndKerbDomain.indexOf("@");
+            // e.g. serviceHostname := "myhost.foo.com"
+            final String serviceHostname = serviceHostnameAndKerbDomain.substring(0,indexOf);
+
+            final String mech = "GSSAPI";   // TODO: should depend on zoo.cfg specified mechs.
+
+            try {
+                return Subject.doAs(subject,new PrivilegedExceptionAction<SaslServer>() {
+                    public SaslServer run() {
+                        try {
+                            SaslServer saslServer;
+                            saslServer = Sasl.createSaslServer(mech, servicePrincipalName, serviceHostname, null, new SaslServerCallbackHandler());
+                            return saslServer;
+                        }
+                        catch (SaslException e) {
+                            LOG.error("Zookeeper Quorum Member failed to create a SaslServer to interact with a client during session initiation: " + e);
+                            e.printStackTrace();
+                            return null;
+                        }
                     }
                 }
+                );
             }
-            );
+            catch (PrivilegedActionException e) {
+                // TODO: exit server at this point(?)
+                e.printStackTrace();
+            }
+
         }
-        catch (PrivilegedActionException e) {
-            // TODO: exit server at this point(?)
-            e.printStackTrace();
+        catch (Exception e) {
+            LOG.error("server principal name/hostname figuring-out error: " + e);
         }
+
+
         return null;
     }
 
