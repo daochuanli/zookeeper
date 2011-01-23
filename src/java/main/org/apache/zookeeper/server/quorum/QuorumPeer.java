@@ -41,6 +41,8 @@ import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
 import org.apache.zookeeper.server.quorum.flexible.QuorumMaj;
 import org.apache.zookeeper.server.quorum.flexible.QuorumVerifier;
 
+import javax.security.auth.Subject;
+
 /**
  * This class manages the quorum protocol. There are three states this server
  * can be in:
@@ -447,12 +449,12 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
      */
     public QuorumPeer(Map<Long,QuorumServer> quorumPeers, File snapDir,
             File logDir, int clientPort, int electionAlg,
-            long myid, int tickTime, int initLimit, int syncLimit)
+            long myid, int tickTime, int initLimit, int syncLimit, Subject subject)
         throws IOException
     {
         this(quorumPeers, snapDir, logDir, electionAlg,
                 myid,tickTime, initLimit,syncLimit,
-                ServerCnxnFactory.createFactory(new InetSocketAddress(clientPort), -1),
+                ServerCnxnFactory.createFactory(new InetSocketAddress(clientPort), -1, subject),
                 new QuorumMaj(countParticipants(quorumPeers)));
     }
     
@@ -463,12 +465,12 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     public QuorumPeer(Map<Long,QuorumServer> quorumPeers, File snapDir,
             File logDir, int clientPort, int electionAlg,
             long myid, int tickTime, int initLimit, int syncLimit, 
-            QuorumVerifier quorumConfig)
+            QuorumVerifier quorumConfig, Subject subject)
         throws IOException
     {
         this(quorumPeers, snapDir, logDir, electionAlg,
                 myid,tickTime, initLimit,syncLimit,
-                ServerCnxnFactory.createFactory(new InetSocketAddress(clientPort), -1),
+                ServerCnxnFactory.createFactory(new InetSocketAddress(clientPort), -1, subject),
                 quorumConfig);
     }
     

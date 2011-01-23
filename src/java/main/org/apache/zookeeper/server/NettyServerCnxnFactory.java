@@ -44,6 +44,8 @@ import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
+import javax.security.auth.Subject;
+
 public class NettyServerCnxnFactory extends ServerCnxnFactory {
     Logger LOG = Logger.getLogger(NettyServerCnxnFactory.class);
 
@@ -298,7 +300,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
     }
 
     @Override
-    public void configure(InetSocketAddress addr, int maxClientCnxns)
+    public void configure(InetSocketAddress addr, int maxClientCnxns, Subject subject)
             throws IOException
     {
         localAddress = addr;

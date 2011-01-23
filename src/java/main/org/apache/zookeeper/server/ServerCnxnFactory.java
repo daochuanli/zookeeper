@@ -52,6 +52,8 @@ public abstract class ServerCnxnFactory {
 
     Subject subject;
 
+    public Subject getSubject() { return subject; }
+
     /**
      * The buffer will cause the connection to be close when we do a send.
      */
