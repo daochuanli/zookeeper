@@ -50,6 +50,8 @@ public abstract class ServerCnxnFactory {
 
     Logger LOG = Logger.getLogger(ServerCnxnFactory.class);
 
+    Subject subject;
+
     /**
      * The buffer will cause the connection to be close when we do a send.
      */
@@ -62,7 +64,7 @@ public abstract class ServerCnxnFactory {
     public abstract void closeSession(long sessionId);
 
     public abstract void configure(InetSocketAddress addr,
-            int maxClientCnxns) throws IOException;
+            int maxClientCnxns, Subject subject) throws IOException;
 
     /** Maximum number of connections allowed from particular host (ip) */
     public abstract int getMaxClientCnxnsPerHost();
@@ -87,6 +89,41 @@ public abstract class ServerCnxnFactory {
         }
     }
 
+    public SaslServer createSaslServer() {
+        // SASL/Kerberos-related constants:
+        // TODO: these are hardwired and redundant (see ZooKeeperMain.java and ClientCnxn.java); use zoo.cfg instead.
+        // TODO: use gethostname or something in zoo.conf.
+        final String HOST_NAME = "zookeeper1";
+        final String SERVICE_PRINCIPAL_NAME = "zookeeper";
+        final String mech = "GSSAPI";   // TODO: should depend on zoo.cfg specified mechs.
+        // or figure out how to mock up a Kerberos server.
+        final String principalName = SERVICE_PRINCIPAL_NAME;
+        final String hostName = HOST_NAME;
+
+        try {
+            return Subject.doAs(subject,new PrivilegedExceptionAction<SaslServer>() {
+                public SaslServer run() {
+                    try {
+                        SaslServer saslServer;
+                        saslServer = Sasl.createSaslServer(mech, principalName, hostName, null, new SaslServerCallbackHandler());
+                        return saslServer;
+                    }
+                    catch (SaslException e) {
+                        LOG.error("Zookeeper Quorum Member failed to create a SaslServer to interact with a client during session initiation: " + e);
+                        e.printStackTrace();
+                        return null;
+                    }
+                }
+            }
+            );
+        }
+        catch (PrivilegedActionException e) {
+            // TODO: exit server at this point(?)
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public abstract void closeAll();
     
     static public ServerCnxnFactory createFactory() throws IOException {
@@ -107,16 +144,16 @@ public abstract class ServerCnxnFactory {
     }
     
     static public ServerCnxnFactory createFactory(int clientPort,
-            int maxClientCnxns) throws IOException
+            int maxClientCnxns, Subject subject) throws IOException
     {
-        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns);
+        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns, subject);
     }
 
     static public ServerCnxnFactory createFactory(InetSocketAddress addr,
-            int maxClientCnxns) throws IOException
+            int maxClientCnxns, Subject subject) throws IOException
     {
         ServerCnxnFactory factory = createFactory();
-        factory.configure(addr, maxClientCnxns);
+        factory.configure(addr, maxClientCnxns, subject);
         return factory;
     }
 
