@@ -329,7 +329,7 @@ public class FinalRequestProcessor implements RequestProcessor {
             }
             case OpCode.sasl: {
                 // client sent a SASL token: respond with our own SASL token in response.
-                LOG.debug("FinalRequestProcessor:ProcessRequest():Responding to client SASL token.");
+                LOG.info("FinalRequestProcessor:ProcessRequest():Responding to client SASL token.");
                 lastOp = "SASL";
 
                 // Overloading SASL tokens inside GetDataRequest/Response objects.
@@ -339,6 +339,7 @@ public class FinalRequestProcessor implements RequestProcessor {
 
                 // Overloading GetDataRequest()'s path field to hold the client token.
                 byte[] clientToken = clientTokenRecord.getPath().getBytes();
+                LOG.info("Size of client SASL token: " + clientToken.length);
                 byte[] responseToken = null;
 
                 try {
@@ -352,7 +353,8 @@ public class FinalRequestProcessor implements RequestProcessor {
                     }
                     catch (SaslException e) {
                         LOG.error("saslServer.evaluateResponse() saslException:" + e);
-			e.printStackTrace();
+                        e.printStackTrace();
+                        cnxn.sendCloseSession();
                     }
 
                 }
