@@ -161,17 +161,17 @@ public class ZooKeeperServerMain {
         // };
 
         try {
-            // 1. Login to Kerberos.
+            // 1. Service Login.
             LoginContext loginCtx = null;
             final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
             loginCtx = new LoginContext(SERVICE_SECTION_OF_JAAS_CONF_FILE);
             loginCtx.login();
             zkServerSubject = loginCtx.getSubject();
-            LOG.info("Zookeeper Quorum member successfully authenticated while initializing itself.");
+            LOG.info("Zookeeper Quorum member successfully SASL-authenticated.");
             return zkServerSubject;
         }
         catch (LoginException e) {
-            LOG.error("Zookeeper Quorum member failed to authenticate while initializing itself: " + e);
+            LOG.error("Zookeeper Quorum member failed to SASL-authenticate: " + e);
             e.printStackTrace();
             System.exit(-1);
         }
