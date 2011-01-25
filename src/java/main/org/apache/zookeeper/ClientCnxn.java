@@ -172,12 +172,15 @@ public class ClientCnxn {
     public void prepareSaslResponseToServer(byte[] serverToken) {
         saslToken = serverToken;
 
+        LOG.info("saslToken (server) length: " + saslToken.length);
+
         if (saslClient.isComplete() == true) {
             LOG.debug("*****ClientCnxn:run(): SASL negotiation COMPLETE*****");
             state = States.CONNECTED;
         }
         else {
             saslToken = createSaslToken(saslToken);
+            LOG.info("saslToken (client) length: " + saslToken.length);
             queueSaslPacket(saslToken);
             state = States.SASL;
         }
@@ -960,12 +963,17 @@ public class ClientCnxn {
 
                     if (state == States.SASL_INITIAL) {
                         if (saslClient.isComplete() == true) {
+                            // TODO: this happens when client re-connects after authenticating:
+                            // should re-authenticate in this case rather than going straight to CONNECTED.
                             state = States.CONNECTED;
                             LOG.warn("Unexpectedly, SASL negotiation is complete while client is in SASL_INITIAL state. Going to CONNECTED with no intervening SASL negotiation with Zookeeper Quorum member.");
                         }
                         else {
                             if (saslClient.hasInitialResponse() == true) {
+                                LOG.info("saslClient.hasInitialResponse()==true");
+                                LOG.info("hasInitialResponse() == true; (1) SASL token length = " + cnxn.saslToken.length);
                                 cnxn.saslToken = createSaslToken(cnxn.saslToken);
+                                LOG.info("hasInitialResponse() == true; (2) SASL token length = " + cnxn.saslToken.length);
                                 if (cnxn.saslToken == null) {
                                     state = States.AUTH_FAILED;
                                     LOG.debug("SASL negotiation with Zookeeper Quorum member failed: client state is now AUTH_FAILED.");
@@ -974,6 +982,9 @@ public class ClientCnxn {
                                     queueSaslPacket(cnxn.saslToken);
                                     state = States.SASL;
                                 }
+                            }
+                            else {
+                                    LOG.info("saslClient.hasInitialResponse()==false");
                             }
                         }
                     }
