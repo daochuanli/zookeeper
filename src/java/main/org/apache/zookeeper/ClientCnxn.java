@@ -58,21 +58,7 @@ import org.apache.zookeeper.ZooKeeper.States;
 import org.apache.zookeeper.ZooKeeper.WatchRegistration;
 import org.apache.zookeeper.client.HostProvider;
 import org.apache.zookeeper.data.Stat;
-import org.apache.zookeeper.proto.AuthPacket;
-import org.apache.zookeeper.proto.ConnectRequest;
-import org.apache.zookeeper.proto.CreateResponse;
-import org.apache.zookeeper.proto.ExistsResponse;
-import org.apache.zookeeper.proto.GetACLResponse;
-import org.apache.zookeeper.proto.GetChildren2Response;
-import org.apache.zookeeper.proto.GetChildrenResponse;
-import org.apache.zookeeper.proto.GetDataRequest;
-import org.apache.zookeeper.proto.GetDataResponse;
-import org.apache.zookeeper.proto.ReplyHeader;
-import org.apache.zookeeper.proto.RequestHeader;
-import org.apache.zookeeper.proto.SetACLResponse;
-import org.apache.zookeeper.proto.SetDataResponse;
-import org.apache.zookeeper.proto.SetWatches;
-import org.apache.zookeeper.proto.WatcherEvent;
+import org.apache.zookeeper.proto.*;
 import org.apache.zookeeper.server.ByteBufferInputStream;
 import org.apache.zookeeper.server.ZooTrace;
 
@@ -225,14 +211,11 @@ public class ClientCnxn {
 
     private void queueSaslPacket(byte[] saslToken) {
         LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
-
-        // adopted from Zookeeper:create():
         RequestHeader h = new RequestHeader();
         h.setType(ZooDefs.OpCode.sasl);
-        GetDataRequest request = new GetDataRequest();
-        // overloading the 'path' value of the GetDataRequest to hold the client saslToken.
-        request.setPath(new String(saslToken));
-        GetDataResponse response = new GetDataResponse();
+        GetSASLRequest request = new GetSASLRequest();
+        request.setToken(saslToken);
+        SetSASLResponse response = new SetSASLResponse();
 
         ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
 
@@ -577,13 +560,10 @@ public class ClientCnxn {
                           cb.processResult(rc, clientPath, p.ctx, null);
                       }
                   } else if (p.cb instanceof ServerSaslResponseCallback) {
-                      // have to put this BEFORE GetDataResponse, because we're using GetDataResponse as
-                      // a transport container.
-                      // (TODO: create custom container for SASL instead of using GetData{Request/Response}.)
                       ServerSaslResponseCallback cb = (ServerSaslResponseCallback) p.cb;
-                      GetDataResponse rsp = (GetDataResponse) p.response;
+                      SetSASLResponse rsp = (SetSASLResponse) p.response;
                       // TODO : check rc (== 0, etc) as with other packet types.
-                      cb.processResult(rc,null,p.ctx,rsp.getData(),null);
+                      cb.processResult(rc,null,p.ctx,rsp.getToken(),null);
                   } else if (p.response instanceof GetDataResponse) {
                       DataCallback cb = (DataCallback) p.cb;
                       GetDataResponse rsp = (GetDataResponse) p.response;

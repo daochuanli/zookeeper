@@ -32,23 +32,9 @@ import org.apache.zookeeper.ZooDefs.OpCode;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
-import org.apache.zookeeper.proto.CreateResponse;
-import org.apache.zookeeper.proto.ExistsRequest;
-import org.apache.zookeeper.proto.ExistsResponse;
-import org.apache.zookeeper.proto.GetACLRequest;
-import org.apache.zookeeper.proto.GetACLResponse;
-import org.apache.zookeeper.proto.GetChildren2Request;
-import org.apache.zookeeper.proto.GetChildren2Response;
-import org.apache.zookeeper.proto.GetChildrenRequest;
-import org.apache.zookeeper.proto.GetChildrenResponse;
-import org.apache.zookeeper.proto.GetDataRequest;
-import org.apache.zookeeper.proto.GetDataResponse;
-import org.apache.zookeeper.proto.ReplyHeader;
-import org.apache.zookeeper.proto.SetACLResponse;
-import org.apache.zookeeper.proto.SetDataResponse;
-import org.apache.zookeeper.proto.SetWatches;
-import org.apache.zookeeper.proto.SyncRequest;
-import org.apache.zookeeper.proto.SyncResponse;
+import org.apache.zookeeper.proto.*;
+
+
 import org.apache.zookeeper.server.DataTree.ProcessTxnResult;
 import org.apache.zookeeper.server.ZooKeeperServer.ChangeRecord;
 import org.apache.zookeeper.txn.CreateSessionTxn;
@@ -332,13 +318,11 @@ public class FinalRequestProcessor implements RequestProcessor {
                 LOG.info("FinalRequestProcessor:ProcessRequest():Responding to client SASL token.");
                 lastOp = "SASL";
 
-                // Overloading SASL tokens inside GetDataRequest/Response objects.
-                // TODO: use purpose-made Proto classes such as "Sasl{Request/Response}" or similar.
-                GetDataRequest clientTokenRecord = new GetDataRequest();
+                GetSASLRequest clientTokenRecord = new GetSASLRequest();
                 ZooKeeperServer.byteBuffer2Record(request.request,clientTokenRecord);
 
                 // Overloading GetDataRequest()'s path field to hold the client token.
-                byte[] clientToken = clientTokenRecord.getPath().getBytes();
+                byte[] clientToken = clientTokenRecord.getToken();
                 LOG.info("Size of client SASL token: " + clientToken.length);
                 byte[] responseToken = null;
 
@@ -362,8 +346,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                     LOG.error("cnxn.saslServer is null: cnxn object did not initialize its saslServer properly.");
                 }
 
-                Stat dummy_stat = new Stat();
-                rsp = new GetDataResponse(responseToken,dummy_stat);
+                rsp = new SetSASLResponse(responseToken);
                 break;
             }
             }
