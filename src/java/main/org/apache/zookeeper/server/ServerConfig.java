@@ -112,4 +112,8 @@ public class ServerConfig {
     public int getMaxSessionTimeout() { return maxSessionTimeout; }
 
     public String getJaasConf() { return jaasConf; }
+
+    // TODO: hardwired to DIGEST-MD5 for now.
+    public String getAuthMech() { return "DIGEST-MD5"; }
+
 }

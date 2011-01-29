@@ -422,7 +422,7 @@ public class ZooKeeper {
             ac = (AuthorizeCallback) callback;
           } else {
             throw new UnsupportedCallbackException(callback,
-                "Unrecognized SASL GSSAPI Callback");
+                "Unrecognized SASL ClientCallback");
           }
         }
         if (ac != null) {
@@ -532,7 +532,7 @@ public class ZooKeeper {
                 saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
                     public SaslClient run() throws SaslException {
                         // TODO: should depend on CLI arguments.
-                        String[] mechs = {"GSSAPI"};
+                        String[] mechs = {"DIGEST-MD5"};
                         LOG.debug("creating sasl client: client="+clientPrincipalName+";service="+serviceName+";serviceHostname="+serviceHostname);
                         SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,serviceName,serviceHostname,null,new ClientCallbackHandler());
                         return saslClient;

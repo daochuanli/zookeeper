@@ -110,7 +110,7 @@ public class ZooKeeperServerMain {
             zkServer.setMaxSessionTimeout(config.maxSessionTimeout);
             cnxnFactory = ServerCnxnFactory.createFactory();
 
-            Subject subject = setupSubject(config.getJaasConf());
+            Subject subject = setupSubject(config.getJaasConf(),config.getAuthMech());
             cnxnFactory.configure(config.getClientPortAddress(),
                     config.getMaxClientCnxns(),
                     subject);
@@ -132,11 +132,16 @@ public class ZooKeeperServerMain {
         cnxnFactory.shutdown();
     }
 
-    protected Subject setupSubject(String jaasConf) {
+    protected Subject setupSubject(String jaasConf, String authMech) {
         // This initializes zkServerSubject.
         // Should be called only once, at server startup time.
         System.setProperty("javax.security.sasl.level","FINEST");
         System.setProperty("handlers", "java.util.logging.ConsoleHandler");
+
+        if (!(authMech.equals("GSSAPI"))) {
+            LOG.info("No login behavior defined on server-side initiation for authentication mechanism: " + authMech + " : returning null.");
+            return null;
+        }
 
         Subject zkServerSubject;
 

@@ -113,7 +113,7 @@ public abstract class ServerCnxnFactory {
             // e.g. serviceHostname := "myhost.foo.com"
             final String serviceHostname = serviceHostnameAndKerbDomain.substring(0,indexOf);
 
-            final String mech = "GSSAPI";   // TODO: should depend on zoo.cfg specified mechs.
+            final String mech = "DIGEST-MD5";   // TODO: should depend on zoo.cfg specified mechs.
 
             try {
                 return Subject.doAs(subject,new PrivilegedExceptionAction<SaslServer>() {
@@ -216,7 +216,7 @@ class SaslServerCallbackHandler implements CallbackHandler {
                 ac = (AuthorizeCallback) callback;
             } else {
                 throw new UnsupportedCallbackException(callback,
-                        "Unrecognized SASL GSSAPI Callback");
+                        "Unrecognized SASL ServerCallback");
             }
         }
         if (ac != null) {
