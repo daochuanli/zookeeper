@@ -43,6 +43,7 @@ import org.apache.zookeeper.data.Stat;
 
 import java.security.Principal;
 import javax.security.auth.Subject;
+import javax.security.auth.callback.NameCallback;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.callback.Callback;
@@ -906,9 +907,17 @@ public class ZooKeeperMain {
         public void handle( Callback[] callbacks)
                 throws IOException, UnsupportedCallbackException {
 
-            for ( int i=0; i<callbacks.length; i++) {
+            for (int i=0; i<callbacks.length; i++) {
+                Callback callback = callbacks[i];
+                if (callback instanceof NameCallback) {
+                    NameCallback nc = (NameCallback)callback;
+                    // TODO: get from the JAAS config file's Client section's "principal" value.
+                    nc.setName("myclient");
+                }
+                else {
                     throw new UnsupportedCallbackException(
                             callbacks[i], "Unrecognized Callback");
+                }
             }
         }
 

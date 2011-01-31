@@ -520,34 +520,41 @@ public class ZooKeeper {
     }
 
     private static SaslClient createSaslClient(Subject subject, final String serviceName, final String serviceHostname) {
-
-        // determine client principal from subject.
         try {
-            final Object[] principals = subject.getPrincipals().toArray();
-            final Principal clientPrincipal = (Principal)principals[0];
-            final String clientPrincipalName = clientPrincipal.getName();
-
             SaslClient saslClient = null;
-            try {
-                saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
-                    public SaslClient run() throws SaslException {
-                        // TODO: should depend on CLI arguments.
-                        String[] mechs = {"DIGEST-MD5"};
-                        LOG.debug("creating sasl client: client="+clientPrincipalName+";service="+serviceName+";serviceHostname="+serviceHostname);
-                        SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,serviceName,serviceHostname,null,new ClientCallbackHandler());
-                        return saslClient;
-                    }
-                });
+            if (subject == null) {
+                // no subject: must not be JAAS authentication: use DIGEST-MD5 mechanism instead.
+                String[] mechs = {"DIGEST-MD5"};
+                saslClient = Sasl.createSaslClient(mechs,"myclient",serviceName,serviceHostname,null,new ClientCallbackHandler());
                 return saslClient;
             }
-            catch (Exception e) {
-                LOG.error("Error creating SASL client:" + e);
-                e.printStackTrace();
-                return null;
+            else {
+                final Object[] principals = subject.getPrincipals().toArray();
+                // determine client principal from subject.
+                final Principal clientPrincipal = (Principal)principals[0];
+                final String clientPrincipalName = clientPrincipal.getName();
+
+                try {
+                    saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
+                        public SaslClient run() throws SaslException {
+                            // TODO: should depend on CLI arguments.
+                            String[] mechs = {"GSSAPI"};
+                            LOG.debug("creating sasl client: client="+clientPrincipalName+";service="+serviceName+";serviceHostname="+serviceHostname);
+                            SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,serviceName,serviceHostname,null,new ClientCallbackHandler());
+                            return saslClient;
+                        }
+                    });
+                    return saslClient;
+                }
+                catch (Exception e) {
+                    LOG.error("Error creating SASL client:" + e);
+                    e.printStackTrace();
+                    return null;
+                }
             }
         }
-        catch (NullPointerException e) {
-            LOG.error("Fatal zookeeper client error: no principals found for server.");
+        catch (Exception e) {
+            LOG.error("Exception while trying to create SASL client.");
             System.exit(-1);
             return null;
         }
