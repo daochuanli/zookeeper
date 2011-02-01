@@ -229,7 +229,7 @@ public class ClientCnxn {
         else {
             // subject == null means non-JAAS authentication.
             if (saslToken.length == 0) {
-                // TODO: for digest-md5 auth, maybe have another client state like WAITING_FOR_FIRST_SERVER_SASL_DIGEST_MD5_TOKEN or something.
+                // TODO: for digest-md5 auth, maybe have another client state like WAITING_FOR_FIRST_SERVER_SASL_DIGEST_MD5_TOKEN..
                 LOG.info("Server gave us an empty saslToken (or maybe it's just about to start the sasl initiation.");
                 return null;
             }
@@ -1004,7 +1004,7 @@ public class ClientCnxn {
                     }
                     if (state == States.SASL) {
                         if (saslClient.isComplete() == true) {
-                            LOG.debug("SASL negotiation COMPLETE*****! SASL->CONNECTED.");
+                            LOG.info("Client successfully SASL-authenticated.");
                             state = States.CONNECTED;
                         }
                     }

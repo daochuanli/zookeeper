@@ -410,42 +410,44 @@ public class ZooKeeper {
       @Override
       public void handle(Callback[] callbacks) throws
               UnsupportedCallbackException {
-        System.out.println("ClientCallbackHandler::handle()");
-        for (Callback callback : callbacks) {
-          if (callback instanceof AuthorizeCallback) {
-            AuthorizeCallback ac = (AuthorizeCallback) callback;
-            String authid = ac.getAuthenticationID();
-            String authzid = ac.getAuthorizationID();
-            if (authid.equals(authzid)) {
-                ac.setAuthorized(true);
-            } else {
-                ac.setAuthorized(false);
-            }
-            if (ac.isAuthorized()) {
-                ac.setAuthorizedID(authzid);
-            }
-          } else {
-              if (callback instanceof RealmCallback) {
-                  RealmCallback rc = (RealmCallback) callback;
-                  rc.setText("192.168.56.1");
+          System.out.println("ClientCallbackHandler::handle()");
+          for (Callback callback : callbacks) {
+              if (callback instanceof NameCallback) {
+                  NameCallback nc = (NameCallback) callback;
+                  nc.setName(nc.getDefaultName());
               }
               else {
-                  if (callback instanceof NameCallback) {
-                      NameCallback nc = (NameCallback) callback;
-                      nc.setName(nc.getDefaultName()); // for now..(returns 'myclient').
-                  } else {
-                      if (callback instanceof PasswordCallback) {
-                          PasswordCallback pc = (PasswordCallback)callback;
-                          String password = "password";
-                          pc.setPassword(password.toCharArray());
+                  if (callback instanceof PasswordCallback) {
+                      PasswordCallback pc = (PasswordCallback)callback;
+                      String password = "mypassword";
+                      pc.setPassword(password.toCharArray());
+                  }
+                  else {
+                      if (callback instanceof RealmCallback) {
+                          RealmCallback rc = (RealmCallback) callback;
+                          rc.setText(rc.getDefaultText());
                       }
                       else {
-                          throw new UnsupportedCallbackException(callback,"Unrecognized SASL ClientCallback");
+                          if (callback instanceof AuthorizeCallback) {
+                              AuthorizeCallback ac = (AuthorizeCallback) callback;
+                              String authid = ac.getAuthenticationID();
+                              String authzid = ac.getAuthorizationID();
+                              if (authid.equals(authzid)) {
+                                  ac.setAuthorized(true);
+                              } else {
+                                  ac.setAuthorized(false);
+                              }
+                              if (ac.isAuthorized()) {
+                                  ac.setAuthorizedID(authzid);
+                              }
+                          }
+                          else {
+                              throw new UnsupportedCallbackException(callback,"Unrecognized SASL ClientCallback");
+                          }
                       }
                   }
               }
           }
-        }
       }
     }
 

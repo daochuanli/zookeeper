@@ -310,19 +310,18 @@ public class ZooKeeperMain {
                     System.setProperty("java.security.auth.login.config",cl.getOption("jaas"));
                 }
                 else {
-                    LOG.warn("No JAAS conf file supplied: continuing without SASL authentication.");
+                    LOG.warn("No JAAS conf file supplied: continuing without JAAS Subject.");
                     return null;
                 }
 
             }
             LoginContext loginCtx = null;
-            loginCtx = new LoginContext(CLIENT_SECTION_OF_JAAS_CONF_FILE,
-                    new LoginCallbackHandler());
+            loginCtx = new LoginContext(CLIENT_SECTION_OF_JAAS_CONF_FILE,new LoginCallbackHandler());
             loginCtx.login();
             subject = loginCtx.getSubject();
         }
         catch (LoginException e) {
-            LOG.error("Login failure : " + e + "; continuing without SASL authentication.");
+            LOG.error("Login failure : " + e + "; continuing without JAAS Subject.");
         }
         return subject;
     }
@@ -895,32 +894,19 @@ public class ZooKeeperMain {
         return acl;
     }
 
-
     private class LoginCallbackHandler implements CallbackHandler {
-
         public LoginCallbackHandler() {
             super();
         }
 
-        // no callbacks supported: use the ticket cache instead.
-        // (command line 'kinit'; and set useTicketCache=true in your JAAS configuration file).
-        public void handle( Callback[] callbacks)
-                throws IOException, UnsupportedCallbackException {
-
-            for (int i=0; i<callbacks.length; i++) {
+        public void handle(Callback[] callbacks)
+            throws IOException, UnsupportedCallbackException {
+            for (int i = 0; i < callbacks.length; i++) {
                 Callback callback = callbacks[i];
-                if (callback instanceof NameCallback) {
-                    NameCallback nc = (NameCallback)callback;
-                    // TODO: get from the JAAS config file's Client section's "principal" value.
-                    nc.setName("myclient");
-                }
-                else {
-                    throw new UnsupportedCallbackException(
-                            callbacks[i], "Unrecognized Callback");
-                }
+                throw new UnsupportedCallbackException(callbacks[i], "Unrecognized callback: " + callback);
             }
         }
-
     }
+
 }
 

@@ -219,42 +219,42 @@ class SaslServerCallbackHandler implements CallbackHandler {
         LOG.debug("ServerCallbackHandler::handle()");
         AuthorizeCallback ac = null;
         for (Callback callback : callbacks) {
-            if (callback instanceof AuthorizeCallback) {
-                ac = (AuthorizeCallback) callback;
-
-                String authenticationID = ac.getAuthenticationID();
-                String authorizationID = ac.getAuthorizationID();
-
-                LOG.info("Successfully authenticated client: authenticationID=" + authenticationID + ";  authorizationID=" + authorizationID + ".");
-                if (authenticationID.equals(authorizationID)) {
-                    LOG.debug("setAuthorized(true) since " + authenticationID + "==" + authorizationID);
-                    ac.setAuthorized(true);
-                } else {
-                    LOG.debug("setAuthorized(true), even though " + authenticationID + "!=" + authorizationID + ".");
-                    ac.setAuthorized(true);
-                }
-                if (ac.isAuthorized()) {
-                    LOG.debug("isAuthorized() since ac.isAuthorized() == true");
-                    ac.setAuthorizedID(authorizationID);
-                }
-            } else {
+            if (callback instanceof NameCallback) {
+                NameCallback nc = (NameCallback) callback;
+                nc.setName(nc.getDefaultName());
+            }
+            else {
                 if (callback instanceof PasswordCallback) {
                     PasswordCallback pc = (PasswordCallback) callback;
-                    String thePassword = "password";
+                    // compare user's supplied password with server-stored user's password.
+                    String thePassword = "mypassword";
                     pc.setPassword(thePassword.toCharArray());
                 }
                 else {
                     if (callback instanceof RealmCallback) {
                         RealmCallback rc = (RealmCallback) callback;
                         LOG.info("client supplied realm: " + rc.getDefaultText());
+                        rc.setText(rc.getDefaultText());
                     }
                     else {
-                        if (callback instanceof NameCallback) {
-                            NameCallback nc = (NameCallback) callback;
-                        }
-                        else {
-                            throw new UnsupportedCallbackException(callback,
-                                    "Unrecognized SASL ServerCallback: " + callback);
+                        if (callback instanceof AuthorizeCallback) {
+                            ac = (AuthorizeCallback) callback;
+
+                            String authenticationID = ac.getAuthenticationID();
+                            String authorizationID = ac.getAuthorizationID();
+
+                            LOG.info("Successfully authenticated client: authenticationID=" + authenticationID + ";  authorizationID=" + authorizationID + ".");
+                            if (authenticationID.equals(authorizationID)) {
+                                LOG.debug("setAuthorized(true) since " + authenticationID + "==" + authorizationID);
+                                ac.setAuthorized(true);
+                            } else {
+                                LOG.debug("setAuthorized(true), even though " + authenticationID + "!=" + authorizationID + ".");
+                                ac.setAuthorized(true);
+                            }
+                            if (ac.isAuthorized()) {
+                                LOG.debug("isAuthorized() since ac.isAuthorized() == true");
+                                ac.setAuthorizedID(authorizationID);
+                            }
                         }
                     }
                 }

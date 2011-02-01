@@ -339,7 +339,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                         }
                     }
                     catch (SaslException e) {
-                        LOG.error("Error evaluating client response:" + e);
+                        LOG.error("Client failed to SASL authenticate. Closing client session: " + e);
                         e.printStackTrace();
                         cnxn.sendCloseSession();
                     }
