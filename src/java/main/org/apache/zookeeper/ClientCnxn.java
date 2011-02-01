@@ -165,12 +165,16 @@ public class ClientCnxn {
             state = States.CONNECTED;
         }
         else {
-            saslToken = createSaslToken(saslToken);
-            if (saslToken != null) {
-                LOG.info("saslToken (client) length: " + saslToken.length);
-                queueSaslPacket(saslToken);
-            }
-            else {
+            try {
+                saslToken = createSaslToken(saslToken);
+                if (saslToken != null) {
+                    LOG.info("saslToken (client) length: " + saslToken.length);
+                    queueSaslPacket(saslToken);
+                }
+                else {
+                    LOG.warn("saslToken is null: that seems strange; look into it.");
+                }
+
                 if (saslClient.isComplete() == true) {
                     LOG.info("SASL authentication successful.");
                     state = States.CONNECTED;
@@ -178,11 +182,14 @@ public class ClientCnxn {
                 else {
                     state = States.SASL;
                 }
+            } catch (SaslException e) {
+                LOG.error("SASL authentication failed.");
+                state = States.AUTH_FAILED;
             }
         }
     }
 
-    byte[] createSaslToken(final byte[] saslToken) {
+    byte[] createSaslToken(final byte[] saslToken) throws SaslException {
         if (saslToken == null) {
             // TODO: introspect about runtime environment (such as jaas.conf)
             LOG.error("Experienced a fatal error in authenticating with a Zookeeper Quorum member: the quorum member's saslToken is null:");
@@ -221,24 +228,13 @@ public class ClientCnxn {
         }
         else {
             // subject == null means non-JAAS authentication.
-            try {
-                if (saslToken.length == 0) {
-                    // TODO: for digest-md5 auth, maybe have another client state like WAITING_FOR_FIRST_SERVER_SASL_DIGEST_MD5_TOKEN or something.
-                    LOG.info("Server gave us an empty saslToken (or maybe it's just about to start the sasl initiation.");
-                    return null;
-                }
-
-
-
-                byte[] retval = saslClient.evaluateChallenge(saslToken);
-                return retval;
-            }
-            catch (SaslException e) {
-                LOG.error("Some kind of error occurred when evaluating Zookeeper Quorum Member's received SASL token. Client will go to AUTH_FAILED state.");
-                e.printStackTrace();
+            if (saslToken.length == 0) {
+                // TODO: for digest-md5 auth, maybe have another client state like WAITING_FOR_FIRST_SERVER_SASL_DIGEST_MD5_TOKEN or something.
+                LOG.info("Server gave us an empty saslToken (or maybe it's just about to start the sasl initiation.");
+                return null;
             }
         }
-        return null;
+        return saslClient.evaluateChallenge(saslToken);
     }
 
     private void queueSaslPacket(byte[] saslToken) {
