@@ -329,6 +329,9 @@ public class FinalRequestProcessor implements RequestProcessor {
                 try {
                     SaslServer saslServer = cnxn.saslServer;
                     try {
+                        // note that clientToken might be empty (clientToken.length == 0):
+                        // in the case of the DIGEST-MD5 mechanism, clientToken will be empty at the beginning of the
+                        // SASL negotiation process.
                         responseToken = saslServer.evaluateResponse(clientToken);
 
                         if (saslServer.isComplete() == true) {
@@ -336,7 +339,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                         }
                     }
                     catch (SaslException e) {
-                        LOG.error("saslServer.evaluateResponse() saslException:" + e);
+                        LOG.error("Error evaluating client response:" + e);
                         e.printStackTrace();
                         cnxn.sendCloseSession();
                     }
@@ -347,6 +350,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                 }
 
                 rsp = new SetSASLResponse(responseToken);
+                LOG.info("Size of server SASL response: " + responseToken.length);
                 break;
             }
             }

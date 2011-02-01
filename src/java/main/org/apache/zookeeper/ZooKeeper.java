@@ -67,13 +67,8 @@ import org.apache.zookeeper.proto.SyncRequest;
 import org.apache.zookeeper.proto.SyncResponse;
 import org.apache.zookeeper.server.DataTree;
 import javax.security.auth.Subject;
-import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.callback.UnsupportedCallbackException;
-import javax.security.sasl.AuthorizeCallback;
-import javax.security.sasl.Sasl;
-import javax.security.sasl.SaslClient;
-import javax.security.sasl.SaslException;
+import javax.security.auth.callback.*;
+import javax.security.sasl.*;
 
 /**
  * This is the main class of ZooKeeper client library. To use a ZooKeeper
@@ -416,25 +411,39 @@ public class ZooKeeper {
       public void handle(Callback[] callbacks) throws
               UnsupportedCallbackException {
         System.out.println("ClientCallbackHandler::handle()");
-        AuthorizeCallback ac = null;
         for (Callback callback : callbacks) {
           if (callback instanceof AuthorizeCallback) {
-            ac = (AuthorizeCallback) callback;
+            AuthorizeCallback ac = (AuthorizeCallback) callback;
+            String authid = ac.getAuthenticationID();
+            String authzid = ac.getAuthorizationID();
+            if (authid.equals(authzid)) {
+                ac.setAuthorized(true);
+            } else {
+                ac.setAuthorized(false);
+            }
+            if (ac.isAuthorized()) {
+                ac.setAuthorizedID(authzid);
+            }
           } else {
-            throw new UnsupportedCallbackException(callback,
-                "Unrecognized SASL ClientCallback");
-          }
-        }
-        if (ac != null) {
-          String authid = ac.getAuthenticationID();
-          String authzid = ac.getAuthorizationID();
-          if (authid.equals(authzid)) {
-            ac.setAuthorized(true);
-          } else {
-            ac.setAuthorized(false);
-          }
-          if (ac.isAuthorized()) {
-            ac.setAuthorizedID(authzid);
+              if (callback instanceof RealmCallback) {
+                  RealmCallback rc = (RealmCallback) callback;
+                  rc.setText("192.168.56.1");
+              }
+              else {
+                  if (callback instanceof NameCallback) {
+                      NameCallback nc = (NameCallback) callback;
+                      nc.setName(nc.getDefaultName()); // for now..(returns 'myclient').
+                  } else {
+                      if (callback instanceof PasswordCallback) {
+                          PasswordCallback pc = (PasswordCallback)callback;
+                          String password = "password";
+                          pc.setPassword(password.toCharArray());
+                      }
+                      else {
+                          throw new UnsupportedCallbackException(callback,"Unrecognized SASL ClientCallback");
+                      }
+                  }
+              }
           }
         }
       }

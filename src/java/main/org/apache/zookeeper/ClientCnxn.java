@@ -161,14 +161,24 @@ public class ClientCnxn {
         LOG.info("saslToken (server) length: " + saslToken.length);
 
         if (saslClient.isComplete() == true) {
-            LOG.debug("*****ClientCnxn:run(): SASL negotiation COMPLETE*****");
+            LOG.info("SASL authentication successful.");
             state = States.CONNECTED;
         }
         else {
             saslToken = createSaslToken(saslToken);
-            LOG.info("saslToken (client) length: " + saslToken.length);
-            queueSaslPacket(saslToken);
-            state = States.SASL;
+            if (saslToken != null) {
+                LOG.info("saslToken (client) length: " + saslToken.length);
+                queueSaslPacket(saslToken);
+            }
+            else {
+                if (saslClient.isComplete() == true) {
+                    LOG.info("SASL authentication successful.");
+                    state = States.CONNECTED;
+                }
+                else {
+                    state = States.SASL;
+                }
+            }
         }
     }
 
@@ -178,33 +188,55 @@ public class ClientCnxn {
             LOG.error("Experienced a fatal error in authenticating with a Zookeeper Quorum member: the quorum member's saslToken is null:");
             System.exit(-1);
         }
-        try {
-            final byte[] retval =
-                    Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
-                        public byte[] run() {
-                            try {
-                                LOG.debug("ClientCnxn:createSaslToken(): ->saslClient.evaluateChallenge(len="+saslToken.length+")");
-                                return saslClient.evaluateChallenge(saslToken);
+
+        if (subject != null) {
+            try {
+                final byte[] retval =
+                        Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
+                            public byte[] run() {
+                                try {
+                                    LOG.debug("ClientCnxn:createSaslToken(): ->saslClient.evaluateChallenge(len="+saslToken.length+")");
+                                    return saslClient.evaluateChallenge(saslToken);
+                                }
+                                catch (NullPointerException e) {
+                                    LOG.error("Quorum Member's SASL challenge was null.");
+                                }
+                                catch (SaslException e) {
+                                    LOG.error("Quorum Member's SASL challenge caused a SASLException:",e);
+                                    e.printStackTrace();
+                                }
+                                // returning null here will result in client going to AUTH_FAILED.
+                                return null;
                             }
-                            catch (NullPointerException e) {
-                                LOG.error("Quorum Member's SASL challenge was null.");
-                            }
-                            catch (SaslException e) {
-                                LOG.error("Quorum Member's SASL challenge caused a SASLException:",e);
-                                e.printStackTrace();
-                            }
-                            // returning null here will result in client going to AUTH_FAILED.
-                            return null;
-                        }
-                    });
-            LOG.debug("Successfully created initial token with length:"+retval.length);
-            return retval;
+                        });
+                LOG.debug("Successfully created initial token with length:"+retval.length);
+                return retval;
+            }
+            catch (Exception e) {
+                // TODO: introspect about runtime environment (such as jaas.conf)
+                // to give hints to user.
+                LOG.error("Some kind of error occurred when evaluating Zookeeper Quorum Member's received SASL token. Client will go to AUTH_FAILED state.");
+                e.printStackTrace();
+            }
         }
-        catch (Exception e) {
-            // TODO: introspect about runtime environment (such as jaas.conf)
-            // to give hints to user.
-            LOG.error("Some kind of error occurred when evaluating Zookeeper Quorum Member's received SASL token. Client will go to AUTH_FAILED state.");
-            e.printStackTrace();
+        else {
+            // subject == null means non-JAAS authentication.
+            try {
+                if (saslToken.length == 0) {
+                    // TODO: for digest-md5 auth, maybe have another client state like WAITING_FOR_FIRST_SERVER_SASL_DIGEST_MD5_TOKEN or something.
+                    LOG.info("Server gave us an empty saslToken (or maybe it's just about to start the sasl initiation.");
+                    return null;
+                }
+
+
+
+                byte[] retval = saslClient.evaluateChallenge(saslToken);
+                return retval;
+            }
+            catch (SaslException e) {
+                LOG.error("Some kind of error occurred when evaluating Zookeeper Quorum Member's received SASL token. Client will go to AUTH_FAILED state.");
+                e.printStackTrace();
+            }
         }
         return null;
     }
@@ -964,7 +996,13 @@ public class ClientCnxn {
                                 }
                             }
                             else {
-                                    LOG.info("saslClient.hasInitialResponse()==false");
+                                LOG.info("saslClient.hasInitialResponse()==false");
+                                LOG.info("sending empty SASL token to server.");
+                                // send a blank initial token which will hopefully prompt the ZK server to start the
+                                // real authentication process.
+                                byte[] emptyToken = new byte[0];
+                                queueSaslPacket(emptyToken);
+                                state = States.SASL;
                             }
                         }
                     }
@@ -1106,7 +1144,7 @@ public class ClientCnxn {
             LOG.info("Session establishment complete on server "
                     + clientCnxnSocket.getRemoteSocketAddress() + ", sessionid = 0x"
                     + Long.toHexString(sessionId) + ", negotiated timeout = "
-                    + negotiatedSessionTimeout);
+                    + negotiatedSessionTimeout + "; now entering SASL dialogue with server.");
             eventThread.queueEvent(new WatchedEvent(
                     Watcher.Event.EventType.None,
                     Watcher.Event.KeeperState.SyncConnected, null));
