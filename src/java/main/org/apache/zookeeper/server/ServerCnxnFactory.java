@@ -214,6 +214,8 @@ public abstract class ServerCnxnFactory {
 class SaslServerCallbackHandler implements CallbackHandler {
     private static final Logger LOG = Logger.getLogger(CallbackHandler.class);
 
+    private String userName = null;
+
     public void handle(Callback[] callbacks) throws
             UnsupportedCallbackException {
         AuthorizeCallback ac = null;
@@ -222,6 +224,7 @@ class SaslServerCallbackHandler implements CallbackHandler {
                 NameCallback nc = (NameCallback) callback;
                 if (true) { // if (nc.getDefaultName() is a user which is in a pair <U,P> in the list of DIGEST-MD5 user/password pairs. {
                     nc.setName(nc.getDefaultName());
+                    this.userName = nc.getDefaultName();
                 }
                 else { // no such user.
                     LOG.warn("User '" + nc.getDefaultName() + "' not found in list of DIGEST-MD5 authenticateable users.");
@@ -231,8 +234,15 @@ class SaslServerCallbackHandler implements CallbackHandler {
                 if (callback instanceof PasswordCallback) {
                     PasswordCallback pc = (PasswordCallback) callback;
 
-                    String thePassword = "mypassword1";
+                    String thePassword = "mypassword";
                     // String thePassword = GetPassword(user);
+                    if (this.userName.equals("super")) {
+                        // superuser: use Java system property for password.
+                        // TODO: use superDigest rather than superPassword, as with pre-SASL Zookeeper (see: DigestAuthenticationProvider)
+                        thePassword = System.getProperty("zookeeper.SASLAuthenticationProvider.superPassword");
+                    }
+
+
 
                     pc.setPassword(thePassword.toCharArray());
                 }
