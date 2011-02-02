@@ -894,6 +894,9 @@ public class ZooKeeperMain {
         return acl;
     }
 
+    // This is only used by JAAS-based authentication (e.g. Kerberos).
+    // currently no Callback types are supported (all attempts to
+    // garner login information (user,realm,password) will return UnsupportedCallbackException).
     private class LoginCallbackHandler implements CallbackHandler {
         public LoginCallbackHandler() {
             super();
