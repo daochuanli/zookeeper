@@ -24,6 +24,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.LinkedList;
 import java.util.Random;
@@ -165,6 +166,7 @@ public class ClientCnxn {
             state = States.CONNECTED;
         }
         else {
+            state = States.SASL;
             try {
                 saslToken = createSaslToken(saslToken);
                 if (saslToken != null) {
@@ -172,15 +174,14 @@ public class ClientCnxn {
                     queueSaslPacket(saslToken);
                 }
                 else {
-                    LOG.warn("saslToken is null: that seems strange; look into it.");
-                }
+                    LOG.info("saslToken is null: authentication attempt has finished (successfully or unsuccessfully).");
 
-                if (saslClient.isComplete() == true) {
-                    LOG.info("SASL authentication successful.");
-                    state = States.CONNECTED;
-                }
-                else {
-                    state = States.SASL;
+                    // Note: only checking for completeness after saslToken becomes null. No point in changing
+                    // state status
+                    if (saslClient.isComplete() == true) {
+                        LOG.info("SASL authentication successful.");
+                        state = States.CONNECTED;
+                    }
                 }
             } catch (SaslException e) {
                 LOG.error("SASL authentication failed.");
@@ -203,40 +204,52 @@ public class ClientCnxn {
                             public byte[] run() {
                                 try {
                                     LOG.debug("ClientCnxn:createSaslToken(): ->saslClient.evaluateChallenge(len="+saslToken.length+")");
-                                    return saslClient.evaluateChallenge(saslToken);
+                                    if (saslToken.length == 0) {
+                                        LOG.error("SASL token is 0-length: bad token.");
+                                        return null;
+                                    }
+                                    try {
+                                        return saslClient.evaluateChallenge(saslToken);
+                                    }
+                                    catch (SaslException e) {
+                                        LOG.error("SASL error: " + e + " encountered while evaluating server challenge.");
+                                        return null;
+                                    }
                                 }
                                 catch (NullPointerException e) {
                                     LOG.error("Quorum Member's SASL challenge was null.");
                                 }
-                                catch (SaslException e) {
-                                    LOG.error("Quorum Member's SASL challenge caused a SASLException:",e);
-                                    e.printStackTrace();
-                                }
-                                // returning null here will result in client going to AUTH_FAILED.
+                                // NOTE: saslClient.evaluateChallenge() will throw a SaslException if authentication fails.
+                                // returning null here will cause another (new) SaslException to be thrown.
                                 return null;
                             }
                         });
-                if (retval != null) {
+
+                if (retval == null) {
+                    if (saslClient.isComplete() == true) {
+                        LOG.info("SASL Client authentication complete.");
+                    }
+                    else {
+                        throw new SaslException("Server could not authenticate this client.");
+                    }
+                }
+                else {
                     LOG.debug("Successfully created initial token with length:"+retval.length);
                 }
                 return retval;
             }
-            catch (Exception e) {
-                // TODO: introspect about runtime environment (such as jaas.conf)
-                // to give hints to user.
-                LOG.error("Some kind of error occurred when evaluating Zookeeper Quorum Member's received SASL token. Client will go to AUTH_FAILED state.");
-                e.printStackTrace();
+            catch (SaslException e) {
+                throw e;
+            }
+            catch (PrivilegedActionException e) {
+                LOG.error("An error: " + e + " occurred when evaluating Zookeeper Quorum Member's received SASL token. Client will go to AUTH_FAILED state.");
+                throw new SaslException("An error: " + e + " occurred when evaluating Zookeeper Quorum Member's received SASL token. Client will go to AUTH_FAILED state.");
             }
         }
         else {
-            // subject == null means non-JAAS authentication.
-            if (saslToken.length == 0) {
-                // TODO: for digest-md5 auth, maybe have another client state like WAITING_FOR_FIRST_SERVER_SASL_DIGEST_MD5_TOKEN..
-                LOG.info("Server gave us an empty saslToken (or maybe it's just about to start the sasl initiation.");
-                return null;
-            }
+            LOG.error("Cannot make SASL TOKEN without subject defined.");
+            return null;
         }
-        return saslClient.evaluateChallenge(saslToken);
     }
 
     private void queueSaslPacket(byte[] saslToken) {
