@@ -216,7 +216,9 @@ public class ClientCnxn {
                                 return null;
                             }
                         });
-                LOG.debug("Successfully created initial token with length:"+retval.length);
+                if (retval != null) {
+                    LOG.debug("Successfully created initial token with length:"+retval.length);
+                }
                 return retval;
             }
             catch (Exception e) {

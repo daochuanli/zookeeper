@@ -536,10 +536,14 @@ public class ZooKeeper {
     private static SaslClient createSaslClient(Subject subject, final String serviceName, final String serviceHostname) {
         try {
             SaslClient saslClient = null;
-            if (subject == null) {
-                // no subject: must not be JAAS authentication: use DIGEST-MD5 mechanism instead.
+            // For now, we use subject.getPrincipals().isEmpty() as an indication of which SASL mechanism to use: if empty, use DIGEST-MD5; otherwise, use GSSAPI.
+            if (subject.getPrincipals().isEmpty() == true) {
+                // no principals: must not be GSSAPI: use DIGEST-MD5 mechanism instead.
+                LOG.info("Client will use DIGEST-MD5 as SASL mechanism.");
                 String[] mechs = {"DIGEST-MD5"};
-                saslClient = Sasl.createSaslClient(mechs,"myclient",serviceName,serviceHostname,null,new ClientCallbackHandler("mypassword"));
+                String username = (String)(subject.getPublicCredentials().toArray()[0]);
+                String password = (String)(subject.getPrivateCredentials().toArray()[0]);
+                saslClient = Sasl.createSaslClient(mechs,username,serviceName,serviceHostname,null,new ClientCallbackHandler(password));
                 return saslClient;
             }
             else {
@@ -551,7 +555,7 @@ public class ZooKeeper {
                 try {
                     saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
                         public SaslClient run() throws SaslException {
-                            // TODO: should depend on CLI arguments.
+                            LOG.info("Client will use GSSAPI as SASL mechanism.");
                             String[] mechs = {"GSSAPI"};
                             LOG.debug("creating sasl client: client="+clientPrincipalName+";service="+serviceName+";serviceHostname="+serviceHostname);
                             SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,serviceName,serviceHostname,null,new ClientCallbackHandler(null));
