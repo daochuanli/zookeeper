@@ -135,14 +135,14 @@ public abstract class ServerCnxnFactory {
                 }
             }
             catch (Exception e) {
-                LOG.error("server principal name/hostname figuring-out error: " + e);
+                LOG.error("server principal name/hostname determination error: " + e);
             }
         }
         else {
             // non-JAAS SASL authentication: assuming only DIGEST-MD5 mechanism for now.
             // TODO: use 'authMech=' value in zoo.cfg.
             try {
-                SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","192.168.56.1",null,new SaslServerCallbackHandler());
+                SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","ekoontz",null,new SaslServerCallbackHandler());
                 return saslServer;
             }
             catch (SaslException e) {
@@ -216,18 +216,24 @@ class SaslServerCallbackHandler implements CallbackHandler {
 
     public void handle(Callback[] callbacks) throws
             UnsupportedCallbackException {
-        LOG.debug("ServerCallbackHandler::handle()");
         AuthorizeCallback ac = null;
         for (Callback callback : callbacks) {
             if (callback instanceof NameCallback) {
                 NameCallback nc = (NameCallback) callback;
-                nc.setName(nc.getDefaultName());
+                if (true) { // if (nc.getDefaultName() is a user which is in a pair <U,P> in the list of DIGEST-MD5 user/password pairs. {
+                    nc.setName(nc.getDefaultName());
+                }
+                else { // no such user.
+                    LOG.warn("User '" + nc.getDefaultName() + "' not found in list of DIGEST-MD5 authenticateable users.");
+                }
             }
             else {
                 if (callback instanceof PasswordCallback) {
                     PasswordCallback pc = (PasswordCallback) callback;
-                    // compare user's supplied password with server-stored user's password.
-                    String thePassword = "mypassword";
+
+                    String thePassword = "mypassword1";
+                    // String thePassword = GetPassword(user);
+
                     pc.setPassword(thePassword.toCharArray());
                 }
                 else {
