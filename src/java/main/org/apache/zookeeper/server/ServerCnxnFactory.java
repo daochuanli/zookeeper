@@ -25,6 +25,7 @@ import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
+import java.util.Map;
 
 import javax.management.JMException;
 import javax.security.auth.Subject;
@@ -90,65 +91,70 @@ public abstract class ServerCnxnFactory {
     public SaslServer createSaslServer() {
         if (subject != null) {
             // server is using a JAAS-authenticated subject: determine service principal name and hostname from zk server's subject.
-            try {
-                final Object[] principals = subject.getPrincipals().toArray();
-                final Principal servicePrincipal = (Principal)principals[0];
-
-                // e.g. servicePrincipalNameAndHostname := "zookeeper/myhost.foo.com@FOO.COM"
-                final String servicePrincipalNameAndHostname = servicePrincipal.getName();
-
-                int indexOf = servicePrincipalNameAndHostname.indexOf("/");
-
-                // e.g. servicePrincipalName := "zookeeper"
-                final String servicePrincipalName = servicePrincipalNameAndHostname.substring(0, indexOf);
-
-                // e.g. serviceHostnameAndKerbDomain := "myhost.foo.com@FOO.COM"
-                final String serviceHostnameAndKerbDomain = servicePrincipalNameAndHostname.substring(indexOf+1,servicePrincipalNameAndHostname.length());
-
-                indexOf = serviceHostnameAndKerbDomain.indexOf("@");
-                // e.g. serviceHostname := "myhost.foo.com"
-                final String serviceHostname = serviceHostnameAndKerbDomain.substring(0,indexOf);
-
-                final String mech = "GSSAPI";   // TODO: should depend on zoo.cfg specified mechs, but if subject is non-null, it can be assumed to be GSSAPI.
-
+            if (subject.getPrincipals().size() > 0) {
                 try {
-                    return Subject.doAs(subject,new PrivilegedExceptionAction<SaslServer>() {
-                        public SaslServer run() {
-                            try {
-                                SaslServer saslServer;
-                                saslServer = Sasl.createSaslServer(mech, servicePrincipalName, serviceHostname, null, new SaslServerCallbackHandler());
-                                return saslServer;
-                            }
-                            catch (SaslException e) {
-                                LOG.error("Zookeeper Quorum Member failed to create a SaslServer to interact with a client during session initiation: " + e);
-                                e.printStackTrace();
-                                return null;
+                    final Object[] principals = subject.getPrincipals().toArray();
+                    final Principal servicePrincipal = (Principal)principals[0];
+
+                    // e.g. servicePrincipalNameAndHostname := "zookeeper/myhost.foo.com@FOO.COM"
+                    final String servicePrincipalNameAndHostname = servicePrincipal.getName();
+
+                    int indexOf = servicePrincipalNameAndHostname.indexOf("/");
+
+                    // e.g. servicePrincipalName := "zookeeper"
+                    final String servicePrincipalName = servicePrincipalNameAndHostname.substring(0, indexOf);
+
+                    // e.g. serviceHostnameAndKerbDomain := "myhost.foo.com@FOO.COM"
+                    final String serviceHostnameAndKerbDomain = servicePrincipalNameAndHostname.substring(indexOf+1,servicePrincipalNameAndHostname.length());
+
+                    indexOf = serviceHostnameAndKerbDomain.indexOf("@");
+                    // e.g. serviceHostname := "myhost.foo.com"
+                    final String serviceHostname = serviceHostnameAndKerbDomain.substring(0,indexOf);
+
+                    final String mech = "GSSAPI";   // TODO: should depend on zoo.cfg specified mechs, but if subject is non-null, it can be assumed to be GSSAPI.
+
+                    try {
+                        return Subject.doAs(subject,new PrivilegedExceptionAction<SaslServer>() {
+                            public SaslServer run() {
+                                try {
+                                    SaslServer saslServer;
+                                    saslServer = Sasl.createSaslServer(mech, servicePrincipalName, serviceHostname, null, new SaslServerCallbackHandler(null));
+                                    return saslServer;
+                                }
+                                catch (SaslException e) {
+                                    LOG.error("Zookeeper Quorum Member failed to create a SaslServer to interact with a client during session initiation: " + e);
+                                    e.printStackTrace();
+                                    return null;
+                                }
                             }
                         }
+                        );
                     }
-                    );
+                    catch (PrivilegedActionException e) {
+                        // TODO: exit server at this point(?)
+                        LOG.error("Zookeeper Quorum member experienced a PrivilegedActionException exception while creating a SaslServer using a JAAS principal context:" + e);
+                        e.printStackTrace();
+                    }
                 }
-                catch (PrivilegedActionException e) {
-                    // TODO: exit server at this point(?)
-                    LOG.error("Zookeeper Quorum member experienced a PrivilegedActionException exception while creating a SaslServer using a JAAS principal context:" + e);
-                    e.printStackTrace();
+                catch (Exception e) {
+                    LOG.error("server principal name/hostname determination error: " + e);
                 }
             }
-            catch (Exception e) {
-                LOG.error("server principal name/hostname determination error: " + e);
+            else {
+            // JAAS non-GSSAPI authentication: assuming and supporting only DIGEST-MD5 mechanism for now.
+                // TODO: use 'authMech=' value in zoo.cfg.
+                try {
+                    Map<String,String> credentials = null;
+                    if (subject.getPrivateCredentials().size() > 0) {
+                        credentials = (Map<String,String>)subject.getPrivateCredentials().toArray()[0];
+                    }
+                    SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","ekoontz",null,new SaslServerCallbackHandler(credentials));
+                    return saslServer;
+                }
+                catch (SaslException e) {
+                    LOG.error("Zookeeper Quorum member failed to create a SaslServer to interact with a client during session initiation: " + e);
+                }
             }
-        }
-        else {
-            // non-JAAS SASL authentication: assuming only DIGEST-MD5 mechanism for now.
-            // TODO: use 'authMech=' value in zoo.cfg.
-            try {
-                SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","ekoontz",null,new SaslServerCallbackHandler());
-                return saslServer;
-            }
-            catch (SaslException e) {
-                LOG.error("Zookeeper Quorum member failed to create a SaslServer to interact with a client during session initiation: " + e);
-            }
-
         }
         return null;
     }
@@ -213,8 +219,13 @@ public abstract class ServerCnxnFactory {
 
 class SaslServerCallbackHandler implements CallbackHandler {
     private static final Logger LOG = Logger.getLogger(CallbackHandler.class);
-
     private String userName = null;
+    private Map<String,String> credentials = null;
+
+
+    public SaslServerCallbackHandler(Map<String,String> credentials) {
+        this.credentials = credentials;
+    }
 
     public void handle(Callback[] callbacks) throws
             UnsupportedCallbackException {
@@ -234,17 +245,20 @@ class SaslServerCallbackHandler implements CallbackHandler {
                 if (callback instanceof PasswordCallback) {
                     PasswordCallback pc = (PasswordCallback) callback;
 
-                    String thePassword = "mypassword";
-                    // String thePassword = GetPassword(user);
-                    if (this.userName.equals("super")) {
-                        // superuser: use Java system property for password.
-                        // TODO: use superDigest rather than superPassword, as with pre-SASL Zookeeper (see: DigestAuthenticationProvider)
-                        thePassword = System.getProperty("zookeeper.SASLAuthenticationProvider.superPassword");
+                    if ((this.userName.equals("super")
+                            &&
+                            (System.getProperty("zookeeper.SASLAuthenticationProvider.superPassword") != null))) {
+                        // superuser: use Java system property for password, if available.
+                        pc.setPassword(System.getProperty("zookeeper.SASLAuthenticationProvider.superPassword").toCharArray());
                     }
-
-
-
-                    pc.setPassword(thePassword.toCharArray());
+                    else {
+                        if (this.credentials.get(this.userName) != null) {
+                            pc.setPassword(this.credentials.get(this.userName).toCharArray());
+                        }
+                        else {
+                            LOG.info("No password found for user: " + this.userName);
+                        }
+                    }
                 }
                 else {
                     if (callback instanceof RealmCallback) {

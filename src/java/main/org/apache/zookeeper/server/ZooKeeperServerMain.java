@@ -136,14 +136,9 @@ public class ZooKeeperServerMain {
         // This initializes zkServerSubject.
         // Should be called only once, at server startup time.
         System.setProperty("javax.security.sasl.level","FINEST");
+
+        // TODO: Figure out what this does and if it's needed.
         System.setProperty("handlers", "java.util.logging.ConsoleHandler");
-
-        if (!(authMech.equals("GSSAPI"))) {
-            LOG.info("No login behavior defined on server-side initiation for authentication mechanism: " + authMech + " : returning null.");
-            return null;
-        }
-
-        Subject zkServerSubject;
 
         if (System.getProperty("java.security.auth.login.config") != null) {
             LOG.info("Using JAAS configuration file: " + System.getProperty("java.security.auth.login.config"));
@@ -152,6 +147,28 @@ public class ZooKeeperServerMain {
             System.setProperty("java.security.auth.login.config",jaasConf);
         }
 
+        Subject zkServerSubject;
+        if (authMech.equals("DIGEST-MD5")) {
+            LOG.info("Loading passwords from jaas.conf...");
+            LoginContext loginCtx = null;
+            final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
+            try {
+                loginCtx = new LoginContext(SERVICE_SECTION_OF_JAAS_CONF_FILE);
+                loginCtx.login();
+                zkServerSubject = loginCtx.getSubject();
+                LOG.info("Zookeeper Quorum member successfully SASL-authenticated.");
+                return zkServerSubject;
+            }
+            catch (LoginException e) {
+                LOG.error("Zookeeper Quorum member failed to SASL-authenticate: " + e);
+                e.printStackTrace();
+                System.exit(-1);
+            }
+
+            return null;
+        }
+
+        // (authmech != DIGEST-MD5) => GSSAPI
         //
         // If using Kerberos, the file given in JAAS config file must have :
         //
@@ -186,3 +203,4 @@ public class ZooKeeperServerMain {
 
 
 }
+
