@@ -126,6 +126,13 @@ module org.apache.zookeeper.proto {
     class SetSASLResponse {
         buffer token;
     }
+    class AddCredRequest {
+        ustring username;
+        ustring password;
+    }   
+    class AddCredResponse {
+        ustring response;
+    }   
     class CreateRequest {
         ustring path;
         buffer data;

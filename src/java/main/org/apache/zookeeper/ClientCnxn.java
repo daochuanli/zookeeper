@@ -32,11 +32,6 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.LinkedBlockingQueue;
 import javax.security.auth.Subject;
-import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.callback.UnsupportedCallbackException;
-import javax.security.sasl.AuthorizeCallback;
-import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 
@@ -1257,6 +1252,21 @@ public class ClientCnxn {
         queuePacket(new RequestHeader(-4, OpCode.auth), null,
                 new AuthPacket(0, scheme, auth), null, null, null, null,
                 null, null);
+    }
+
+    public void addCred(String username, String password) {
+        if (!state.isAlive()) {
+            return;
+        }
+        RequestHeader h = new RequestHeader();
+        h.setType(ZooDefs.OpCode.addcred);
+        AddCredRequest request = new AddCredRequest();
+        request.setUsername(username);
+        request.setPassword(password);
+        AddCredResponse response = new AddCredResponse();
+
+        ReplyHeader r = new ReplyHeader();
+        Packet packet = queuePacket(h,r,request,response,null,null,null,this,null);
     }
 
     States getState() {

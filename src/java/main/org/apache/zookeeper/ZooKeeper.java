@@ -629,8 +629,7 @@ public class ZooKeeper {
     }
 
     public void addCredentials(String user, String password) {
-        int i = 42;
-        i = i+1;
+        cnxn.addCred(user,password);
     }
 
     /**

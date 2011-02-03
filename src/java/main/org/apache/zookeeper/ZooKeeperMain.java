@@ -846,12 +846,11 @@ public class ZooKeeperMain {
             byte[] b = null;
             if (args.length >= 3)
                 b = args[2].getBytes();
-
             zk.addAuthInfo(args[1], b);
         } else if (cmd.equals("addcred") && args.length == 3) {
-            String foo = args[0];
-            String bar = args[1];
-            zk.addCredentials(foo,bar);
+            String username = args[1];
+            String password = args[2];
+            zk.addCredentials(username,password);
         }
 
         else {
