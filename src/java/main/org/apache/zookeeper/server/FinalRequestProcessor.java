@@ -353,6 +353,12 @@ public class FinalRequestProcessor implements RequestProcessor {
                 LOG.info("Size of server SASL response: " + responseToken.length);
                 break;
             }
+            case OpCode.addcred: {
+                lastOp = "ADDC";
+                // get user and password and add to DIGEST-MD5 database.
+                LOG.info("Addcred: request: " + request.toString());
+                break;
+            }
             }
         } catch (SessionMovedException e) {
             // session moved is a connection level error, we need to tear

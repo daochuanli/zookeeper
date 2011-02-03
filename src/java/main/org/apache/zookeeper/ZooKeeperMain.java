@@ -95,6 +95,7 @@ public class ZooKeeperMain {
         commandMap.put("printwatches", "on|off");
         commandMap.put("quit","");
         commandMap.put("addauth", "scheme auth");
+        commandMap.put("addcred","user password");
     }
 
     static void usage() {
@@ -847,7 +848,13 @@ public class ZooKeeperMain {
                 b = args[2].getBytes();
 
             zk.addAuthInfo(args[1], b);
-        } else {
+        } else if (cmd.equals("addcred") && args.length == 3) {
+            String foo = args[0];
+            String bar = args[1];
+            zk.addCredentials(foo,bar);
+        }
+
+        else {
             usage();
         }
         return watch;

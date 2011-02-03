@@ -628,6 +628,11 @@ public class ZooKeeper {
         cnxn.addAuthInfo(scheme, auth);
     }
 
+    public void addCredentials(String user, String password) {
+        int i = 42;
+        i = i+1;
+    }
+
     /**
      * Specify the default watcher for the connection (overrides the one
      * specified during construction).

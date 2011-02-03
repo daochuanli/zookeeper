@@ -56,6 +56,8 @@ public class ZooDefs {
 
         public final int sasl = 102;
 
+        public final int addcred = 103;
+
         public final int createSession = -10;
 
         public final int closeSession = -11;

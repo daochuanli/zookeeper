@@ -5,7 +5,12 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.server.ServerCnxn;
 
+import java.util.Map;
+
 public class SASLAuthenticationProvider implements AuthenticationProvider {
+    private Map<String,String> credentials;
+
+
     public String getScheme() {
         return "sasl";
     }
@@ -19,6 +24,13 @@ public class SASLAuthenticationProvider implements AuthenticationProvider {
         return KeeperException.Code.AUTHFAILED;
 
     }
+
+    public void addCredentials(final String id, final String user, final String password) {
+        if (id.equals("super")) { // only superuser can add new DIGEST-MD5 users, for now.
+            this.credentials.put(user,password);
+        }
+    }
+
 
     public boolean matches(String id,String aclExpr) {
         return (id.equals("super") || id.equals(aclExpr));
