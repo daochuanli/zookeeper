@@ -201,20 +201,14 @@ public class ClientCnxn {
             try {
                 final byte[] retval =
                         Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
-                            public byte[] run() {
+                            public byte[] run() throws SaslException {
                                 try {
                                     LOG.debug("ClientCnxn:createSaslToken(): ->saslClient.evaluateChallenge(len="+saslToken.length+")");
                                     if (saslToken.length == 0) {
                                         LOG.error("SASL token is 0-length: bad token.");
-                                        return null;
+                                        throw new SaslException("SASL token is 0-length: bad token.");
                                     }
-                                    try {
-                                        return saslClient.evaluateChallenge(saslToken);
-                                    }
-                                    catch (SaslException e) {
-                                        LOG.error("SASL error: " + e + " encountered while evaluating server challenge.");
-                                        return null;
-                                    }
+                                    return saslClient.evaluateChallenge(saslToken);
                                 }
                                 catch (NullPointerException e) {
                                     LOG.error("Quorum Member's SASL challenge was null.");
@@ -225,21 +219,14 @@ public class ClientCnxn {
                             }
                         });
 
-                if (retval == null) {
-                    if (saslClient.isComplete() == true) {
-                        LOG.info("SASL Client authentication complete.");
-                    }
-                    else {
-                        throw new SaslException("Server could not authenticate this client.");
-                    }
+                if (retval != null) {
+                    LOG.debug("Successfully created token with length:"+retval.length);
                 }
-                else {
-                    LOG.debug("Successfully created initial token with length:"+retval.length);
+
+                if (saslClient.isComplete() == true) {
+                    LOG.info("SASL Client authentication complete.");
                 }
                 return retval;
-            }
-            catch (SaslException e) {
-                throw e;
             }
             catch (PrivilegedActionException e) {
                 LOG.error("An error: " + e + " occurred when evaluating Zookeeper Quorum Member's received SASL token. Client will go to AUTH_FAILED state.");
