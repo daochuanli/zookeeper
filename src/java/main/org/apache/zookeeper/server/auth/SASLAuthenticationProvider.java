@@ -21,7 +21,7 @@ public class SASLAuthenticationProvider implements AuthenticationProvider {
     }
 
     public boolean matches(String id,String aclExpr) {
-        return id.equals(aclExpr);
+        return (id.equals("super") || id.equals(aclExpr));
     }
 
     public boolean isAuthenticated() {
