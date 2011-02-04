@@ -391,20 +391,21 @@ public class ZooKeeper {
                 + " sessionTimeout=" + sessionTimeout + " watcher=" + watcher);
 
         watchManager.defaultWatcher = watcher;
-
-        int indexOf = service_principal.indexOf("/");
-
-        String service_principal_name = service_principal.substring(0, indexOf);
-        String service_principal_hostname = service_principal.substring(indexOf+1,service_principal.length());
-
-        ConnectStringParser connectStringParser = new ConnectStringParser(
-                connectString);
+        ConnectStringParser connectStringParser = new ConnectStringParser(connectString);
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
         SaslClient saslClient = null;
-        if (subject != null) {
-            saslClient = createSaslClient(subject,service_principal_name,service_principal_hostname);
+
+        if (service_principal != null) {
+            int indexOf = service_principal.indexOf("/");
+
+            String service_principal_name = service_principal.substring(0, indexOf);
+            String service_principal_hostname = service_principal.substring(indexOf+1,service_principal.length());
+
+            if (subject != null) {
+                saslClient = createSaslClient(subject,service_principal_name,service_principal_hostname);
+            }
         }
 
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),

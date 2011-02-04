@@ -966,6 +966,13 @@ public class ClientCnxn {
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
 
+                    // TODO: ugly: handle this better: if not using SASL, should never be in SASL_INITIAL in the first place.
+                    // could be avoided by going straight to CONNECTED and only going to SASL_INITIAL if client
+                    // explicitly does 'sasl' command.
+                    if ((state == States.SASL_INITIAL) && (saslClient == null)) {
+                        state = States.CONNECTED;
+                    }
+
                     if (state == States.SASL_INITIAL) {
                         if (saslClient.isComplete() == true) {
                             // TODO: this happens when client re-connects after authenticating:
@@ -1126,14 +1133,8 @@ public class ClientCnxn {
             hostProvider.onConnected();
             sessionId = _sessionId;
             sessionPasswd = _sessionPasswd;
-            // Big Red SASL on-off switch: true -> SASL is on; false otherwise.
-            if (true) {
-                state = States.SASL_INITIAL;
+            state = States.SASL_INITIAL;
 
-            }
-            else {
-                state = States.CONNECTED;
-            }
             LOG.info("Session establishment complete on server "
                     + clientCnxnSocket.getRemoteSocketAddress() + ", sessionid = 0x"
                     + Long.toHexString(sessionId) + ", negotiated timeout = "
