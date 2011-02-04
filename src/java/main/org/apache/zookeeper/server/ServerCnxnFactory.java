@@ -63,6 +63,9 @@ public abstract class ServerCnxnFactory {
     public abstract void closeSession(long sessionId);
 
     public abstract void configure(InetSocketAddress addr,
+            int maxClientCnxns) throws IOException;
+
+    public abstract void configure(InetSocketAddress addr,
             int maxClientCnxns, Subject subject) throws IOException;
 
     /** Maximum number of connections allowed from particular host (ip) */
@@ -178,11 +181,25 @@ public abstract class ServerCnxnFactory {
             throw ioe;
         }
     }
-    
+
+    static public ServerCnxnFactory createFactory(int clientPort,
+            int maxClientCnxns) throws IOException
+    {
+        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns, null);
+    }
+
     static public ServerCnxnFactory createFactory(int clientPort,
             int maxClientCnxns, Subject subject) throws IOException
     {
         return createFactory(new InetSocketAddress(clientPort), maxClientCnxns, subject);
+    }
+
+    static public ServerCnxnFactory createFactory(InetSocketAddress addr,
+            int maxClientCnxns) throws IOException
+    {
+        ServerCnxnFactory factory = createFactory();
+        factory.configure(addr, maxClientCnxns);
+        return factory;
     }
 
     static public ServerCnxnFactory createFactory(InetSocketAddress addr,

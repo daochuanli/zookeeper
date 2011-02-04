@@ -348,7 +348,21 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
         quorumStats = new QuorumStats(this);
     }
     
-   
+    // TODO: document why QuorumPeer() now is being passed a ServerCnxnFactory
+    // (probably has to do with SASL authentication).
+    public QuorumPeer(Map<Long, QuorumServer> quorumPeers, // peers
+                      File dataDir,                        // s1dir
+                      File dataLogDir,                     // port1
+                      int electionType,                    // 3
+                      long myid,                           // 1
+                      int tickTime,                        // tickTime
+                      int initLimit,                       // initLimit
+                      int syncLimit) throws IOException {  // syncLimit
+        this(quorumPeers, dataDir, dataLogDir, electionType, myid, tickTime,
+        		initLimit, syncLimit, null);
+    }
+
+
     /**
      * For backward compatibility purposes, we instantiate QuorumMaj by default.
      */
@@ -449,12 +463,12 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
      */
     public QuorumPeer(Map<Long,QuorumServer> quorumPeers, File snapDir,
             File logDir, int clientPort, int electionAlg,
-            long myid, int tickTime, int initLimit, int syncLimit, Subject subject)
+            long myid, int tickTime, int initLimit, int syncLimit)
         throws IOException
     {
         this(quorumPeers, snapDir, logDir, electionAlg,
                 myid,tickTime, initLimit,syncLimit,
-                ServerCnxnFactory.createFactory(new InetSocketAddress(clientPort), -1, subject),
+                ServerCnxnFactory.createFactory(new InetSocketAddress(clientPort), -1, null),
                 new QuorumMaj(countParticipants(quorumPeers)));
     }
     
@@ -465,12 +479,12 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     public QuorumPeer(Map<Long,QuorumServer> quorumPeers, File snapDir,
             File logDir, int clientPort, int electionAlg,
             long myid, int tickTime, int initLimit, int syncLimit, 
-            QuorumVerifier quorumConfig, Subject subject)
+            QuorumVerifier quorumConfig)
         throws IOException
     {
         this(quorumPeers, snapDir, logDir, electionAlg,
                 myid,tickTime, initLimit,syncLimit,
-                ServerCnxnFactory.createFactory(new InetSocketAddress(clientPort), -1, subject),
+                ServerCnxnFactory.createFactory(new InetSocketAddress(clientPort), -1, null),
                 quorumConfig);
     }
     

@@ -371,6 +371,12 @@ public class ZooKeeper {
      * @param watcher
      *            a watcher object which will be notified of state changes, may
      *            also be notified for node events
+     * @param subject
+     *            Contains credential information.
+     * @param service_principal
+     *            The name of the principal that the zookeeper server is using.
+     *            This client will authenticate with this principal if using GSSAPI as
+     *            the SASL authentication mechanism.
      *
      * @throws IOException
      *             in cases of network failure
@@ -396,12 +402,21 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        SaslClient saslClient = createSaslClient(subject,service_principal_name,service_principal_hostname);
+        SaslClient saslClient = null;
+        if (subject != null) {
+            saslClient = createSaslClient(subject,service_principal_name,service_principal_hostname);
+        }
 
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
                               getClientCnxnSocket(),subject, saslClient);
         cnxn.start();
+    }
+
+    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher)
+        throws IOException
+    {
+        this(connectString,sessionTimeout,watcher,null,null);
     }
 
     // CallbackHandler here refers to javax.security.auth.callback.CallbackHandler.
@@ -501,6 +516,13 @@ public class ZooKeeper {
      *            specific session id to use if reconnecting
      * @param sessionPasswd
      *            password for this session
+     * @param subject
+     *            server subject
+     * @param server_principal
+     *            server principal name
+     * @param service_principal_hostname
+     *            hostname of quorum server that we are connecting to.
+     * // TODO: remove: should be able to get service_principal_hostname from connectString.
      *
      * @throws IOException in cases of network failure
      * @throws IllegalArgumentException if an invalid chroot path is specified
@@ -508,7 +530,7 @@ public class ZooKeeper {
      */
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
             long sessionId, byte[] sessionPasswd, Subject subject,
-            String server_principal,String client_principal, String service_principal_hostname)
+            String server_principal, String service_principal_hostname)
         throws IOException
     {
         LOG.info("Initiating client connection, connectString=" + connectString
@@ -532,6 +554,30 @@ public class ZooKeeper {
                               getClientCnxnSocket(), sessionId, sessionPasswd, subject, saslClient);
         cnxn.start();
     }
+
+    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
+                long sessionId, byte[] sessionPasswd)
+            throws IOException
+     {
+            LOG.info("Initiating client connection, connectString=" + connectString
+                    + " sessionTimeout=" + sessionTimeout
+                    + " watcher=" + watcher
+                    + " sessionId=" + Long.toHexString(sessionId)
+                    + " sessionPasswd="
+                    + (sessionPasswd == null ? "<null>" : "<hidden>"));
+
+            watchManager.defaultWatcher = watcher;
+
+            ConnectStringParser connectStringParser = new ConnectStringParser(
+                    connectString);
+            HostProvider hostProvider = new StaticHostProvider(
+                    connectStringParser.getServerAddresses());
+
+            cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
+                                  hostProvider, sessionTimeout, this, watchManager,
+                                  getClientCnxnSocket(), sessionId, sessionPasswd, null,null);
+            cnxn.start();
+     }
 
     private static SaslClient createSaslClient(Subject subject, final String serviceName, final String serviceHostname) {
         try {
