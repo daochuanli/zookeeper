@@ -149,18 +149,18 @@ public class ZooKeeperServerMain {
 
         Subject zkServerSubject;
         if (authMech.equals("DIGEST-MD5")) {
-            LOG.info("Loading passwords from jaas.conf...");
             LoginContext loginCtx = null;
             final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
             try {
                 loginCtx = new LoginContext(SERVICE_SECTION_OF_JAAS_CONF_FILE);
+                // DigestLoginModule loads passwords from Server section of the JAAS conf file.
                 loginCtx.login();
                 zkServerSubject = loginCtx.getSubject();
-                LOG.info("Zookeeper Quorum member successfully SASL-authenticated.");
+                LOG.info("Zookeeper Quorum member successfully SASL-authenticated using " + authMech + " mechanism.");
                 return zkServerSubject;
             }
             catch (LoginException e) {
-                LOG.error("Zookeeper Quorum member failed to SASL-authenticate: " + e);
+                LOG.error("Zookeeper Quorum member failed to SASL-authenticate using " + authMech + " mechanism: " + e);
                 e.printStackTrace();
                 System.exit(-1);
             }
