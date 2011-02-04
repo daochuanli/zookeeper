@@ -141,14 +141,15 @@ public abstract class ServerCnxnFactory {
                 }
             }
             else {
-            // JAAS non-GSSAPI authentication: assuming and supporting only DIGEST-MD5 mechanism for now.
+                // JAAS non-GSSAPI authentication: assuming and supporting only DIGEST-MD5 mechanism for now.
                 // TODO: use 'authMech=' value in zoo.cfg.
+                // TODO: fix compiler cast warnings (Object / Map<String,String>)
                 try {
-                    Map<String,String> credentials = null;
+                    Object credentials = null;
                     if (subject.getPrivateCredentials().size() > 0) {
-                        credentials = (Map<String,String>)subject.getPrivateCredentials().toArray()[0];
+                        credentials = subject.getPrivateCredentials().toArray()[0];
                     }
-                    SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","ekoontz",null,new SaslServerCallbackHandler(credentials));
+                    SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","ekoontz",null,new SaslServerCallbackHandler((Map<String,String>)credentials));
                     return saslServer;
                 }
                 catch (SaslException e) {

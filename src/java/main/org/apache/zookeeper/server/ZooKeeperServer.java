@@ -24,12 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.jute.BinaryInputArchive;
@@ -862,4 +857,16 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         }
         cnxn.incrOutstandingRequests(h);
     }
+
+    void addCredentials(String username, String password) {
+        // update user->password map, which is stored in the first element of subject's private credentials.
+        Object currentCredentialsObj = this.getServerCnxnFactory().getSubject().getPrivateCredentials().toArray()[0];
+        if (currentCredentialsObj instanceof Map) {
+            Map<String,String> currentCredentials = (Map<String,String>) currentCredentialsObj;
+            currentCredentials.put(username,password);
+            this.getServerCnxnFactory().getSubject().getPrivateCredentials().clear();
+            this.getServerCnxnFactory().getSubject().getPrivateCredentials().add((Object)currentCredentials);
+        }
+    }
+
 }

@@ -29,6 +29,7 @@ import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.KeeperException.SessionMovedException;
 import org.apache.zookeeper.ZooDefs.OpCode;
+import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
@@ -321,7 +322,6 @@ public class FinalRequestProcessor implements RequestProcessor {
                 GetSASLRequest clientTokenRecord = new GetSASLRequest();
                 ZooKeeperServer.byteBuffer2Record(request.request,clientTokenRecord);
 
-                // Overloading GetDataRequest()'s path field to hold the client token.
                 byte[] clientToken = clientTokenRecord.getToken();
                 LOG.info("Size of client SASL token: " + clientToken.length);
                 byte[] responseToken = null;
@@ -356,7 +356,11 @@ public class FinalRequestProcessor implements RequestProcessor {
             case OpCode.addcred: {
                 lastOp = "ADDC";
                 // get user and password and add to DIGEST-MD5 database.
-                LOG.info("Addcred: request: " + request.toString());
+                AddCredRequest addCredRequest = new AddCredRequest();
+                ZooKeeperServer.byteBuffer2Record(request.request,addCredRequest);
+                LOG.info("Addcred: request: " + addCredRequest.toString());
+                this.zks.addCredentials(addCredRequest.getUsername(),addCredRequest.getPassword());
+                rsp = new AddCredResponse("Added password for " + addCredRequest.getUsername());
                 break;
             }
             }

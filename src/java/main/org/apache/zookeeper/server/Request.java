@@ -115,6 +115,7 @@ public class Request {
         case OpCode.closeSession:
         case OpCode.setWatches:
         case OpCode.sasl:
+        case OpCode.addcred:
             return true;
         default:
             return false;
