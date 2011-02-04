@@ -34,8 +34,6 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import javax.security.auth.Subject;
-
 public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable {
     private static final Logger LOG = Logger.getLogger(NIOServerCnxnFactory.class);
 
@@ -85,11 +83,10 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
 
     Thread thread;
     @Override
-    public void configure(InetSocketAddress addr, int maxcc, Subject subject) throws IOException {
+    public void configure(InetSocketAddress addr, int maxcc) throws IOException {
         thread = new Thread(this, "NIOServerCxn.Factory:" + addr);
         thread.setDaemon(true);
         maxClientCnxns = maxcc;
-        this.subject = subject;
         this.ss = ServerSocketChannel.open();
         ss.socket().setReuseAddress(true);
         LOG.info("binding to port " + addr);

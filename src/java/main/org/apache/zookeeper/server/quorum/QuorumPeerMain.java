@@ -122,8 +122,7 @@ public class QuorumPeerMain {
           ServerCnxnFactory cnxnFactory = ServerCnxnFactory.createFactory();
           Subject subject = cnxnFactory.getSubject();
           cnxnFactory.configure(config.getClientPortAddress(),
-                                config.getMaxClientCnxns(),
-                                subject);
+                                config.getMaxClientCnxns());
   
           quorumPeer = new QuorumPeer();
           quorumPeer.setClientPortAddress(config.getClientPortAddress());

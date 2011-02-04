@@ -300,7 +300,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
     }
 
     @Override
-    public void configure(InetSocketAddress addr, int maxClientCnxns, Subject subject)
+    public void configure(InetSocketAddress addr, int maxClientCnxns)
             throws IOException
     {
         localAddress = addr;
