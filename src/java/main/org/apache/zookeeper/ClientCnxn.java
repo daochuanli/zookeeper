@@ -163,7 +163,7 @@ public class ClientCnxn {
         else {
             state = States.SASL;
             try {
-                saslToken = createSaslToken(saslToken);
+                saslToken = createSaslToken(saslToken, saslClient);
                 if (saslToken != null) {
                     LOG.info("saslToken (client) length: " + saslToken.length);
                     queueSaslPacket(saslToken);
@@ -185,7 +185,7 @@ public class ClientCnxn {
         }
     }
 
-    byte[] createSaslToken(final byte[] saslToken) throws SaslException {
+    byte[] createSaslToken(final byte[] saslToken, final SaslClient saslClient) throws SaslException {
         if (saslToken == null) {
             // TODO: introspect about runtime environment (such as jaas.conf)
             LOG.error("Experienced a fatal error in authenticating with a Zookeeper Quorum member: the quorum member's saslToken is null:");
@@ -199,7 +199,9 @@ public class ClientCnxn {
                             public byte[] run() throws SaslException {
                                 try {
                                     LOG.debug("ClientCnxn:createSaslToken(): ->saslClient.evaluateChallenge(len="+saslToken.length+")");
-                                    if (saslToken.length == 0) {
+                                    String test = saslClient.getMechanismName();
+                                    if ((saslToken.length == 0) && (saslClient.getMechanismName().equals("DIGEST-MD5"))) {
+                                        // GSSAPI and DIGEST-MD5 seem to differ here in that in the former it's ok to have a 0-length initial token, so don't raise an exception here.
                                         LOG.error("SASL token is 0-length: bad token.");
                                         throw new SaslException("SASL token is 0-length: bad token.");
                                     }
@@ -984,7 +986,7 @@ public class ClientCnxn {
                             if (saslClient.hasInitialResponse() == true) {
                                 LOG.info("saslClient.hasInitialResponse()==true");
                                 LOG.info("hasInitialResponse() == true; (1) SASL token length = " + cnxn.saslToken.length);
-                                cnxn.saslToken = createSaslToken(cnxn.saslToken);
+                                cnxn.saslToken = createSaslToken(cnxn.saslToken,cnxn.saslClient);
                                 LOG.info("hasInitialResponse() == true; (2) SASL token length = " + cnxn.saslToken.length);
                                 if (cnxn.saslToken == null) {
                                     state = States.AUTH_FAILED;
