@@ -45,6 +45,7 @@ public class ServerConfig {
     /** defaults to -1 if not set explicitly */
     protected int maxSessionTimeout = -1;
     protected String jaasConf;
+    protected String authMech;
 
     /**
      * Parse arguments for server configuration
@@ -97,6 +98,7 @@ public class ServerConfig {
       minSessionTimeout = config.getMinSessionTimeout();
       maxSessionTimeout = config.getMaxSessionTimeout();
       jaasConf = config.getJaasConf();
+      authMech = config.getAuthMech();
     }
 
     public InetSocketAddress getClientPortAddress() {
@@ -112,8 +114,6 @@ public class ServerConfig {
     public int getMaxSessionTimeout() { return maxSessionTimeout; }
 
     public String getJaasConf() { return jaasConf; }
-
-    // TODO: hardwired to DIGEST-MD5 for now.
-    public String getAuthMech() { return "DIGEST-MD5"; }
+    public String getAuthMech() { return authMech; }
 
 }
