@@ -170,40 +170,27 @@ public class ZooKeeperServerMain {
 
             return null;
         }
-
-        // (authmech != DIGEST-MD5) => GSSAPI
-        //
-        // If using Kerberos, the file given in JAAS config file must have :
-        //
-        // $SERVICE_SECTION_OF_JAAS_CONF_FILE {
-        //   com.sun.security.auth.module.Krb5LoginModule required
-        //   useKeyTab=true
-        //   keyTab="$KEY_TAB_FILE_NAME"
-        //   doNotPrompt=true
-        //   useTicketCache=false
-        //   storeKey=true
-        //   principal="$SERVICE_NAME/$HOST_NAME";
-        // };
-
-        try {
-            // 1. Service Login.
-            LoginContext loginCtx = null;
-            final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
-            loginCtx = new LoginContext(SERVICE_SECTION_OF_JAAS_CONF_FILE);
-            loginCtx.login();
-            zkServerSubject = loginCtx.getSubject();
-            LOG.info("Zookeeper Quorum member successfully SASL-authenticated.");
-            return zkServerSubject;
-        }
-        catch (LoginException e) {
-            LOG.error("Zookeeper Quorum member failed to SASL-authenticate: " + e);
-            e.printStackTrace();
-            System.exit(-1);
+        else {
+            if (authMech.equals("GSSAPI")) {
+                try {
+                    LoginContext loginCtx = null;
+                    final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
+                    loginCtx = new LoginContext(SERVICE_SECTION_OF_JAAS_CONF_FILE);
+                    loginCtx.login();
+                    zkServerSubject = loginCtx.getSubject();
+                    LOG.info("Zookeeper Quorum member successfully SASL-authenticated.");
+                    return zkServerSubject;
+                }
+                catch (LoginException e) {
+                    LOG.error("Zookeeper Quorum member failed to SASL-authenticate: " + e);
+                    e.printStackTrace();
+                    System.exit(-1);
+                }
+                return null;
+            }
         }
         return null;
     }
-
-
 
 }
 
