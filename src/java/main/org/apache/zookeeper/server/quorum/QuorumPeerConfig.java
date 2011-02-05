@@ -72,6 +72,7 @@ public class QuorumPeerConfig {
     protected LearnerType peerType = LearnerType.PARTICIPANT;
 
     protected String jaasConf;
+    protected String authMech;
 
     @SuppressWarnings("serial")
     public static class ConfigException extends Exception {
@@ -161,7 +162,10 @@ public class QuorumPeerConfig {
                 }
             } else if (key.equals("jaasConf")) {
                 jaasConf = value;
-            } else if (key.startsWith("server.")) {
+            } else if (key.equals("authMech")) {
+                authMech = value;
+            }
+            else if (key.startsWith("server.")) {
                 int dot = key.indexOf('.');
                 long sid = Long.parseLong(key.substring(dot + 1));
                 String parts[] = value.split(":");
@@ -385,5 +389,9 @@ public class QuorumPeerConfig {
 
     public String getJaasConf() {
         return jaasConf;
+    }
+
+    public String getAuthMech() {
+        return authMech;
     }
 }
