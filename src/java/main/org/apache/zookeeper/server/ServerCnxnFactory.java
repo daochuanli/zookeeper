@@ -179,6 +179,13 @@ public abstract class ServerCnxnFactory {
         }
     }
 
+    static public ServerCnxnFactory createFactory(Subject subject) throws IOException {
+        ServerCnxnFactory retval = createFactory();
+        retval.subject = subject;
+        return retval;
+    }
+
+
     static public ServerCnxnFactory createFactory(int clientPort,
             int maxClientCnxns) throws IOException
     {
