@@ -590,10 +590,11 @@ public class ZooKeeper {
                 String[] mechs = {"DIGEST-MD5"};
                 String username = (String)(subject.getPublicCredentials().toArray()[0]);
                 String password = (String)(subject.getPrivateCredentials().toArray()[0]);
-                saslClient = Sasl.createSaslClient(mechs,username,serviceName,"",null,new ClientCallbackHandler(password));
+                // "zk-sasl-md5" is a constant used also by server.
+                saslClient = Sasl.createSaslClient(mechs,username,serviceName,"zk-sasl-md5",null,new ClientCallbackHandler(password));
                 return saslClient;
             }
-            else {
+            else { // GSSAPI.
                 final Object[] principals = subject.getPrincipals().toArray();
                 // determine client principal from subject.
                 final Principal clientPrincipal = (Principal)principals[0];

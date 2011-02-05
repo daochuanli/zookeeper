@@ -150,7 +150,7 @@ public abstract class ServerCnxnFactory {
                         credentials = subject.getPrivateCredentials().toArray()[0];
                     }
                     // Note that the third argument (realm) is blank.
-                    SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","",null,new SaslServerCallbackHandler((Map<String,String>)credentials));
+                    SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","zk-sasl-md5",null,new SaslServerCallbackHandler((Map<String,String>)credentials));
                     return saslServer;
                 }
                 catch (SaslException e) {
