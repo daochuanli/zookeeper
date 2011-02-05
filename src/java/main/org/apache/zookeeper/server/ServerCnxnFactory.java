@@ -149,7 +149,8 @@ public abstract class ServerCnxnFactory {
                     if (subject.getPrivateCredentials().size() > 0) {
                         credentials = subject.getPrivateCredentials().toArray()[0];
                     }
-                    SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","ekoontz",null,new SaslServerCallbackHandler((Map<String,String>)credentials));
+                    // Note that the third argument (realm) is blank.
+                    SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","",null,new SaslServerCallbackHandler((Map<String,String>)credentials));
                     return saslServer;
                 }
                 catch (SaslException e) {

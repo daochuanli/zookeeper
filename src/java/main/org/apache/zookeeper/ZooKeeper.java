@@ -590,7 +590,7 @@ public class ZooKeeper {
                 String[] mechs = {"DIGEST-MD5"};
                 String username = (String)(subject.getPublicCredentials().toArray()[0]);
                 String password = (String)(subject.getPrivateCredentials().toArray()[0]);
-                saslClient = Sasl.createSaslClient(mechs,username,serviceName,serviceHostname,null,new ClientCallbackHandler(password));
+                saslClient = Sasl.createSaslClient(mechs,username,serviceName,"",null,new ClientCallbackHandler(password));
                 return saslClient;
             }
             else {
