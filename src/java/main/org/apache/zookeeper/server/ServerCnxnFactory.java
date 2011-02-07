@@ -238,11 +238,11 @@ class SaslServerCallbackHandler implements CallbackHandler {
 
     public void handle(Callback[] callbacks) throws
             UnsupportedCallbackException {
-        AuthorizeCallback ac = null;
         for (Callback callback : callbacks) {
             if (callback instanceof NameCallback) {
                 NameCallback nc = (NameCallback) callback;
-                if (true) { // if (nc.getDefaultName() is a user which is in a pair <U,P> in the list of DIGEST-MD5 user/password pairs. {
+                // check to see if this user is in the user password database.
+                if (credentials.get(nc.getDefaultName()) != null) {
                     nc.setName(nc.getDefaultName());
                     this.userName = nc.getDefaultName();
                 }
@@ -277,7 +277,7 @@ class SaslServerCallbackHandler implements CallbackHandler {
                     }
                     else {
                         if (callback instanceof AuthorizeCallback) {
-                            ac = (AuthorizeCallback) callback;
+                            AuthorizeCallback ac = (AuthorizeCallback) callback;
 
                             String authenticationID = ac.getAuthenticationID();
                             String authorizationID = ac.getAuthorizationID();
