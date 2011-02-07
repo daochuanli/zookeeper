@@ -374,12 +374,39 @@ public class FinalRequestProcessor implements RequestProcessor {
             }
             case OpCode.addcred: {
                 lastOp = "ADDC";
-                // get user and password and add to DIGEST-MD5 database.
+                //
                 AddCredRequest addCredRequest = new AddCredRequest();
-                ZooKeeperServer.byteBuffer2Record(request.request,addCredRequest);
-                LOG.info("Addcred: request: " + addCredRequest.toString());
-                this.zks.addCredentials(addCredRequest.getUsername(),addCredRequest.getPassword());
-                rsp = new AddCredResponse("Added password for " + addCredRequest.getUsername());
+                try {
+                    ZooKeeperServer.byteBuffer2Record(request.request,addCredRequest);
+                    boolean allowedToAddAuth = false;
+                    for(Object each : cnxn.getAuthInfo()) {
+                        Id id = (Id)each;
+                        if (id.getScheme().equals("sasl")) {
+                            if (id.getId().equals("super")) {
+                                allowedToAddAuth = true;
+                                break;
+                            }
+                            else {
+                                if (id.getId().equals(addCredRequest.getUsername())) {
+                                    allowedToAddAuth = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (allowedToAddAuth == true) {
+                        this.zks.addCredentials(addCredRequest.getUsername(),addCredRequest.getPassword());
+                        rsp = new AddCredResponse("Added password for " + addCredRequest.getUsername());
+                    }
+                    else {
+                        rsp = new AddCredResponse("You do not have permission to add or change the password for:" + addCredRequest.getUsername());
+                    }
+
+                }
+                catch (IOException e) {
+                    rsp = new AddCredResponse("Error while trying to add password for:" + addCredRequest.getUsername());
+
+                }
                 break;
             }
             }
