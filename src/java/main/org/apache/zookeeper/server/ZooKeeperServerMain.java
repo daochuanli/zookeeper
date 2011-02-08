@@ -109,12 +109,7 @@ public class ZooKeeperServerMain {
             zkServer.setMinSessionTimeout(config.minSessionTimeout);
             zkServer.setMaxSessionTimeout(config.maxSessionTimeout);
 
-            if (config.getJaasConf() != null) {
-                cnxnFactory = ServerCnxnFactory.createFactory(config.getJaasConf(),config.getAuthMech());
-            }
-            else {
-                cnxnFactory = ServerCnxnFactory.createFactory();
-            }
+            cnxnFactory = ServerCnxnFactory.createFactory();
             cnxnFactory.configure(config.getClientPortAddress(),config.getMaxClientCnxns());
             cnxnFactory.startup(zkServer);
             cnxnFactory.join();

@@ -203,7 +203,7 @@ public abstract class ClientBase extends ZKTestCase {
     {
         watcher.reset();
         String host = hp.substring(0,hp.lastIndexOf(":"));
-        TestableZooKeeper zk = new TestableZooKeeper(hp, timeout, watcher, null,"zookeeper"+"/"+host);
+        TestableZooKeeper zk = new TestableZooKeeper(hp, timeout, watcher, "zookeeper"+"/"+host);
         if (!watcher.clientConnected.await(timeout, TimeUnit.MILLISECONDS))
         {
             Assert.fail("Unable to connect to server");

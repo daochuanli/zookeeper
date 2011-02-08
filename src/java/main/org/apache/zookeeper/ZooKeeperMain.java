@@ -277,7 +277,6 @@ public class ZooKeeperMain {
         zk = new ZooKeeper(newHost,
                  Integer.parseInt(cl.getOption("timeout")),
                  new MyWatcher(),
-                 cl.getOption("jaas"),
                  servicePrincipalName);
     }
     

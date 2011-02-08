@@ -32,8 +32,8 @@ public class TestableZooKeeper extends ZooKeeper {
     }
 
     public TestableZooKeeper(String host, int sessionTimeout,
-            Watcher watcher, String jaasConfFile, String servicePrincipal) throws IOException {
-        super(host, sessionTimeout, watcher, jaasConfFile, servicePrincipal);
+            Watcher watcher, String servicePrincipal) throws IOException {
+        super(host, sessionTimeout, watcher, servicePrincipal);
     }
 
     @Override
