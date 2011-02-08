@@ -37,8 +37,7 @@ public class SASLAuthenticationProvider implements AuthenticationProvider {
     }
 
     public boolean isAuthenticated() {
-        // Should never be called.
-        return false;
+        return true;
     }
 
     public boolean isValid(String id) {
