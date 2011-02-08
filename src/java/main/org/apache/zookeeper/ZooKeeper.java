@@ -72,6 +72,8 @@ import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.auth.login.LoginContext;
+import javax.security.auth.login.LoginException;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.AuthorizeCallback;
@@ -391,7 +393,7 @@ public class ZooKeeper {
      * @throws IllegalArgumentException
      *             if an invalid chroot path is specified
      */
-    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher, Subject subject,
+    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher, String jaasConfFile,
                      String service_principal)
         throws IOException
     {
@@ -404,6 +406,7 @@ public class ZooKeeper {
                 connectStringParser.getServerAddresses());
 
         SaslClient saslClient = null;
+        Subject subject = JAASLogin(jaasConfFile);
 
         if (service_principal != null) {
             int indexOf = service_principal.indexOf("/");
@@ -538,7 +541,7 @@ public class ZooKeeper {
      * @throws IllegalArgumentException for an invalid list of ZooKeeper hosts
      */
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
-            long sessionId, byte[] sessionPasswd, Subject subject,
+            long sessionId, byte[] sessionPasswd, String jaasConfFile,
             String server_principal, String service_principal_hostname)
         throws IOException
     {
@@ -556,6 +559,8 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
+        Subject subject = JAASLogin(jaasConfFile);
+
         SaslClient saslClient = createSaslClient(subject,server_principal,service_principal_hostname);
 
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
@@ -563,6 +568,27 @@ public class ZooKeeper {
                               getClientCnxnSocket(), sessionId, sessionPasswd, subject, saslClient);
         cnxn.start();
     }
+
+    public Subject JAASLogin(String jaasConfFile) {
+        Subject subject = null;
+        try {
+            final String CLIENT_SECTION_OF_JAAS_CONF_FILE = "Client"; // The section (of the JAAS configuration file named $JAAS_CONF_FILE_NAME)
+
+            if (jaasConfFile != null) {
+                System.setProperty("java.security.auth.login.config",jaasConfFile);
+            }
+
+            LoginContext loginCtx = null;
+            loginCtx = new LoginContext(CLIENT_SECTION_OF_JAAS_CONF_FILE,new LoginCallbackHandler());
+            loginCtx.login();
+            subject = loginCtx.getSubject();
+        }
+        catch (LoginException e) {
+            LOG.error("Login failure : " + e + "; continuing without JAAS Subject.");
+        }
+        return subject;
+    }
+
 
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
                 long sessionId, byte[] sessionPasswd)
@@ -1836,6 +1862,23 @@ public class ZooKeeper {
                     + clientCnxnSocketName);
             ioe.initCause(e);
             throw ioe;
+        }
+    }
+
+    // This is only used by JAAS-based authentication (e.g. Kerberos).
+    // currently no Callback types are supported (all attempts to
+    // garner login information (user,realm,password) will return UnsupportedCallbackException).
+    private class LoginCallbackHandler implements CallbackHandler {
+        public LoginCallbackHandler() {
+            super();
+        }
+
+        public void handle(Callback[] callbacks)
+            throws IOException, UnsupportedCallbackException {
+            for (int i = 0; i < callbacks.length; i++) {
+                Callback callback = callbacks[i];
+                throw new UnsupportedCallbackException(callbacks[i], "Unrecognized callback: " + callback);
+            }
         }
     }
 }

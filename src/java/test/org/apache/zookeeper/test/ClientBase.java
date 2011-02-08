@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import javax.management.MBeanServerConnection;
+import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.Priority;
@@ -51,6 +52,7 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.server.ServerCnxnFactory;
 import org.apache.zookeeper.server.ZKDatabase;
 import org.apache.zookeeper.server.ZooKeeperServer;
+import org.apache.zookeeper.server.ZooKeeperServerMain;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
 import org.junit.After;
 import org.junit.Assert;
@@ -160,6 +162,13 @@ public abstract class ClientBase extends ZKTestCase {
         return createClient(watcher, hp, CONNECTION_TIMEOUT);
     }
 
+    protected TestableZooKeeper createSaslizedClient(CountdownWatcher watcher, String hp)
+        throws IOException, InterruptedException
+    {
+        return createSaslizedClient(watcher, hp, CONNECTION_TIMEOUT);
+    }
+
+
     protected TestableZooKeeper createClient(CountdownWatcher watcher,
             String hp, int timeout)
         throws IOException, InterruptedException
@@ -187,6 +196,36 @@ public abstract class ClientBase extends ZKTestCase {
 
         return zk;
     }
+
+    protected TestableZooKeeper createSaslizedClient(CountdownWatcher watcher,
+                                                     String hp, int timeout)
+            throws IOException, InterruptedException
+    {
+        watcher.reset();
+        String host = hp.substring(0,hp.lastIndexOf(":"));
+        TestableZooKeeper zk = new TestableZooKeeper(hp, timeout, watcher, null,"zookeeper"+"/"+host);
+        if (!watcher.clientConnected.await(timeout, TimeUnit.MILLISECONDS))
+        {
+            Assert.fail("Unable to connect to server");
+        }
+        synchronized(this) {
+            if (!allClientsSetup) {
+                LOG.error("allClients never setup");
+                Assert.fail("allClients never setup");
+            }
+            if (allClients != null) {
+                allClients.add(zk);
+            } else {
+                // test done - close the zk, not needed
+                zk.close();
+            }
+        }
+
+        JMXEnv.ensureAll("0x" + Long.toHexString(zk.getSessionId()));
+
+        return zk;
+    }
+
 
     public static class HostPort {
         String host;
@@ -341,7 +380,7 @@ public abstract class ClientBase extends ZKTestCase {
         ZooKeeperServer zks = new ZooKeeperServer(dataDir, dataDir, 3000);
         final int PORT = getPort(hostPort);
         if (factory == null) {
-            factory = ServerCnxnFactory.createFactory(PORT, maxCnxns);
+            factory = ServerCnxnFactory.createFactory(PORT, maxCnxns, null, "DIGEST-MD5");
         }
         factory.startup(zks);
         Assert.assertTrue("waiting for server up",

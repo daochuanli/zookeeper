@@ -110,8 +110,7 @@ public class ZooKeeperServerMain {
             zkServer.setMaxSessionTimeout(config.maxSessionTimeout);
 
             if (config.getJaasConf() != null) {
-                Subject subject = setupSubject(config.getJaasConf(),config.getAuthMech());
-                cnxnFactory = ServerCnxnFactory.createFactory(subject);
+                cnxnFactory = ServerCnxnFactory.createFactory(config.getJaasConf(),config.getAuthMech());
             }
             else {
                 cnxnFactory = ServerCnxnFactory.createFactory();
@@ -135,62 +134,7 @@ public class ZooKeeperServerMain {
         cnxnFactory.shutdown();
     }
 
-    protected Subject setupSubject(String jaasConf, String authMech) {
-        // This initializes zkServerSubject.
-        // Should be called only once, at server startup time.
-        System.setProperty("javax.security.sasl.level","FINEST");
 
-        // TODO: Figure out what this does and if it's needed.
-        System.setProperty("handlers", "java.util.logging.ConsoleHandler");
-
-        if (System.getProperty("java.security.auth.login.config") != null) {
-            LOG.info("Using JAAS configuration file: " + System.getProperty("java.security.auth.login.config"));
-        }
-        else {
-            System.setProperty("java.security.auth.login.config",jaasConf);
-        }
-
-        Subject zkServerSubject;
-        if (authMech.equals("DIGEST-MD5")) {
-            LoginContext loginCtx = null;
-            final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
-            try {
-                loginCtx = new LoginContext(SERVICE_SECTION_OF_JAAS_CONF_FILE);
-                // DigestLoginModule loads passwords from Server section of the JAAS conf file.
-                loginCtx.login();
-                zkServerSubject = loginCtx.getSubject();
-                LOG.info("Zookeeper Quorum member successfully SASL-authenticated using " + authMech + " mechanism.");
-                return zkServerSubject;
-            }
-            catch (LoginException e) {
-                LOG.error("Zookeeper Quorum member failed to SASL-authenticate using " + authMech + " mechanism: " + e);
-                e.printStackTrace();
-                System.exit(-1);
-            }
-
-            return null;
-        }
-        else {
-            if (authMech.equals("GSSAPI")) {
-                try {
-                    LoginContext loginCtx = null;
-                    final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
-                    loginCtx = new LoginContext(SERVICE_SECTION_OF_JAAS_CONF_FILE);
-                    loginCtx.login();
-                    zkServerSubject = loginCtx.getSubject();
-                    LOG.info("Zookeeper Quorum member successfully SASL-authenticated.");
-                    return zkServerSubject;
-                }
-                catch (LoginException e) {
-                    LOG.error("Zookeeper Quorum member failed to SASL-authenticate: " + e);
-                    e.printStackTrace();
-                    System.exit(-1);
-                }
-                return null;
-            }
-        }
-        return null;
-    }
 
 }
 

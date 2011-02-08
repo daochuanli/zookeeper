@@ -31,7 +31,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
@@ -41,14 +40,8 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 
-import java.security.Principal;
 import javax.security.auth.Subject;
-import javax.security.auth.callback.NameCallback;
-import javax.security.auth.login.LoginContext;
-import javax.security.auth.login.LoginException;
-import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.callback.UnsupportedCallbackException;
+
 
 
 
@@ -275,10 +268,7 @@ public class ZooKeeperMain {
             zk.close();
         }
 
-        this.subject = JAASLogin();
-
         int indexOf = newHost.indexOf(":");
-
         String zkHostname = newHost.substring(0,indexOf);
 
         // default service principal name is zookeeper/ (service name/host name)
@@ -287,7 +277,7 @@ public class ZooKeeperMain {
         zk = new ZooKeeper(newHost,
                  Integer.parseInt(cl.getOption("timeout")),
                  new MyWatcher(),
-                 this.subject,
+                 cl.getOption("jaas"),
                  servicePrincipalName);
     }
     
@@ -297,36 +287,6 @@ public class ZooKeeperMain {
         ZooKeeperMain main = new ZooKeeperMain(args);
         main.run();
     }
-
-    public Subject JAASLogin() {
-        Subject subject = null;
-        try {
-            final String CLIENT_SECTION_OF_JAAS_CONF_FILE = "Client"; // The section (of the JAAS configuration file named $JAAS_CONF_FILE_NAME)
-
-            if (System.getProperty("java.security.auth.login.config") != null) {
-                LOG.info("Using JAAS configuration file: " + System.getProperty("java.security.auth.login.config"));
-            }
-            else {
-                if (cl.getOption("jaas") != null) {
-                    System.setProperty("java.security.auth.login.config",cl.getOption("jaas"));
-                }
-                else {
-                    LOG.warn("No JAAS conf file supplied: continuing without JAAS Subject.");
-                    return null;
-                }
-
-            }
-            LoginContext loginCtx = null;
-            loginCtx = new LoginContext(CLIENT_SECTION_OF_JAAS_CONF_FILE,new LoginCallbackHandler());
-            loginCtx.login();
-            subject = loginCtx.getSubject();
-        }
-        catch (LoginException e) {
-            LOG.error("Login failure : " + e + "; continuing without JAAS Subject.");
-        }
-        return subject;
-    }
-
 
     public ZooKeeperMain(String args[]) throws IOException, InterruptedException {
         cl.parseOptions(args);
@@ -898,23 +858,6 @@ public class ZooKeeperMain {
             acl.add(newAcl);
         }
         return acl;
-    }
-
-    // This is only used by JAAS-based authentication (e.g. Kerberos).
-    // currently no Callback types are supported (all attempts to
-    // garner login information (user,realm,password) will return UnsupportedCallbackException).
-    private class LoginCallbackHandler implements CallbackHandler {
-        public LoginCallbackHandler() {
-            super();
-        }
-
-        public void handle(Callback[] callbacks)
-            throws IOException, UnsupportedCallbackException {
-            for (int i = 0; i < callbacks.length; i++) {
-                Callback callback = callbacks[i];
-                throw new UnsupportedCallbackException(callbacks[i], "Unrecognized callback: " + callback);
-            }
-        }
     }
 
 }

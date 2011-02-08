@@ -18,6 +18,7 @@
 
 package org.apache.zookeeper;
 
+import javax.security.auth.Subject;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
@@ -29,7 +30,12 @@ public class TestableZooKeeper extends ZooKeeper {
             Watcher watcher) throws IOException {
         super(host, sessionTimeout, watcher);
     }
-    
+
+    public TestableZooKeeper(String host, int sessionTimeout,
+            Watcher watcher, String jaasConfFile, String servicePrincipal) throws IOException {
+        super(host, sessionTimeout, watcher, jaasConfFile, servicePrincipal);
+    }
+
     @Override
     public List<String> getChildWatches() {
         return super.getChildWatches();

@@ -180,25 +180,73 @@ public abstract class ServerCnxnFactory {
         }
     }
 
-    static public ServerCnxnFactory createFactory(Subject subject) throws IOException {
+    static public ServerCnxnFactory createFactory(String jaasConfFile, String authMech) throws IOException {
         ServerCnxnFactory retval = createFactory();
-        retval.subject = subject;
+        retval.subject = JAASLogin(jaasConfFile,authMech);
         return retval;
     }
 
-
     static public ServerCnxnFactory createFactory(int clientPort,
-            int maxClientCnxns) throws IOException
-    {
-        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns);
+            int maxClientCnxns, String jaasConfFile, String authMech) throws IOException {
+        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns, jaasConfFile, authMech);
     }
 
     static public ServerCnxnFactory createFactory(InetSocketAddress addr,
-            int maxClientCnxns) throws IOException
-    {
+            int maxClientCnxns, String jaasConfFile, String authMech) throws IOException {
         ServerCnxnFactory factory = createFactory();
+        factory.subject = JAASLogin(jaasConfFile,authMech);
         factory.configure(addr, maxClientCnxns);
         return factory;
+    }
+
+    static public Subject JAASLogin(String jaasConf, String authMech) {
+        // This is used to initialize a Zookeeper Quorum Member's subject.
+        // Should be called only once, when the Quorum member starts.
+        System.setProperty("javax.security.sasl.level","FINEST");
+
+        // TODO: Figure out what this does and if it's needed.
+        System.setProperty("handlers", "java.util.logging.ConsoleHandler");
+
+        if (jaasConf != null) {
+            System.setProperty("java.security.auth.login.config",jaasConf);
+        }
+
+        Subject zkServerSubject;
+        if (authMech.equals("DIGEST-MD5")) {
+            LoginContext loginCtx = null;
+            final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
+            try {
+                loginCtx = new LoginContext(SERVICE_SECTION_OF_JAAS_CONF_FILE);
+                // DigestLoginModule loads passwords from Server section of the JAAS conf file.
+                loginCtx.login();
+                zkServerSubject = loginCtx.getSubject();
+                return zkServerSubject;
+            }
+            catch (LoginException e) {
+                e.printStackTrace();
+                System.exit(-1);
+            }
+
+            return null;
+        }
+        else {
+            if (authMech.equals("GSSAPI")) {
+                try {
+                    LoginContext loginCtx = null;
+                    final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
+                    loginCtx = new LoginContext(SERVICE_SECTION_OF_JAAS_CONF_FILE);
+                    loginCtx.login();
+                    zkServerSubject = loginCtx.getSubject();
+                    return zkServerSubject;
+                }
+                catch (LoginException e) {
+                    e.printStackTrace();
+                    System.exit(-1);
+                }
+                return null;
+            }
+        }
+        return null;
     }
 
     public abstract InetSocketAddress getLocalAddress();
