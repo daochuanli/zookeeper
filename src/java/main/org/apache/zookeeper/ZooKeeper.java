@@ -541,7 +541,7 @@ public class ZooKeeper {
      * @throws IllegalArgumentException for an invalid list of ZooKeeper hosts
      */
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
-            long sessionId, byte[] sessionPasswd, String jaasConfFile,
+            long sessionId, byte[] sessionPasswd,
             String server_principal, String service_principal_hostname)
         throws IOException
     {
