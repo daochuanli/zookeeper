@@ -41,8 +41,6 @@ import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
 import org.apache.zookeeper.server.quorum.flexible.QuorumMaj;
 import org.apache.zookeeper.server.quorum.flexible.QuorumVerifier;
 
-import javax.security.auth.Subject;
-
 /**
  * This class manages the quorum protocol. There are three states this server
  * can be in:
@@ -347,21 +345,6 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
         super("QuorumPeer");
         quorumStats = new QuorumStats(this);
     }
-    
-    // TODO: document why QuorumPeer() now is being passed a ServerCnxnFactory
-    // (probably has to do with SASL authentication).
-    public QuorumPeer(Map<Long, QuorumServer> quorumPeers, // peers
-                      File dataDir,                        // s1dir
-                      File dataLogDir,                     // port1
-                      int electionType,                    // 3
-                      long myid,                           // 1
-                      int tickTime,                        // tickTime
-                      int initLimit,                       // initLimit
-                      int syncLimit) throws IOException {  // syncLimit
-        this(quorumPeers, dataDir, dataLogDir, electionType, myid, tickTime,
-        		initLimit, syncLimit, null);
-    }
-
 
     /**
      * For backward compatibility purposes, we instantiate QuorumMaj by default.
