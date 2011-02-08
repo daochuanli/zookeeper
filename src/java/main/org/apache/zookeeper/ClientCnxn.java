@@ -997,8 +997,8 @@ public class ClientCnxn {
                         if (saslClient.isComplete() == true) {
                             // TODO: this happens when client re-connects after authenticating:
                             // should re-authenticate in this case rather than going straight to CONNECTED.
-                            state = States.CONNECTED;
-                            LOG.warn("Unexpectedly, SASL negotiation is complete while client is in SASL_INITIAL state. Going to CONNECTED with no intervening SASL negotiation with Zookeeper Quorum member.");
+                            state = States.AUTH_FAILED;
+                            LOG.warn("Unexpectedly, SASL negotiation object is in completed state, while client's state is in SASL_INITIAL state. Going to AUTH_FAILED without attempting SASL negotiation with Zookeeper Quorum member.");
                         }
                         else {
                             if (saslClient.hasInitialResponse() == true) {
