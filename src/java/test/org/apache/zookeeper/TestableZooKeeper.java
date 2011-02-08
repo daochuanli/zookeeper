@@ -18,7 +18,6 @@
 
 package org.apache.zookeeper;
 
-import javax.security.auth.Subject;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
@@ -28,7 +27,8 @@ public class TestableZooKeeper extends ZooKeeper {
 
     public TestableZooKeeper(String host, int sessionTimeout,
             Watcher watcher) throws IOException {
-        super(host, sessionTimeout, watcher);
+        // TODO: check for system property "java.security.auth.login.config"
+        super(host, sessionTimeout, watcher, "zookeeper/127.0.0.1");
     }
 
     public TestableZooKeeper(String host, int sessionTimeout,

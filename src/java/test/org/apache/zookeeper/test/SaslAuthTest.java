@@ -33,10 +33,8 @@ import org.junit.Test;
 
 public class SaslAuthTest extends ClientBase {
     static {
-        System.setProperty("zookeeper.SASLAuthenticationProvider.superPassword",
-                "test");
-        System.setProperty("java.security.auth.login.config",
-                "/Users/ekoontz/zookeeper/src/java/test/config/jaas.conf");
+        System.setProperty("java.security.auth.login.config","/Users/ekoontz/zookeeper/src/java/test/config/jaas.conf");
+        System.setProperty("zookeeper.authProvider.1","org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
     }
 
     private AtomicInteger authFailed = new AtomicInteger(0);
@@ -46,7 +44,7 @@ public class SaslAuthTest extends ClientBase {
     throws IOException, InterruptedException
     {
         MyWatcher watcher = new MyWatcher();
-        return createSaslizedClient(watcher, hp);
+        return createClient(watcher, hp);
     }
 
     private class MyWatcher extends CountdownWatcher {
@@ -64,78 +62,21 @@ public class SaslAuthTest extends ClientBase {
     @Test
     public void testBadSaslAuthNotifiesWatch() throws Exception {
         ZooKeeper zk = createClient();
-        Thread.sleep(5000);
         zk.close();
     }
 
     
     @Test
-    public void testSuper() throws Exception {
+    public void testAuth() throws Exception {
         ZooKeeper zk = createClient();
-        try {
-            zk.addAuthInfo("digest", "pat:pass".getBytes());
-            zk.create("/path1", null, Ids.CREATOR_ALL_ACL,
-                    CreateMode.PERSISTENT);
-            zk.close();
-            // verify no auth
-            zk = createClient();
-            try {
-                zk.getData("/path1", false, null);
-                Assert.fail("auth verification");
-            } catch (KeeperException.NoAuthException e) {
-                // expected
-            }
-            zk.close();
-            // verify bad pass Assert.fails
-            zk = createClient();
-            zk.addAuthInfo("digest", "pat:pass2".getBytes());
-            try {
-                zk.getData("/path1", false, null);
-                Assert.fail("auth verification");
-            } catch (KeeperException.NoAuthException e) {
-                // expected
-            }
-            zk.close();
-            // verify super with bad pass Assert.fails
-            zk = createClient();
-            zk.addAuthInfo("digest", "super:test2".getBytes());
-            try {
-                zk.getData("/path1", false, null);
-                Assert.fail("auth verification");
-            } catch (KeeperException.NoAuthException e) {
-                // expected
-            }
-            zk.close();
-            // verify super with correct pass success
-            zk = createClient();
-            zk.addAuthInfo("digest", "super:test".getBytes());
-            zk.getData("/path1", false, null);
+        if (true) {try {
+            // succeeds:
+            //zk.create("/path1", null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            // fails:
+            zk.create("/path2", null, Ids.CREATOR_ALL_ACL, CreateMode.PERSISTENT);
+
         } finally {
             zk.close();
-        }
-    }
-    
-    @Test
-    public void testSuperACL() throws Exception {
-    	 ZooKeeper zk = createClient();
-         try {
-             zk.addAuthInfo("digest", "pat:pass".getBytes());
-             zk.create("/path1", null, Ids.CREATOR_ALL_ACL,
-                     CreateMode.PERSISTENT);
-             zk.close();
-             // verify super can do anything and ignores ACLs
-             zk = createClient();
-             zk.addAuthInfo("digest", "super:test".getBytes());
-             zk.getData("/path1", false, null);
-             
-             zk.setACL("/path1", Ids.READ_ACL_UNSAFE, -1);
-             zk.create("/path1/foo", null, Ids.CREATOR_ALL_ACL, CreateMode.PERSISTENT);
-           
-             
-             zk.setACL("/path1", Ids.OPEN_ACL_UNSAFE, -1);
-        	 
-         } finally {
-             zk.close();
-         }
+        }           }
     }
 }
