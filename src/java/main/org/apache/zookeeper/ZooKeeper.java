@@ -393,7 +393,7 @@ public class ZooKeeper {
      * @throws IllegalArgumentException
      *             if an invalid chroot path is specified
      */
-    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher, String jaasConfFile,
+    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
                      String service_principal)
         throws IOException
     {
@@ -406,7 +406,7 @@ public class ZooKeeper {
                 connectStringParser.getServerAddresses());
 
         SaslClient saslClient = null;
-        Subject subject = JAASLogin(jaasConfFile);
+        Subject subject = JAASLogin();
 
         if (service_principal != null) {
             int indexOf = service_principal.indexOf("/");
@@ -428,7 +428,7 @@ public class ZooKeeper {
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher)
         throws IOException
     {
-        this(connectString,sessionTimeout,watcher,null,null);
+        this(connectString,sessionTimeout,watcher,null);
     }
 
     // CallbackHandler here refers to javax.security.auth.callback.CallbackHandler.
@@ -559,7 +559,7 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        Subject subject = JAASLogin(jaasConfFile);
+        Subject subject = JAASLogin();
 
         SaslClient saslClient = createSaslClient(subject,server_principal,service_principal_hostname);
 
@@ -569,22 +569,24 @@ public class ZooKeeper {
         cnxn.start();
     }
 
-    public Subject JAASLogin(String jaasConfFile) {
+    public Subject JAASLogin() {
         Subject subject = null;
-        try {
-            final String CLIENT_SECTION_OF_JAAS_CONF_FILE = "Client"; // The section (of the JAAS configuration file named $JAAS_CONF_FILE_NAME)
-
-            if (jaasConfFile != null) {
-                System.setProperty("java.security.auth.login.config",jaasConfFile);
-            }
-
+        if (System.getProperty("java.security.auth.login.config") != null) {
+            Subject zkServerSubject;
             LoginContext loginCtx = null;
-            loginCtx = new LoginContext(CLIENT_SECTION_OF_JAAS_CONF_FILE,new LoginCallbackHandler());
-            loginCtx.login();
-            subject = loginCtx.getSubject();
-        }
-        catch (LoginException e) {
-            LOG.error("Login failure : " + e + "; continuing without JAAS Subject.");
+            final String CLIENT_SECTION_OF_JAAS_CONF_FILE = "Client"; // The section (of the JAAS configuration file named $JAAS_CONF_FILE_NAME)
+            try {
+                loginCtx = new LoginContext(CLIENT_SECTION_OF_JAAS_CONF_FILE,new LoginCallbackHandler());
+
+                // If using DIGEST-MD5, a username and password will be loaded from the jaas conf file section here.
+                loginCtx.login();
+
+                zkServerSubject = loginCtx.getSubject();
+                return zkServerSubject;
+            }
+            catch (LoginException e) {
+                LOG.error("Login failure : " + e + "; continuing without JAAS Subject.");
+            }
         }
         return subject;
     }

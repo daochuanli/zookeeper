@@ -380,7 +380,7 @@ public abstract class ClientBase extends ZKTestCase {
         ZooKeeperServer zks = new ZooKeeperServer(dataDir, dataDir, 3000);
         final int PORT = getPort(hostPort);
         if (factory == null) {
-            factory = ServerCnxnFactory.createFactory(PORT, maxCnxns, null, "DIGEST-MD5");
+            factory = ServerCnxnFactory.createFactory(PORT, maxCnxns);
         }
         factory.startup(zks);
         Assert.assertTrue("waiting for server up",
