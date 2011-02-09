@@ -626,7 +626,7 @@ public class ZooKeeper {
                 String[] mechs = {"DIGEST-MD5"};
                 String username = (String)(subject.getPublicCredentials().toArray()[0]);
                 String password = (String)(subject.getPrivateCredentials().toArray()[0]);
-                // "zk-sasl-md5" is a constant used also by server.
+                // "zk-sasl-md5" is a hard-wired 'domain' parameter used also by server.
                 saslClient = Sasl.createSaslClient(mechs,username,serviceName,"zk-sasl-md5",null,new ClientCallbackHandler(password));
                 return saslClient;
             }
