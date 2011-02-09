@@ -26,7 +26,7 @@ public class SASLAuthenticationProvider implements AuthenticationProvider {
     }
 
     public void addCredentials(final String id, final String user, final String password) {
-        if (id.equals("super")) { // only superuser can add new DIGEST-MD5 users, for now.
+        if (id.equals("super")) { // only superuser can add new DIGEST-MD5 users or change users' passwords.
             this.credentials.put(user,password);
         }
     }
