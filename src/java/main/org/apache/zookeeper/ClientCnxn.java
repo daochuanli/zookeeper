@@ -172,10 +172,10 @@ public class ClientCnxn {
     public void prepareSaslResponseToServer(byte[] serverToken) {
         saslToken = serverToken;
 
-        LOG.info("saslToken (server) length: " + saslToken.length);
+        LOG.debug("saslToken (server) length: " + saslToken.length);
 
         if (saslClient.isComplete() == true) {
-            LOG.info("SASL authentication successful.");
+            LOG.info("SASL authentication with Zookeeper server is successful");
             state = States.CONNECTED;
         }
         else {
@@ -183,16 +183,13 @@ public class ClientCnxn {
             try {
                 saslToken = createSaslToken(saslToken, saslClient);
                 if (saslToken != null) {
-                    LOG.info("saslToken (client) length: " + saslToken.length);
+                    LOG.debug("saslToken (client) length: " + saslToken.length);
                     queueSaslPacket(saslToken);
                 }
                 else {
-                    LOG.info("saslToken is null: authentication attempt has finished (successfully or unsuccessfully).");
-
-                    // Note: only checking for completeness after saslToken becomes null. No point in changing
-                    // state status
+                    // if saslToken is null, then authentication attempt has finished (successfully or unsuccessfully).");
                     if (saslClient.isComplete() == true) {
-                        LOG.info("SASL authentication successful.");
+                        LOG.info("SASL authentication with Zookeeper server is successful.");
                         state = States.CONNECTED;
                     }
                 }

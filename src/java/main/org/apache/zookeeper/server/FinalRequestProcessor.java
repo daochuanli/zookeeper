@@ -342,7 +342,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                 ZooKeeperServer.byteBuffer2Record(request.request,clientTokenRecord);
 
                 byte[] clientToken = clientTokenRecord.getToken();
-                LOG.info("Size of client SASL token: " + clientToken.length);
+                LOG.debug("Size of client SASL token: " + clientToken.length);
                 byte[] responseToken = null;
 
                 try {
@@ -370,7 +370,7 @@ public class FinalRequestProcessor implements RequestProcessor {
 
                 rsp = new SetSASLResponse(responseToken);
                 if (responseToken != null) {
-                    LOG.info("Size of server SASL response: " + responseToken.length);
+                    LOG.debug("Size of server SASL response: " + responseToken.length);
                 }
                 break;
             }
