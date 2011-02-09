@@ -18,22 +18,21 @@
 
 package org.apache.zookeeper.test;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.TestableZooKeeper;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.junit.Assert;
 import org.junit.Test;
 
 public class SaslAuthTest extends ClientBase {
     static {
-        System.setProperty("java.security.auth.login.config","/Users/ekoontz/zookeeper/src/java/test/config/jaas.conf");
         System.setProperty("zookeeper.authProvider.1","org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
     }
 
@@ -43,6 +42,22 @@ public class SaslAuthTest extends ClientBase {
     protected TestableZooKeeper createClient(String hp)
     throws IOException, InterruptedException
     {
+        File tmpDir = ClientBase.createTmpDir();
+        File saslConfFile = new File(tmpDir, "jaas.conf");
+        FileWriter fwriter = new FileWriter(saslConfFile);
+
+        fwriter.write("" +
+                "Server {\n" +
+                "          org.apache.zookeeper.server.auth.DigestLoginModule required\n" +
+                "          user_super=\"test\";\n" +
+                "};\n" +
+                "Client {\n" +
+                "       org.apache.zookeeper.server.auth.DigestLoginModule required\n" +
+                "       username=\"super\"\n" +
+                "       password=\"test\";\n" +
+                "};" + "\n");
+        fwriter.close();
+        System.setProperty("java.security.auth.login.config",saslConfFile.getAbsolutePath());
         MyWatcher watcher = new MyWatcher();
         return createClient(watcher, hp);
     }
