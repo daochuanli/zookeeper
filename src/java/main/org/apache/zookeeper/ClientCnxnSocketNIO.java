@@ -102,8 +102,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     if (!pbb.hasRemaining()) {
                         sentCount++;
                         Packet p = outgoingQueue.removeFirst();
-                        // TODO: figure out why these 2 (Opcode.ping and .auth) are excluded from pendingQueue.
-                        // (in other words, figure out what pendingQueue is).
                         if (p.requestHeader != null
                                 && p.requestHeader.getType() != OpCode.ping
                                 && p.requestHeader.getType() != OpCode.auth) {
@@ -245,7 +243,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     }
     
     @Override
-    void doTransport(int waitTimeOut, List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue)
+    void doTransport(int waitTimeOut, List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue )
             throws IOException, InterruptedException {
         selector.select(waitTimeOut);
         Set<SelectionKey> selected;

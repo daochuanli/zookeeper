@@ -201,8 +201,6 @@ public class ZooKeeperMain {
                         options.put("server", it.next());
                     } else if (opt.equals("-timeout")) {
                         options.put("timeout", it.next());
-                    } else if (opt.equals("-jaas")) {
-                        options.put("jaas", it.next());
                     }
                 } catch (NoSuchElementException e){
                     System.err.println("Error: no argument found for option "
@@ -289,7 +287,7 @@ public class ZooKeeperMain {
 
     public ZooKeeperMain(String args[]) throws IOException, InterruptedException {
         cl.parseOptions(args);
-
+        System.out.println("Connecting to " + cl.getOption("server"));
         connectToZK(cl.getOption("server"));
         //zk = new ZooKeeper(cl.getOption("server"),
 //                Integer.parseInt(cl.getOption("timeout")), new MyWatcher());
@@ -811,7 +809,6 @@ public class ZooKeeperMain {
             String password = args[2];
             zk.addCredentials(username,password);
         }
-
         else {
             usage();
         }
