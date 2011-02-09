@@ -71,7 +71,6 @@ public class QuorumPeerConfig {
 
     protected LearnerType peerType = LearnerType.PARTICIPANT;
 
-    protected String jaasConf;
     protected String authMech;
 
     @SuppressWarnings("serial")
@@ -160,8 +159,6 @@ public class QuorumPeerConfig {
                 {
                     throw new ConfigException("Unrecognised peertype: " + value);
                 }
-            } else if (key.equals("jaasConf")) {
-                jaasConf = value;
             } else if (key.equals("authMech")) {
                 authMech = value;
             }
@@ -385,10 +382,6 @@ public class QuorumPeerConfig {
 
     public LearnerType getPeerType() {
         return peerType;
-    }
-
-    public String getJaasConf() {
-        return jaasConf;
     }
 
     public String getAuthMech() {

@@ -44,7 +44,7 @@ public class ServerConfig {
     protected int minSessionTimeout = -1;
     /** defaults to -1 if not set explicitly */
     protected int maxSessionTimeout = -1;
-    protected String jaasConf;
+    // TODO: not currently used: add support.
     protected String authMech;
 
     /**
@@ -97,7 +97,6 @@ public class ServerConfig {
       maxClientCnxns = config.getMaxClientCnxns();
       minSessionTimeout = config.getMinSessionTimeout();
       maxSessionTimeout = config.getMaxSessionTimeout();
-      jaasConf = config.getJaasConf();
       authMech = config.getAuthMech();
     }
 
@@ -112,8 +111,10 @@ public class ServerConfig {
     public int getMinSessionTimeout() { return minSessionTimeout; }
     /** maximum session timeout in milliseconds, -1 if unset */
     public int getMaxSessionTimeout() { return maxSessionTimeout; }
-
-    public String getJaasConf() { return jaasConf; }
+    // SASL mechanism that server can use. Currently not consulted: instead
+    // server decides which mechanism based on lack/presence of login credentials for
+    // server in the server's JAAS configuration file.
+    // TODO: respect authMech start-time configuration setting, which would be stored in here in authMech.
     public String getAuthMech() { return authMech; }
 
 }
