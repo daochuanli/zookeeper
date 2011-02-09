@@ -369,7 +369,9 @@ public class FinalRequestProcessor implements RequestProcessor {
                 }
 
                 rsp = new SetSASLResponse(responseToken);
-                LOG.info("Size of server SASL response: " + responseToken.length);
+                if (responseToken != null) {
+                    LOG.info("Size of server SASL response: " + responseToken.length);
+                }
                 break;
             }
             case OpCode.addcred: {
