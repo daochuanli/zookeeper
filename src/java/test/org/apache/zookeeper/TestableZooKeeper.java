@@ -27,8 +27,7 @@ public class TestableZooKeeper extends ZooKeeper {
 
     public TestableZooKeeper(String host, int sessionTimeout,
             Watcher watcher) throws IOException {
-        // TODO: check for system property "java.security.auth.login.config"
-        super(host, sessionTimeout, watcher, "zookeeper/127.0.0.1");
+        super(host, sessionTimeout, watcher, "zookeeper/"+host.substring(0,host.indexOf(":")));
     }
 
     public TestableZooKeeper(String host, int sessionTimeout,
