@@ -93,8 +93,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         ss.socket().bind(addr);
         ss.configureBlocking(false);
         ss.register(selector, SelectionKey.OP_ACCEPT);
-
-
+        this.subject = JAASLogin();
     }
 
 

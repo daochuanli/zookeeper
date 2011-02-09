@@ -171,8 +171,7 @@ public abstract class ServerCnxnFactory {
             serverCnxnFactoryName = NIOServerCnxnFactory.class.getName();
         }
         try {
-            return (ServerCnxnFactory) Class.forName(serverCnxnFactoryName)
-                                                .newInstance();
+            return (ServerCnxnFactory)Class.forName(serverCnxnFactoryName).newInstance();
         } catch (Exception e) {
             IOException ioe = new IOException("Couldn't instantiate "
                     + serverCnxnFactoryName);
@@ -191,33 +190,45 @@ public abstract class ServerCnxnFactory {
             int maxClientCnxns) throws IOException
     {
         ServerCnxnFactory factory = createFactory();
-        factory.subject = JAASLogin();
         factory.configure(addr, maxClientCnxns);
         return factory;
     }
 
-    static public Subject JAASLogin() {
+    public Subject JAASLogin() {
         // This is used to initialize a Zookeeper Quorum Member's subject.
         // Should be called only once, when the Quorum member starts.
         // TODO: Figure out what this does and if it's needed.
         System.setProperty("handlers", "java.util.logging.ConsoleHandler");
 
         if (System.getProperty("java.security.auth.login.config") != null) {
+            LOG.info("Using java.security.auth.login.config="+System.getProperty("java.security.auth.login.config") + " for doing server-side subject authentication.");
             final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
             try {
                 LoginContext loginCtx = new LoginContext(SERVICE_SECTION_OF_JAAS_CONF_FILE);
-                // DigestLoginModule loads passwords from Server section of the JAAS conf file.
-                loginCtx.login();
-                return loginCtx.getSubject();
+                if (loginCtx != null) {
+                    // DigestLoginModule loads passwords from Server section of the JAAS conf file.
+                    loginCtx.login();
+                    if (loginCtx.getSubject() != null) {
+                        LOG.info("Server successfully authenticated.");
+                        return loginCtx.getSubject();
+                    }
+                    else {
+                        LOG.info("No subject found after login.");
+                        return null;
+                    }
+                }
+                else {
+                    LOG.error("No 'Server' section found in file:" + System.getProperty("java.security.auth.login.config") + ".");
+                    return null;
+                }
             }
             catch (LoginException e) {
-                e.printStackTrace();
-                System.exit(-1);
+                LOG.error("Error while trying to do server-side subject authentication using 'Server' section of " + System.getProperty("java.security.auth.login.config") + ":" + e);
+                return null;
             }
         }
         else {
-            // TODO: move this log message (and the getProperty() up to caller).
-            // LOG.info("System Property: java.security.auth.login.config is not defined: not using JAAS.");
+            LOG.info("java.security.auth.login.config is not defined: not doing server-side subject authentication.");
         }
         return null;
     }
