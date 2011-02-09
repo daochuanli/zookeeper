@@ -34,6 +34,28 @@ import org.junit.Test;
 public class SaslAuthTest extends ClientBase {
     static {
         System.setProperty("zookeeper.authProvider.1","org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
+
+        try {
+            File tmpDir = createTmpDir();
+            File saslConfFile = new File(tmpDir, "jaas.conf");
+            FileWriter fwriter = new FileWriter(saslConfFile);
+
+            fwriter.write("" +
+                    "Server {\n" +
+                    "          org.apache.zookeeper.server.auth.DigestLoginModule required\n" +
+                    "          user_super=\"test\";\n" +
+                    "};\n" +
+                    "Client {\n" +
+                    "       org.apache.zookeeper.server.auth.DigestLoginModule required\n" +
+                    "       username=\"super\"\n" +
+                    "       password=\"test\";\n" +
+                    "};" + "\n");
+            fwriter.close();
+            System.setProperty("java.security.auth.login.config",saslConfFile.getAbsolutePath());
+        }
+        catch (IOException e) {
+            // could not create tmp directory to hold JAAS conf file.
+        }
     }
 
     private AtomicInteger authFailed = new AtomicInteger(0);
