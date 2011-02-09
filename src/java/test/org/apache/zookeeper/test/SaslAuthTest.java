@@ -84,14 +84,10 @@ public class SaslAuthTest extends ClientBase {
     @Test
     public void testAuth() throws Exception {
         ZooKeeper zk = createClient();
-        if (true) {try {
-            // succeeds:
-            //zk.create("/path1", null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-            // fails:
-            zk.create("/path2", null, Ids.CREATOR_ALL_ACL, CreateMode.PERSISTENT);
-
+        try {
+            zk.create("/path1", null, Ids.CREATOR_ALL_ACL, CreateMode.PERSISTENT);
         } finally {
             zk.close();
-        }           }
+        }
     }
 }
