@@ -37,7 +37,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import javax.management.MBeanServerConnection;
-import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.Priority;
@@ -52,7 +51,6 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.server.ServerCnxnFactory;
 import org.apache.zookeeper.server.ZKDatabase;
 import org.apache.zookeeper.server.ZooKeeperServer;
-import org.apache.zookeeper.server.ZooKeeperServerMain;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
 import org.junit.After;
 import org.junit.Assert;

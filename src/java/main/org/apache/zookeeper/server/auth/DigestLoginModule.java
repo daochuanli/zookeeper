@@ -2,7 +2,6 @@ package org.apache.zookeeper.server.auth;
 import javax.security.auth.Subject;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.spi.LoginModule;
-import java.security.Principal;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;

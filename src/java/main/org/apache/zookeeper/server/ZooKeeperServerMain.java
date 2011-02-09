@@ -22,10 +22,6 @@ import java.io.File;
 import java.io.IOException;
 
 import javax.management.JMException;
-import javax.security.auth.Subject;
-import javax.security.auth.login.LoginContext;
-import javax.security.auth.login.LoginException;
-
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.jmx.ManagedUtil;
 import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
@@ -108,9 +104,9 @@ public class ZooKeeperServerMain {
             zkServer.setTickTime(config.tickTime);
             zkServer.setMinSessionTimeout(config.minSessionTimeout);
             zkServer.setMaxSessionTimeout(config.maxSessionTimeout);
-
             cnxnFactory = ServerCnxnFactory.createFactory();
-            cnxnFactory.configure(config.getClientPortAddress(),config.getMaxClientCnxns());
+            cnxnFactory.configure(config.getClientPortAddress(),
+                    config.getMaxClientCnxns());
             cnxnFactory.startup(zkServer);
             cnxnFactory.join();
             if (zkServer.isRunning()) {
@@ -128,8 +124,5 @@ public class ZooKeeperServerMain {
     protected void shutdown() {
         cnxnFactory.shutdown();
     }
-
-
-
 }
 
