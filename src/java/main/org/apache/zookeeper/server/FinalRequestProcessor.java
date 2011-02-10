@@ -397,7 +397,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                         }
                     }
                     if (allowedToAddAuth == true) {
-                        this.zks.addCredentials(addCredRequest.getUsername(),addCredRequest.getPassword());
+                        this.zks.addCredential(addCredRequest.getUsername(),addCredRequest.getPassword());
                         rsp = new AddCredResponse("Added password for " + addCredRequest.getUsername());
                     }
                     else {

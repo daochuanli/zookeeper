@@ -1,4 +1,6 @@
 package org.apache.zookeeper.server.auth;
+import org.apache.zookeeper.server.ServerCnxnFactory;
+
 import javax.security.auth.Subject;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.spi.LoginModule;
@@ -36,19 +38,10 @@ public class DigestLoginModule implements LoginModule {
             //server: save options: they are user->password pairs (except e.g. "debug").
             this.options = options;
             this.subject = subject;
-            Map<String,String> userPassPairs = new HashMap<String,String>();
 
-            Iterator it = options.entrySet().iterator();
-            while (it.hasNext()) {
-                Map.Entry pair = (Map.Entry)it.next();
+            ServerCnxnFactory factory = (ServerCnxnFactory)sharedState.get("servercnxn_factory");
 
-                String key = (String)pair.getKey();
-                if (key.substring(0,5).equals("user_")) {
-                    String userName = key.substring(5);
-                    userPassPairs.put(userName,(String)pair.getValue());
-                }
-            }
-            this.subject.getPrivateCredentials().add((Object)userPassPairs);
+
         }
 
         return;

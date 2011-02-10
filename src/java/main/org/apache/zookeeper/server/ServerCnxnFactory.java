@@ -25,11 +25,14 @@ import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import javax.management.JMException;
 import javax.security.auth.Subject;
 import javax.security.auth.callback.*;
+import javax.security.auth.login.AppConfigurationEntry;
+import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import javax.security.sasl.*;
@@ -48,8 +51,15 @@ public abstract class ServerCnxnFactory {
     Logger LOG = Logger.getLogger(ServerCnxnFactory.class);
 
     Subject subject;
-
     public Subject getSubject() { return subject; }
+
+
+    private SaslServerCallbackHandler saslServerCallbackHandler = null;
+
+    // only used if SASL mechanism is DIGEST-MD5: if mech is GSSAPI, passwords are not stored in Zookeeper.
+    public void addPrivateCredential(String username, String password) {
+        saslServerCallbackHandler.addPrivateCredential(username, password);
+    }
 
     /**
      * The buffer will cause the connection to be close when we do a send.
@@ -118,7 +128,7 @@ public abstract class ServerCnxnFactory {
                             public SaslServer run() {
                                 try {
                                     SaslServer saslServer;
-                                    saslServer = Sasl.createSaslServer(mech, servicePrincipalName, serviceHostname, null, new SaslServerCallbackHandler(null));
+                                    saslServer = Sasl.createSaslServer(mech, servicePrincipalName, serviceHostname, null, new SaslServerCallbackHandler());
                                     return saslServer;
                                 }
                                 catch (SaslException e) {
@@ -143,14 +153,8 @@ public abstract class ServerCnxnFactory {
             else {
                 // JAAS non-GSSAPI authentication: assuming and supporting only DIGEST-MD5 mechanism for now.
                 // TODO: use 'authMech=' value in zoo.cfg.
-                // TODO: fix compiler cast warnings (Object / Map<String,String>)
                 try {
-                    Object credentials = null;
-                    if (subject.getPrivateCredentials().size() > 0) {
-                        credentials = subject.getPrivateCredentials().toArray()[0];
-                    }
-                    // Note that the third argument (realm) is blank.
-                    SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","zk-sasl-md5",null,new SaslServerCallbackHandler((Map<String,String>)credentials));
+                    SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","zk-sasl-md5",null,saslServerCallbackHandler);
                     return saslServer;
                 }
                 catch (SaslException e) {
@@ -202,9 +206,9 @@ public abstract class ServerCnxnFactory {
 
         if (System.getProperty("java.security.auth.login.config") != null) {
             LOG.info("Using java.security.auth.login.config="+System.getProperty("java.security.auth.login.config") + " for doing server-side subject authentication.");
-            final String SERVICE_SECTION_OF_JAAS_CONF_FILE = "Server";
             try {
-                LoginContext loginCtx = new LoginContext(SERVICE_SECTION_OF_JAAS_CONF_FILE);
+                this.saslServerCallbackHandler = new SaslServerCallbackHandler();
+                LoginContext loginCtx = new LoginContext("Server", this.saslServerCallbackHandler);
                 if (loginCtx != null) {
                     // DigestLoginModule loads passwords from Server section of the JAAS conf file.
                     loginCtx.login();
@@ -261,12 +265,16 @@ public abstract class ServerCnxnFactory {
 class SaslServerCallbackHandler implements CallbackHandler {
     private static final Logger LOG = Logger.getLogger(CallbackHandler.class);
     private String userName = null;
-    private Map<String,String> credentials = null;
+    private Map<String,String> credentials;
 
-
-    public SaslServerCallbackHandler(Map<String,String> credentials) {
+    public SaslServerCallbackHandler() {
         this.credentials = credentials;
     }
+
+    public void addPrivateCredential(String username, String password) {
+        this.credentials.put(username,password);
+    }
+
 
     public void handle(Callback[] callbacks) throws
             UnsupportedCallbackException {
