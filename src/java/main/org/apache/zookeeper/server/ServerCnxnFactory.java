@@ -324,7 +324,7 @@ public abstract class ServerCnxnFactory {
                     else {
                         if (callback instanceof RealmCallback) {
                             RealmCallback rc = (RealmCallback) callback;
-                            LOG.info("client supplied realm: " + rc.getDefaultText());
+                            LOG.debug("client supplied realm: " + rc.getDefaultText());
                             rc.setText(rc.getDefaultText());
                         }
                         else {

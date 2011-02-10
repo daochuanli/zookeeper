@@ -335,7 +335,7 @@ public class FinalRequestProcessor implements RequestProcessor {
             }
             case OpCode.sasl: {
                 // client sent a SASL token: respond with our own SASL token in response.
-                LOG.info("FinalRequestProcessor:ProcessRequest():Responding to client SASL token.");
+                LOG.debug("FinalRequestProcessor:ProcessRequest():Responding to client SASL token.");
                 lastOp = "SASL";
 
                 GetSASLRequest clientTokenRecord = new GetSASLRequest();
