@@ -1,12 +1,12 @@
 package org.apache.zookeeper.server.auth;
-import org.apache.zookeeper.server.ServerCnxnFactory;
 
 import javax.security.auth.Subject;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.spi.LoginModule;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+
+import org.apache.zookeeper.server.SaslServerCallbackHandler;
 
 public class DigestLoginModule implements LoginModule {
     private CallbackHandler callbackHandler;
@@ -34,15 +34,7 @@ public class DigestLoginModule implements LoginModule {
             String password = (String)options.get("password");
             this.subject.getPrivateCredentials().add((Object)password);
         }
-        else {
-            //server: save options: they are user->password pairs (except e.g. "debug").
-            this.options = options;
-            this.subject = subject;
 
-            ServerCnxnFactory factory = (ServerCnxnFactory)sharedState.get("servercnxn_factory");
-
-
-        }
 
         return;
     }

@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -128,7 +129,7 @@ public abstract class ServerCnxnFactory {
                             public SaslServer run() {
                                 try {
                                     SaslServer saslServer;
-                                    saslServer = Sasl.createSaslServer(mech, servicePrincipalName, serviceHostname, null, new SaslServerCallbackHandler());
+                                    saslServer = Sasl.createSaslServer(mech, servicePrincipalName, serviceHostname, null, saslServerCallbackHandler);
                                     return saslServer;
                                 }
                                 catch (SaslException e) {
@@ -154,7 +155,7 @@ public abstract class ServerCnxnFactory {
                 // JAAS non-GSSAPI authentication: assuming and supporting only DIGEST-MD5 mechanism for now.
                 // TODO: use 'authMech=' value in zoo.cfg.
                 try {
-                    SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","zk-sasl-md5",null,saslServerCallbackHandler);
+                    SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","zk-sasl-md5",null, saslServerCallbackHandler);
                     return saslServer;
                 }
                 catch (SaslException e) {
@@ -207,7 +208,7 @@ public abstract class ServerCnxnFactory {
         if (System.getProperty("java.security.auth.login.config") != null) {
             LOG.info("Using java.security.auth.login.config="+System.getProperty("java.security.auth.login.config") + " for doing server-side subject authentication.");
             try {
-                this.saslServerCallbackHandler = new SaslServerCallbackHandler();
+                this.saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
                 LoginContext loginCtx = new LoginContext("Server", this.saslServerCallbackHandler);
                 if (loginCtx != null) {
                     // DigestLoginModule loads passwords from Server section of the JAAS conf file.
@@ -260,79 +261,91 @@ public abstract class ServerCnxnFactory {
 
     }
 
-}
-
-class SaslServerCallbackHandler implements CallbackHandler {
-    private static final Logger LOG = Logger.getLogger(CallbackHandler.class);
-    private String userName = null;
-    private Map<String,String> credentials;
-
-    public SaslServerCallbackHandler() {
-        this.credentials = credentials;
-    }
-
-    public void addPrivateCredential(String username, String password) {
-        this.credentials.put(username,password);
-    }
 
 
-    public void handle(Callback[] callbacks) throws
-            UnsupportedCallbackException {
-        for (Callback callback : callbacks) {
-            if (callback instanceof NameCallback) {
-                NameCallback nc = (NameCallback) callback;
-                // check to see if this user is in the user password database.
-                if (credentials.get(nc.getDefaultName()) != null) {
-                    nc.setName(nc.getDefaultName());
-                    this.userName = nc.getDefaultName();
-                }
-                else { // no such user.
-                    LOG.warn("User '" + nc.getDefaultName() + "' not found in list of DIGEST-MD5 authenticateable users.");
-                }
+    public class SaslServerCallbackHandler implements CallbackHandler {
+        private String userName = null;
+        private Map<String,String> credentials;
+
+        public SaslServerCallbackHandler() {
+            int i = 43;
+        }
+
+        public SaslServerCallbackHandler(Configuration configuration) {
+            int i = 42;
+            AppConfigurationEntry options[] = configuration.getAppConfigurationEntry("Server");
+
+            for(AppConfigurationEntry option: options) {
+                Map<String,?> innerOptions = option.getOptions();
+                // populate credentials map..
             }
-            else {
-                if (callback instanceof PasswordCallback) {
-                    PasswordCallback pc = (PasswordCallback) callback;
 
-                    if ((this.userName.equals("super")
-                            &&
-                            (System.getProperty("zookeeper.SASLAuthenticationProvider.superPassword") != null))) {
-                        // superuser: use Java system property for password, if available.
-                        pc.setPassword(System.getProperty("zookeeper.SASLAuthenticationProvider.superPassword").toCharArray());
+
+            return;
+        }
+
+        public void addPrivateCredential(String username, String password) {
+            this.credentials.put(username,password);
+        }
+
+        public void handle(Callback[] callbacks) throws
+                UnsupportedCallbackException {
+            for (Callback callback : callbacks) {
+                if (callback instanceof NameCallback) {
+                    NameCallback nc = (NameCallback) callback;
+                    // check to see if this user is in the user password database.
+                    if (credentials.get(nc.getDefaultName()) != null) {
+                        nc.setName(nc.getDefaultName());
+                        this.userName = nc.getDefaultName();
                     }
-                    else {
-                        if (this.credentials.get(this.userName) != null) {
-                            pc.setPassword(this.credentials.get(this.userName).toCharArray());
-                        }
-                        else {
-                            LOG.info("No password found for user: " + this.userName);
-                        }
+                    else { // no such user.
+                        LOG.warn("User '" + nc.getDefaultName() + "' not found in list of DIGEST-MD5 authenticateable users.");
                     }
                 }
                 else {
-                    if (callback instanceof RealmCallback) {
-                        RealmCallback rc = (RealmCallback) callback;
-                        LOG.info("client supplied realm: " + rc.getDefaultText());
-                        rc.setText(rc.getDefaultText());
+                    if (callback instanceof PasswordCallback) {
+                        PasswordCallback pc = (PasswordCallback) callback;
+
+                        if ((this.userName.equals("super")
+                                &&
+                                (System.getProperty("zookeeper.SASLAuthenticationProvider.superPassword") != null))) {
+                            // superuser: use Java system property for password, if available.
+                            pc.setPassword(System.getProperty("zookeeper.SASLAuthenticationProvider.superPassword").toCharArray());
+                        }
+                        else {
+                            if (this.credentials.get(this.userName) != null) {
+                                pc.setPassword(this.credentials.get(this.userName).toCharArray());
+                            }
+                            else {
+                                LOG.info("No password found for user: " + this.userName);
+                            }
+                        }
                     }
                     else {
-                        if (callback instanceof AuthorizeCallback) {
-                            AuthorizeCallback ac = (AuthorizeCallback) callback;
+                        if (callback instanceof RealmCallback) {
+                            RealmCallback rc = (RealmCallback) callback;
+                            LOG.info("client supplied realm: " + rc.getDefaultText());
+                            rc.setText(rc.getDefaultText());
+                        }
+                        else {
+                            if (callback instanceof AuthorizeCallback) {
+                                AuthorizeCallback ac = (AuthorizeCallback) callback;
 
-                            String authenticationID = ac.getAuthenticationID();
-                            String authorizationID = ac.getAuthorizationID();
+                                String authenticationID = ac.getAuthenticationID();
+                                String authorizationID = ac.getAuthorizationID();
 
-                            LOG.info("Successfully authenticated client: authenticationID=" + authenticationID + ";  authorizationID=" + authorizationID + ".");
-                            if (authenticationID.equals(authorizationID)) {
-                                LOG.debug("setAuthorized(true) since " + authenticationID + "==" + authorizationID);
-                                ac.setAuthorized(true);
-                            } else {
-                                LOG.debug("setAuthorized(true), even though " + authenticationID + "!=" + authorizationID + ".");
-                                ac.setAuthorized(true);
-                            }
-                            if (ac.isAuthorized()) {
-                                LOG.debug("isAuthorized() since ac.isAuthorized() == true");
-                                ac.setAuthorizedID(authorizationID);
+                                LOG.info("Successfully authenticated client: authenticationID=" + authenticationID + ";  authorizationID=" + authorizationID + ".");
+                                if (authenticationID.equals(authorizationID)) {
+                                    LOG.debug("setAuthorized(true) since " + authenticationID + "==" + authorizationID);
+                                    ac.setAuthorized(true);
+                                } else {
+                                    LOG.debug("setAuthorized(true), even though " + authenticationID + "!=" + authorizationID + ".");
+                                    ac.setAuthorized(true);
+                                }
+                                if (ac.isAuthorized()) {
+                                    LOG.debug("isAuthorized() since ac.isAuthorized() == true");
+                                    ac.setAuthorizedID(authorizationID);
+                                }
                             }
                         }
                     }
@@ -341,5 +354,6 @@ class SaslServerCallbackHandler implements CallbackHandler {
         }
     }
 }
+
 
 
