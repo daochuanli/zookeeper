@@ -265,22 +265,26 @@ public abstract class ServerCnxnFactory {
 
     public class SaslServerCallbackHandler implements CallbackHandler {
         private String userName = null;
-        private Map<String,String> credentials;
-
-        public SaslServerCallbackHandler() {
-            int i = 43;
-        }
+        private Map<String,String> credentials = new HashMap<String,String>();
 
         public SaslServerCallbackHandler(Configuration configuration) {
-            int i = 42;
-            AppConfigurationEntry options[] = configuration.getAppConfigurationEntry("Server");
+            AppConfigurationEntry configurationEntries[] = configuration.getAppConfigurationEntry("Server");
 
-            for(AppConfigurationEntry option: options) {
-                Map<String,?> innerOptions = option.getOptions();
-                // populate credentials map..
+            credentials.clear();
+            for(AppConfigurationEntry entry: configurationEntries) {
+                Map<String,?> options = entry.getOptions();
+                // Populate DIGEST-MD5 user -> password map with JAAS configuration entries from the "Server" section.
+                // Usernames are distinguished from other options by prefixing the username with a "user_" prefix.
+                Iterator it = options.entrySet().iterator();
+                while (it.hasNext()) {
+                    Map.Entry pair = (Map.Entry)it.next();
+                    String key = (String)pair.getKey();
+                    if (key.substring(0,5).equals("user_")) {
+                        String userName = key.substring(5);
+                        credentials.put(userName,(String)pair.getValue());
+                    }
+                }
             }
-
-
             return;
         }
 
@@ -317,7 +321,7 @@ public abstract class ServerCnxnFactory {
                                 pc.setPassword(this.credentials.get(this.userName).toCharArray());
                             }
                             else {
-                                LOG.info("No password found for user: " + this.userName);
+                                LOG.warn("No password found for user: " + this.userName);
                             }
                         }
                     }
