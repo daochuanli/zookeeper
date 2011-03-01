@@ -272,7 +272,12 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 }
             }
         }
-        if (sendThread.getZkState() == States.CONNECTED) {
+
+        if ((sendThread.getZkState() == States.CONNECTED)
+            ||
+            (sendThread.getZkState() == States.SASL_INITIAL)
+            ||
+            (sendThread.getZkState() == States.SASL)) {
             if (outgoingQueue.size() > 0) {
                 enableWrite();
             } else {

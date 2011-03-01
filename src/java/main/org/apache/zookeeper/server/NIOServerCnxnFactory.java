@@ -72,7 +72,6 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
 
     int maxClientCnxns = 10;
 
-
     /**
      * Construct a new server connection factory which will accept an unlimited number
      * of concurrent connections from each client (up to the file descriptor
@@ -84,7 +83,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
 
     Thread thread;
     @Override
-    public void configure(InetSocketAddress addr, int maxcc) throws IOException {
+    public void configure(InetSocketAddress addr, int maxcc, String requireClientAuthScheme) throws IOException {
         thread = new Thread(this, "NIOServerCxn.Factory:" + addr);
         thread.setDaemon(true);
         maxClientCnxns = maxcc;
@@ -94,7 +93,10 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         ss.socket().bind(addr);
         ss.configureBlocking(false);
         ss.register(selector, SelectionKey.OP_ACCEPT);
+        this.subject = JAASLogin();
+        this.requireClientAuthScheme = requireClientAuthScheme;
     }
+
 
     /** {@inheritDoc} */
     public int getMaxClientCnxnsPerHost() {
@@ -303,4 +305,6 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         return cnxns;
     }
 
+
 }
+

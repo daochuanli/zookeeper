@@ -30,7 +30,11 @@ import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.KeeperException.SessionMovedException;
 import org.apache.zookeeper.ZooDefs.OpCode;
 import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
+
+import org.apache.zookeeper.proto.AddCredRequest;
+import org.apache.zookeeper.proto.AddCredResponse;
 import org.apache.zookeeper.proto.CreateResponse;
 import org.apache.zookeeper.proto.ExistsRequest;
 import org.apache.zookeeper.proto.ExistsResponse;
@@ -42,16 +46,22 @@ import org.apache.zookeeper.proto.GetChildrenRequest;
 import org.apache.zookeeper.proto.GetChildrenResponse;
 import org.apache.zookeeper.proto.GetDataRequest;
 import org.apache.zookeeper.proto.GetDataResponse;
+import org.apache.zookeeper.proto.GetSASLRequest;
 import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.SetACLResponse;
 import org.apache.zookeeper.proto.SetDataResponse;
+import org.apache.zookeeper.proto.SetSASLResponse;
 import org.apache.zookeeper.proto.SetWatches;
 import org.apache.zookeeper.proto.SyncRequest;
 import org.apache.zookeeper.proto.SyncResponse;
+
 import org.apache.zookeeper.server.DataTree.ProcessTxnResult;
 import org.apache.zookeeper.server.ZooKeeperServer.ChangeRecord;
 import org.apache.zookeeper.txn.CreateSessionTxn;
 import org.apache.zookeeper.txn.ErrorTxn;
+
+import javax.security.sasl.SaslException;
+import javax.security.sasl.SaslServer;
 
 /**
  * This Request processor actually applies any transaction associated with a
@@ -157,6 +167,32 @@ public class FinalRequestProcessor implements RequestProcessor {
             if (LOG.isDebugEnabled()) {
                 LOG.debug(request);
             }
+
+            // Disconnect non-SASL-authenticated sessions by checking request type: all non-createSession-request
+            // types should cause an immediate session termination if authentication is not present.
+            String authScheme = zks.getServerCnxnFactory().getRequireClientAuthScheme();
+
+            if (authScheme != null) {
+                boolean authenticated= false;
+                if (!((request.type == OpCode.createSession) ||
+                      (request.type == OpCode.ping) ||
+                      (request.type == OpCode.sasl) ||
+                      (request.type == OpCode.closeSession))) {
+                    for(Id eachId: cnxn.authInfo) {
+                        if (eachId.getScheme().equals(authScheme)) {
+                            authenticated = true;
+                            break;
+                        }
+                    }
+                    if (!authenticated) {
+                        LOG.warn("Disconnecting client: 'zookeeper.requireClientAuth' system property is: '" + authScheme +
+                                "', but client is not "+authScheme+"-authenticated.");
+                        cnxn.close();
+                        return;
+                    }
+                }
+            }
+
             switch (request.type) {
             case OpCode.ping: {
                 zks.serverStats().updateLatency(request.createTime);
@@ -321,6 +357,89 @@ public class FinalRequestProcessor implements RequestProcessor {
                         getChildren2Request.getPath(), stat, getChildren2Request
                                 .getWatch() ? cnxn : null);
                 rsp = new GetChildren2Response(children, stat);
+                break;
+            }
+            case OpCode.sasl: {
+                // client sent a SASL token: respond with our own SASL token in response.
+                LOG.debug("FinalRequestProcessor:ProcessRequest():Responding to client SASL token.");
+                lastOp = "SASL";
+
+                GetSASLRequest clientTokenRecord = new GetSASLRequest();
+                ZooKeeperServer.byteBuffer2Record(request.request,clientTokenRecord);
+
+                byte[] clientToken = clientTokenRecord.getToken();
+                LOG.debug("Size of client SASL token: " + clientToken.length);
+                byte[] responseToken = null;
+
+                try {
+                    SaslServer saslServer = cnxn.saslServer;
+                    try {
+                        // note that clientToken might be empty (clientToken.length == 0):
+                        // in the case of the DIGEST-MD5 mechanism, clientToken will be empty at the beginning of the
+                        // SASL negotiation process.
+                        responseToken = saslServer.evaluateResponse(clientToken);
+
+                        if (saslServer.isComplete() == true) {
+                            cnxn.addAuthInfo(new Id("sasl",saslServer.getAuthorizationID()));
+                        }
+                    }
+                    catch (SaslException e) {
+                        LOG.warn("Client failed to SASL authenticate: " + e);
+                        if ((System.getProperty("zookeeper.maintain_connection_despite_sasl_failure") != null)
+                                &&
+                            (System.getProperty("zookeeper.maintain_connection_despite_sasl_failure").equals("yes"))) {
+                            LOG.warn("Maintaining client connection despite SASL authentication failure.");
+                        } else {
+                            LOG.warn("Closing client connection due to SASL authentication failure.");
+                            cnxn.close();
+                        }
+                    }
+
+                }
+                catch (NullPointerException e) {
+                    LOG.error("cnxn.saslServer is null: cnxn object did not initialize its saslServer properly.");
+                }
+                if (responseToken != null) {
+                    LOG.debug("Size of server SASL response: " + responseToken.length);
+                }
+                rsp = new SetSASLResponse(responseToken);
+                break;
+            }
+            case OpCode.addcred: {
+                lastOp = "ADDC";
+                //
+                AddCredRequest addCredRequest = new AddCredRequest();
+                try {
+                    ZooKeeperServer.byteBuffer2Record(request.request,addCredRequest);
+                    boolean allowedToAddAuth = false;
+                    for(Object each : cnxn.getAuthInfo()) {
+                        Id id = (Id)each;
+                        if (id.getScheme().equals("sasl")) {
+                            if (id.getId().equals("super")) {
+                                allowedToAddAuth = true;
+                                break;
+                            }
+                            else {
+                                if (id.getId().equals(addCredRequest.getUsername())) {
+                                    allowedToAddAuth = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (allowedToAddAuth == true) {
+                        this.zks.addCredential(addCredRequest.getUsername(),addCredRequest.getPassword());
+                        rsp = new AddCredResponse("Added password for " + addCredRequest.getUsername());
+                    }
+                    else {
+                        rsp = new AddCredResponse("You do not have permission to add or change the password for:" + addCredRequest.getUsername());
+                    }
+
+                }
+                catch (IOException e) {
+                    rsp = new AddCredResponse("Error while trying to add password for:" + addCredRequest.getUsername());
+
+                }
                 break;
             }
             }

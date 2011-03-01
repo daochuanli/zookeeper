@@ -40,6 +40,11 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 
+import javax.security.auth.Subject;
+
+
+
+
 /**
  * The command line client to ZooKeeper.
  *
@@ -55,6 +60,7 @@ public class ZooKeeperMain {
 
     protected ZooKeeper zk;
     protected String host = "";
+    protected Subject subject = null;
 
     public boolean getPrintWatches( ) {
         return printWatches;
@@ -82,6 +88,7 @@ public class ZooKeeperMain {
         commandMap.put("printwatches", "on|off");
         commandMap.put("quit","");
         commandMap.put("addauth", "scheme auth");
+        commandMap.put("addcred","user password");
     }
 
     static void usage() {
@@ -258,10 +265,17 @@ public class ZooKeeperMain {
         if (zk != null && zk.getState().isAlive()) {
             zk.close();
         }
-        host = newHost;
-        zk = new ZooKeeper(host,
+
+        int indexOf = newHost.indexOf(":");
+        String zkHostname = newHost.substring(0,indexOf);
+
+        // default service principal name is zookeeper/ (service name/host name)
+        String servicePrincipalName = "zookeeper/"+zkHostname;
+
+        zk = new ZooKeeper(newHost,
                  Integer.parseInt(cl.getOption("timeout")),
-                 new MyWatcher());
+                 new MyWatcher(),
+                 servicePrincipalName);
     }
     
     public static void main(String args[])
@@ -648,7 +662,7 @@ public class ZooKeeperMain {
             if (args.length >=2) {
                 connectToZK(args[1]);
             } else {
-                connectToZK(host);                
+                connectToZK(host);
             }
         } 
         
@@ -789,9 +803,13 @@ public class ZooKeeperMain {
             byte[] b = null;
             if (args.length >= 3)
                 b = args[2].getBytes();
-
             zk.addAuthInfo(args[1], b);
-        } else {
+        } else if (cmd.equals("addcred") && args.length == 3) {
+            String username = args[1];
+            String password = args[2];
+            zk.addCredentials(username,password);
+        }
+        else {
             usage();
         }
         return watch;
@@ -837,4 +855,6 @@ public class ZooKeeperMain {
         }
         return acl;
     }
+
 }
+

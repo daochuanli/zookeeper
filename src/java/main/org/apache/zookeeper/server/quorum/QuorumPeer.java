@@ -345,8 +345,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
         super("QuorumPeer");
         quorumStats = new QuorumStats(this);
     }
-    
-   
+
     /**
      * For backward compatibility purposes, we instantiate QuorumMaj by default.
      */
@@ -452,7 +451,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     {
         this(quorumPeers, snapDir, logDir, electionAlg,
                 myid,tickTime, initLimit,syncLimit,
-                ServerCnxnFactory.createFactory(new InetSocketAddress(clientPort), -1),
+                ServerCnxnFactory.createFactory(new InetSocketAddress(clientPort), -1, null),
                 new QuorumMaj(countParticipants(quorumPeers)));
     }
     
@@ -468,7 +467,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     {
         this(quorumPeers, snapDir, logDir, electionAlg,
                 myid,tickTime, initLimit,syncLimit,
-                ServerCnxnFactory.createFactory(new InetSocketAddress(clientPort), -1),
+                ServerCnxnFactory.createFactory(new InetSocketAddress(clientPort), -1, null),
                 quorumConfig);
     }
     

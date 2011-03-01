@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 
 import javax.management.JMException;
+import javax.security.auth.Subject;
 
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.jmx.ManagedUtil;
@@ -120,7 +121,8 @@ public class QuorumPeerMain {
       try {
           ServerCnxnFactory cnxnFactory = ServerCnxnFactory.createFactory();
           cnxnFactory.configure(config.getClientPortAddress(),
-                                config.getMaxClientCnxns());
+                                config.getMaxClientCnxns(),
+                                config.getRequireClientAuthScheme());
   
           quorumPeer = new QuorumPeer();
           quorumPeer.setClientPortAddress(config.getClientPortAddress());
