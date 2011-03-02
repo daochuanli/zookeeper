@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import javax.management.JMException;
+import javax.naming.ConfigurationException;
 import javax.security.auth.Subject;
 import javax.security.auth.callback.*;
 import javax.security.auth.login.AppConfigurationEntry;
@@ -39,6 +40,7 @@ import javax.security.sasl.*;
 
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.jmx.MBeanRegistry;
+import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 
 public abstract class ServerCnxnFactory {
     
@@ -223,7 +225,7 @@ public abstract class ServerCnxnFactory {
         return factory;
     }
 
-    public Subject JAASLogin() {
+    public Subject JAASLogin() throws LoginException {
         // This is used to initialize a Zookeeper Quorum Member's subject.
         // Should be called only once, when the Quorum member starts.
         // TODO: Figure out what this does and if it's needed.
@@ -253,7 +255,7 @@ public abstract class ServerCnxnFactory {
             }
             catch (LoginException e) {
                 LOG.error("Error while trying to do server-side subject authentication using 'Server' section of " + System.getProperty("java.security.auth.login.config") + ":" + e);
-                return null;
+                throw(e);
             }
         }
         else {
