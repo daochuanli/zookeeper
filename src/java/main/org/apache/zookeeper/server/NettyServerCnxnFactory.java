@@ -305,8 +305,12 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
     {
         localAddress = addr;
         this.maxClientCnxns = maxClientCnxns;
-        this.subject = JAASLogin();
         this.requireClientAuthScheme = requireClientAuthScheme;
+        try {
+          this.subject = JAASLogin();
+	} catch (Exception e) {
+          throw new IOException(e);
+        }
     }
 
     /** {@inheritDoc} */
