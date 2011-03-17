@@ -188,6 +188,12 @@ BUGFIXES:
 
   ZOOKEEPER-1007. iarchive leak in C client (jeremy stribling via mahadev)
 
+  ZOOKEEPER-993. Code improvements (MIS via fpj)
+
+  ZOOKEEPER-1012. support distinct JVMFLAGS for zookeeper server in zkServer.sh and zookeeper client in zkCli.sh (Eugene Koontz via breed)
+
+  ZOOKEEPER-880. QuorumCnxManager$SendWorker grows without bounds (vishal via breed)
+
 IMPROVEMENTS:
   ZOOKEEPER-724. Improve junit test integration - log harness information 
   (phunt via mahadev)
@@ -275,6 +281,8 @@ NEW FEATURES:
 
   ZOOKEEPER-775. A large scale pub/sub system (Erwin, Ivan and Ben via
   mahadev)
+
+  ZOOKEEPER-1020. Implement function in C client to determine which host you're currently connected to. (stephen tyree via breed)
 
 Release 3.3.0 - 2010-03-24
 
