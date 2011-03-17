@@ -975,7 +975,7 @@ public class ClientCnxn {
                     // could be avoided by going straight to CONNECTED and only going to SASL_INITIAL if client
                     // explicitly does 'sasl' command.
                     if ((state == States.SASL_INITIAL) && (saslClient == null)) {
-                        LOG.info("Client is not configured for SASL authentication: proceeding to CONNECTED state.");
+                        LOG.info("Client could not SASL authenticate.");
                         state = States.CONNECTED;
                     }
 

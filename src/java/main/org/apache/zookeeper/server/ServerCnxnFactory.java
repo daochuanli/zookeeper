@@ -43,7 +43,64 @@ import org.apache.zookeeper.jmx.MBeanRegistry;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 
 public abstract class ServerCnxnFactory {
-    
+
+    protected class LoginThread extends Thread {
+
+      private LoginContext loginContext;
+      private String loginContextName;
+      private SaslServerCallbackHandler saslServerCallbackHandler;
+
+
+      LoginThread(String loginContextName, SaslServerCallbackHandler saslServerCallbackHandler) {
+        this.loginContextName = loginContextName;
+        this.saslServerCallbackHandler = saslServerCallbackHandler;
+          try {
+              this.loginContext = new LoginContext(loginContextName,saslServerCallbackHandler);
+              this.loginContext.login();
+          }
+          catch (LoginException e) {
+              LOG.error("Error while trying to do server-side subject authentication using 'Server' section of " + System.getProperty("java.security.auth.login.config") + ":" + e);
+          }
+      }
+      public void run() {
+          LOG.info("Credentials renewal thread started.");
+          while(true) {
+              try {
+                  this.loginContext.logout();
+                  this.loginContext = new LoginContext(loginContextName,saslServerCallbackHandler);
+                  this.loginContext.login();
+		  LOG.info("Credentials renewal thread successfully logged in.");
+              }
+              catch (LoginException e) {
+                LOG.error("Error while trying to do server-side subject authentication using 'Server' section of " + System.getProperty("java.security.auth.login.config") + ":" + e);
+              }
+              LOG.info("Credentials renewal thread sleeping.");
+              try {
+                  Thread.sleep(10 * 60 * 1000); // 10 minutes.
+              }
+              catch (InterruptedException e) {
+                  LOG.error("Credential renewal thread caught InterruptedException while sleeping. Waking and attempting credential renewal.");
+              }
+          }
+      }
+
+      public LoginContext getLogin() {
+          return this.loginContext;
+      }
+
+    }
+
+    LoginThread loginThread;
+    protected void startLoginThread() {
+      this.saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
+      this.loginThread = new LoginThread("Server",this.saslServerCallbackHandler);
+      this.loginThread.start();
+    }
+
+    protected LoginContext getLogin() {
+        return loginThread.getLogin();
+    }
+
     public static final String ZOOKEEPER_SERVER_CNXN_FACTORY = "zookeeper.serverCnxnFactory";
 
     public interface PacketProcessor {
@@ -52,11 +109,9 @@ public abstract class ServerCnxnFactory {
 
     Logger LOG = Logger.getLogger(ServerCnxnFactory.class);
 
-    Subject subject;
-
     String requireClientAuthScheme = null;
 
-    public Subject getSubject() { return subject; }
+    public Subject getSubject() { return loginThread.getLogin().getSubject(); }
 
 
     private SaslServerCallbackHandler saslServerCallbackHandler = null;
@@ -112,6 +167,7 @@ public abstract class ServerCnxnFactory {
     }
 
     public SaslServer createSaslServer() {
+        Subject subject = getSubject();
         if (subject != null) {
             // server is using a JAAS-authenticated subject: determine service principal name and hostname from zk server's subject.
             if (subject.getPrincipals().size() > 0) {
@@ -223,45 +279,6 @@ public abstract class ServerCnxnFactory {
         ServerCnxnFactory factory = createFactory();
         factory.configure(addr, maxClientCnxns, null);
         return factory;
-    }
-
-    public Subject JAASLogin() throws LoginException {
-        // This is used to initialize a Zookeeper Quorum Member's subject.
-        // Should be called only once, when the Quorum member starts.
-        // TODO: Figure out what this does and if it's needed.
-        System.setProperty("handlers", "java.util.logging.ConsoleHandler");
-
-        if (System.getProperty("java.security.auth.login.config") != null) {
-            LOG.info("Using java.security.auth.login.config="+System.getProperty("java.security.auth.login.config") + " for doing server-side subject authentication.");
-            try {
-                this.saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
-                LoginContext loginCtx = new LoginContext("Server", this.saslServerCallbackHandler);
-                if (loginCtx != null) {
-                    // DigestLoginModule loads passwords from Server section of the JAAS conf file.
-                    loginCtx.login();
-                    if (loginCtx.getSubject() != null) {
-                        LOG.info("Server successfully authenticated.");
-                        return loginCtx.getSubject();
-                    }
-                    else {
-                        LOG.info("No subject found after login.");
-                        return null;
-                    }
-                }
-                else {
-                    LOG.error("No 'Server' section found in file:" + System.getProperty("java.security.auth.login.config") + ".");
-                    return null;
-                }
-            }
-            catch (LoginException e) {
-                LOG.error("Error while trying to do server-side subject authentication using 'Server' section of " + System.getProperty("java.security.auth.login.config") + ":" + e);
-                throw(e);
-            }
-        }
-        else {
-            LOG.info("java.security.auth.login.config is not defined: not doing server-side subject authentication.");
-        }
-        return null;
     }
 
     public abstract InetSocketAddress getLocalAddress();

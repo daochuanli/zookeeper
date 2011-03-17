@@ -35,6 +35,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable {
+
     private static final Logger LOG = Logger.getLogger(NIOServerCnxnFactory.class);
 
     static {
@@ -86,6 +87,9 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
     public void configure(InetSocketAddress addr, int maxcc, String requireClientAuthScheme) throws IOException {
         thread = new Thread(this, "NIOServerCxn.Factory:" + addr);
         thread.setDaemon(true);
+
+        startLoginThread();
+
         maxClientCnxns = maxcc;
         this.ss = ServerSocketChannel.open();
         ss.socket().setReuseAddress(true);
@@ -93,12 +97,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         ss.socket().bind(addr);
         ss.configureBlocking(false);
         ss.register(selector, SelectionKey.OP_ACCEPT);
-        try {
-          this.subject = JAASLogin();
-          this.requireClientAuthScheme = requireClientAuthScheme;
-        } catch (Exception e) {
-          throw new IOException(e);
-        }
+        this.requireClientAuthScheme = requireClientAuthScheme;
     }
 
 

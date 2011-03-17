@@ -307,8 +307,8 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         this.maxClientCnxns = maxClientCnxns;
         this.requireClientAuthScheme = requireClientAuthScheme;
         try {
-          this.subject = JAASLogin();
-	} catch (Exception e) {
+          this.subject = loginThread.getLogin().getSubject();
+        } catch (Exception e) {
           throw new IOException(e);
         }
     }
