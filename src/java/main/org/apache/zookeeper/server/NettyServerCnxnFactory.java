@@ -44,8 +44,6 @@ import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
-import javax.security.auth.Subject;
-
 public class NettyServerCnxnFactory extends ServerCnxnFactory {
     Logger LOG = Logger.getLogger(NettyServerCnxnFactory.class);
 
@@ -306,11 +304,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         localAddress = addr;
         this.maxClientCnxns = maxClientCnxns;
         this.requireClientAuthScheme = requireClientAuthScheme;
-        try {
-          this.subject = loginThread.getLogin().getSubject();
-        } catch (Exception e) {
-          throw new IOException(e);
-        }
+        startLoginThread();
     }
 
     /** {@inheritDoc} */
