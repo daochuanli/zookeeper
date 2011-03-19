@@ -304,7 +304,9 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         localAddress = addr;
         this.maxClientCnxns = maxClientCnxns;
         this.requireClientAuthScheme = requireClientAuthScheme;
-        startLoginThread();
+        if (System.getProperty("java.security.auth.login.config") != null) {
+            startLoginThread();
+        }
     }
 
     /** {@inheritDoc} */

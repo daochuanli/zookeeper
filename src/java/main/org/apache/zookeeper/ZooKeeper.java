@@ -411,8 +411,12 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        startLoginThread();
-        Subject subject = loginThread.getLogin().getSubject();
+        Subject subject = null;
+        if (System.getProperty("java.security.auth.login.config") != null) {
+            startLoginThread();
+            subject = loginThread.getLogin().getSubject();
+        }
+
 
         SaslClient saslClient = null;
         if (service_principal != null) {

@@ -122,6 +122,9 @@ public abstract class ServerCnxnFactory {
     }
 
     public SaslServer createSaslServer() {
+        if (loginThread == null) {
+            return null;
+        }
         Subject subject = loginThread.getLogin().getSubject();
         if (subject != null) {
             // server is using a JAAS-authenticated subject: determine service principal name and hostname from zk server's subject.

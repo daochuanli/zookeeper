@@ -88,7 +88,9 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         thread = new Thread(this, "NIOServerCxn.Factory:" + addr);
         thread.setDaemon(true);
 
-        startLoginThread();
+        if (System.getProperty("java.security.auth.login.config") != null) {
+            startLoginThread();
+        }
 
         maxClientCnxns = maxcc;
         this.ss = ServerSocketChannel.open();
@@ -258,6 +260,10 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
             closeAll();
             thread.interrupt();
             thread.join();
+            if (loginThread != null) {
+                loginThread.interrupt();
+                loginThread.join();
+            }
         } catch (InterruptedException e) {
             LOG.warn("Ignoring interrupted exception during shutdown", e);
         } catch (Exception e) {

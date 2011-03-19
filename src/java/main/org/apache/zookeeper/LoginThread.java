@@ -25,10 +25,11 @@ public class LoginThread extends Thread {
         while(true) {
             LOG.info("sleeping.");
             try {
-                Thread.sleep(1 * 60 * 1000); // 10 minutes.
+                Thread.sleep(10 * 60 * 1000); // 10 minutes.
             }
             catch (InterruptedException e) {
-                LOG.error("caught InterruptedException while sleeping. Waking and attempting credential renewal.");
+                LOG.error("caught InterruptedException while sleeping. Breaking out of endless loop.");
+                break;
             }
             login();
         }
