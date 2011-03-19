@@ -46,66 +46,17 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.LoginThread;
 import org.apache.zookeeper.jmx.MBeanRegistry;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 
 public abstract class ServerCnxnFactory {
 
-    protected class LoginThread extends Thread {
-
-      private LoginContext loginContext;
-      private String loginContextName;
-      private SaslServerCallbackHandler saslServerCallbackHandler;
-
-
-      LoginThread(String loginContextName, SaslServerCallbackHandler saslServerCallbackHandler) {
-        this.loginContextName = loginContextName;
-        this.saslServerCallbackHandler = saslServerCallbackHandler;
-          try {
-              this.loginContext = new LoginContext(loginContextName,saslServerCallbackHandler);
-              this.loginContext.login();
-          }
-          catch (LoginException e) {
-              LOG.error("Error while trying to do server-side subject authentication using 'Server' section of " + System.getProperty("java.security.auth.login.config") + ":" + e);
-          }
-      }
-      public void run() {
-          LOG.info("Credentials renewal thread started.");
-          while(true) {
-              try {
-                  this.loginContext.logout();
-                  this.loginContext = new LoginContext(loginContextName,saslServerCallbackHandler);
-                  this.loginContext.login();
-		  LOG.info("Credentials renewal thread successfully logged in.");
-              }
-              catch (LoginException e) {
-                LOG.error("Error while trying to do server-side subject authentication using 'Server' section of " + System.getProperty("java.security.auth.login.config") + ":" + e);
-              }
-              LOG.info("Credentials renewal thread sleeping.");
-              try {
-                  Thread.sleep(10 * 60 * 1000); // 10 minutes.
-              }
-              catch (InterruptedException e) {
-                  LOG.error("Credential renewal thread caught InterruptedException while sleeping. Waking and attempting credential renewal.");
-              }
-          }
-      }
-
-      public LoginContext getLogin() {
-          return this.loginContext;
-      }
-
-    }
-
     LoginThread loginThread;
-    protected void startLoginThread() {
-      this.saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
-      this.loginThread = new LoginThread("Server",this.saslServerCallbackHandler);
-      this.loginThread.start();
-    }
 
-    protected LoginContext getLogin() {
-        return loginThread.getLogin();
+    protected void startLoginThread() {
+        this.saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
+        this.loginThread = new LoginThread("Server",this.saslServerCallbackHandler);
     }
 
     public static final String ZOOKEEPER_SERVER_CNXN_FACTORY = "zookeeper.serverCnxnFactory";
@@ -117,9 +68,6 @@ public abstract class ServerCnxnFactory {
     Logger LOG = Logger.getLogger(ServerCnxnFactory.class);
 
     String requireClientAuthScheme = null;
-
-    public Subject getSubject() { return loginThread.getLogin().getSubject(); }
-
 
     private SaslServerCallbackHandler saslServerCallbackHandler = null;
 
@@ -174,7 +122,7 @@ public abstract class ServerCnxnFactory {
     }
 
     public SaslServer createSaslServer() {
-        Subject subject = getSubject();
+        Subject subject = loginThread.getLogin().getSubject();
         if (subject != null) {
             // server is using a JAAS-authenticated subject: determine service principal name and hostname from zk server's subject.
             if (subject.getPrincipals().size() > 0) {

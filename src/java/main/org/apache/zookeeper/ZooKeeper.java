@@ -30,6 +30,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.AsyncCallback.ACLCallback;
@@ -130,7 +131,6 @@ public class ZooKeeper {
 
         Environment.logEnv("Client environment:", LOG);
     }
-
 
     private final ZKWatchManager watchManager = new ZKWatchManager();
 
@@ -344,6 +344,14 @@ public class ZooKeeper {
 
     protected final ClientCnxn cnxn;
 
+
+    LoginThread loginThread;
+
+    protected void startLoginThread() {
+        this.loginThread = new LoginThread("Client",new ClientCallbackHandler(null));
+        return;
+    }
+
     /**
      * To create a ZooKeeper client object, the application needs to pass a
      * connection string containing a comma separated list of host:port pairs,
@@ -403,9 +411,10 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        SaslClient saslClient = null;
-        Subject subject = JAASLogin();
+        startLoginThread();
+        Subject subject = loginThread.getLogin().getSubject();
 
+        SaslClient saslClient = null;
         if (service_principal != null) {
             int indexOf = service_principal.indexOf("/");
 
@@ -555,7 +564,9 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        Subject subject = JAASLogin();
+        startLoginThread();
+
+        Subject subject = loginThread.getLogin().getSubject();
 
         SaslClient saslClient = createSaslClient(subject,server_principal,service_principal_hostname);
 
