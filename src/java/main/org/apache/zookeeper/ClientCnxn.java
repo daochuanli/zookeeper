@@ -174,10 +174,7 @@ public class ClientCnxn {
 
         LOG.debug("saslToken (server) length: " + saslToken.length);
 
-        if (saslClient.isComplete() == true) {
-            LOG.info("SASL authentication with Zookeeper server is complete.");
-        }
-        else {
+        if (!(saslClient.isComplete() == true)) {
             try {
                 saslToken = createSaslToken(saslToken, saslClient);
                 if (saslToken != null) {
@@ -224,9 +221,6 @@ public class ClientCnxn {
                     LOG.debug("Successfully created token with length:"+retval.length);
                 }
 
-                if (saslClient.isComplete() == true) {
-                    LOG.info("SASL Client authentication complete.");
-                }
                 return retval;
             }
             catch (PrivilegedActionException e) {
@@ -1014,7 +1008,6 @@ public class ClientCnxn {
                     }
                     if (state == States.SASL) {
                         if (saslClient.isComplete() == true) {
-                            LOG.info("Client SASL authentication process completed.");
                             // TODO : determine whether authentication failed or
                             // not. ZK server knows, but client (running this code here)
                             // does not.
