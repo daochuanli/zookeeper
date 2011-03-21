@@ -411,30 +411,28 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        Subject subject = null;
         // Use presence/absence of java.security.auth.login.config property
-        // as a boolean flag to decide where to start the LoginThread.
-        if (System.getProperty("java.security.auth.login.config") != null) {
+        // as a boolean flag to decide whether to start the LoginThread.
+        if ((System.getProperty("java.security.auth.login.config") != null)
+            &&
+            (service_principal != null)) {
             startLoginThread();
-            subject = loginThread.getLogin().getSubject();
-        }
-
-
-        SaslClient saslClient = null;
-        if (service_principal != null) {
+            Subject subject = loginThread.getLogin().getSubject();
             int indexOf = service_principal.indexOf("/");
 
             String service_principal_name = service_principal.substring(0, indexOf);
             String service_principal_hostname = service_principal.substring(indexOf+1,service_principal.length());
 
-            if (subject != null) {
-                saslClient = createSaslClient(subject,service_principal_name,service_principal_hostname);
-            }
+            SaslClient saslClient = createSaslClient(subject,service_principal_name,service_principal_hostname);
+            cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
+                    hostProvider, sessionTimeout, this, watchManager,
+                    getClientCnxnSocket(),subject, saslClient);
         }
-
-        cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
-                hostProvider, sessionTimeout, this, watchManager,
-                              getClientCnxnSocket(),subject, saslClient);
+        else {
+            cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
+                    hostProvider, sessionTimeout, this, watchManager,
+                    getClientCnxnSocket(),null,null);
+        }
         cnxn.start();
     }
 
