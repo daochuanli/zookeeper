@@ -344,13 +344,7 @@ public class ZooKeeper {
 
     protected final ClientCnxn cnxn;
 
-
     LoginThread loginThread;
-
-    protected void startLoginThread() {
-        this.loginThread = new LoginThread("Client",new ClientCallbackHandler(null));
-        return;
-    }
 
     /**
      * To create a ZooKeeper client object, the application needs to pass a
@@ -416,7 +410,7 @@ public class ZooKeeper {
         if ((System.getProperty("java.security.auth.login.config") != null)
             &&
             (service_principal != null)) {
-            startLoginThread();
+            loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.renew"));
             Subject subject = loginThread.getLogin().getSubject();
             int indexOf = service_principal.indexOf("/");
 
@@ -568,10 +562,7 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        startLoginThread();
-
         Subject subject = loginThread.getLogin().getSubject();
-
         SaslClient saslClient = createSaslClient(subject,server_principal,service_principal_hostname);
 
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
