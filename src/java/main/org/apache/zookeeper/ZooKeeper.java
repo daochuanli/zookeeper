@@ -562,7 +562,11 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        Subject subject = loginThread.getLogin().getSubject();
+        Subject subject = null;
+
+        if ((loginThread != null) && (loginThread.getLogin() != null)) {
+            subject = loginThread.getLogin().getSubject();
+        }
         SaslClient saslClient = createSaslClient(subject,server_principal,service_principal_hostname);
 
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
