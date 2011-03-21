@@ -412,6 +412,8 @@ public class ZooKeeper {
                 connectStringParser.getServerAddresses());
 
         Subject subject = null;
+        // Use presence/absence of java.security.auth.login.config property
+        // as a boolean flag to decide where to start the LoginThread.
         if (System.getProperty("java.security.auth.login.config") != null) {
             startLoginThread();
             subject = loginThread.getLogin().getSubject();
@@ -579,33 +581,6 @@ public class ZooKeeper {
                               getClientCnxnSocket(), sessionId, sessionPasswd, subject, saslClient);
         cnxn.start();
     }
-
-    public Subject JAASLogin() {
-        Subject subject = null;
-        if (System.getProperty("java.security.auth.login.config") != null) {
-            LOG.info("Client will authenticate with server using JAAS login file: " + System.getProperty("java.security.auth.login.config"));
-            Subject zkServerSubject;
-            LoginContext loginCtx = null;
-            final String CLIENT_SECTION_OF_JAAS_CONF_FILE = "Client"; // The section (of the JAAS configuration file named $JAAS_CONF_FILE_NAME)
-            try {
-                loginCtx = new LoginContext(CLIENT_SECTION_OF_JAAS_CONF_FILE,new LoginCallbackHandler());
-
-                // If using DIGEST-MD5, a username and password will be loaded from the jaas conf file section here.
-                loginCtx.login();
-
-                zkServerSubject = loginCtx.getSubject();
-                return zkServerSubject;
-            }
-            catch (LoginException e) {
-                LOG.error("Login failure : " + e + "; continuing without JAAS Subject.");
-            }
-        }
-        else {
-            LOG.info("System property: java.security.auth.login.config is not set, will not attempt SASL negotiation with Zookeeper Server.");
-        }
-        return subject;
-    }
-
 
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
                 long sessionId, byte[] sessionPasswd)
