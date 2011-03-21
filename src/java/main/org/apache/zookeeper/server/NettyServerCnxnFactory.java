@@ -302,11 +302,16 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
             throws IOException
     {
         localAddress = addr;
-        this.maxClientCnxns = maxClientCnxns;
+
         this.requireClientAuthScheme = requireClientAuthScheme;
+        // Use presence/absence of java.security.auth.login.config property
+        // as a boolean flag to decide where to start the LoginThread.
         if (System.getProperty("java.security.auth.login.config") != null) {
             startLoginThread();
         }
+
+        this.maxClientCnxns = maxClientCnxns;
+
     }
 
     /** {@inheritDoc} */

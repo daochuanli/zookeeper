@@ -88,6 +88,9 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         thread = new Thread(this, "NIOServerCxn.Factory:" + addr);
         thread.setDaemon(true);
 
+        this.requireClientAuthScheme = requireClientAuthScheme;
+        // Use presence/absence of java.security.auth.login.config property
+        // as a boolean flag to decide where to start the LoginThread.
         if (System.getProperty("java.security.auth.login.config") != null) {
             startLoginThread();
         }
@@ -99,7 +102,6 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         ss.socket().bind(addr);
         ss.configureBlocking(false);
         ss.register(selector, SelectionKey.OP_ACCEPT);
-        this.requireClientAuthScheme = requireClientAuthScheme;
     }
 
 
