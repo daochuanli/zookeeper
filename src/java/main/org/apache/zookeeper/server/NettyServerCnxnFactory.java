@@ -354,6 +354,16 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         if (zkServer != null) {
             zkServer.shutdown();
         }
+        if (loginThread != null) {
+            try {
+                loginThread.interrupt();
+                loginThread.join();
+            }
+            catch (InterruptedException e) {
+                LOG.warn("Ignoring interrupted exception during shutdown", e);
+            }
+        }
+
         synchronized(this) {
             killed = true;
             notifyAll();
