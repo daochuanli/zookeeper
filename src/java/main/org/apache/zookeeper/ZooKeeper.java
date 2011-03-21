@@ -410,7 +410,9 @@ public class ZooKeeper {
         if ((System.getProperty("java.security.auth.login.config") != null)
             &&
             (service_principal != null)) {
-            loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.renew"));
+
+            // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
+            loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*1000));
             Subject subject = loginThread.getLogin().getSubject();
             int indexOf = service_principal.indexOf("/");
 
