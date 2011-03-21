@@ -988,13 +988,13 @@ public class ClientCnxn {
                         }
                         else {
                             if (saslClient.hasInitialResponse() == true) {
-                                LOG.info("saslClient.hasInitialResponse()==true");
-                                LOG.info("hasInitialResponse() == true; (1) SASL token length = " + cnxn.saslToken.length);
+                                LOG.debug("saslClient.hasInitialResponse()==true");
+                                LOG.debug("hasInitialResponse() == true; (1) SASL token length = " + cnxn.saslToken.length);
                                 cnxn.saslToken = createSaslToken(cnxn.saslToken,cnxn.saslClient);
-                                LOG.info("hasInitialResponse() == true; (2) SASL token length = " + cnxn.saslToken.length);
+                                LOG.debug("hasInitialResponse() == true; (2) SASL token length = " + cnxn.saslToken.length);
                                 if (cnxn.saslToken == null) {
                                     state = States.AUTH_FAILED;
-                                    LOG.debug("SASL negotiation with Zookeeper Quorum member failed: client state is now AUTH_FAILED.");
+                                    LOG.warn("SASL negotiation with Zookeeper Quorum member failed: client state is now AUTH_FAILED.");
                                 }
                                 else {
                                     queueSaslPacket(cnxn.saslToken);
