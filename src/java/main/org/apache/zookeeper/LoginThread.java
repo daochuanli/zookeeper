@@ -61,7 +61,12 @@ public class LoginThread extends Thread {
     }
 
     public void run() {
-        LOG.info("Started. Will refresh login every " + this.sleepInterval + " milliseconds.");
+        if (this.sleepInterval < 1000) {
+            LOG.warn("Sleep interval: " + this.sleepInterval + " is too small: not sleeping; simply exiting run().");
+            return;
+        }
+        LOG.info("Login Refresh thread started. Will refresh login every " + this.sleepInterval + " milliseconds.");
+
         while(true) {
             LOG.info("sleeping.");
             try {
