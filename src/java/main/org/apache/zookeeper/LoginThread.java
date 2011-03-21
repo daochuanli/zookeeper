@@ -37,7 +37,8 @@ public class LoginThread extends Thread {
     private LoginContext loginContext;
     private String loginContextName;
     private CallbackHandler callbackHandler;
-    
+    private int sleepInterval;
+
     /**
      * LoginThread constructor. The constructor starts the thread used
      * to periodically re-login to the Kerberos Ticket Granting Server.
@@ -47,22 +48,26 @@ public class LoginThread extends Thread {
      *
      * @param callbackHandler
      *               Passed as second param to javax.security.auth.login.LoginContext().
+     * @param sleepInterval
+     *               How long to sleep between each LoginContext renewal.
      */
-    public LoginThread(String loginContextName, CallbackHandler callbackHandler) {
-            this.loginContextName = loginContextName;
-            this.callbackHandler = callbackHandler;
-            this.login();
-            this.start();
+    public LoginThread(String loginContextName, CallbackHandler callbackHandler, Integer sleepInterval) {
+        this.loginContextName = loginContextName;
+        this.callbackHandler = callbackHandler;
+        this.sleepInterval = sleepInterval;
+
+        this.login();
+        this.start();
     }
 
     public void run() {
-        LOG.info("started.");
+        LOG.info("Started. Will refresh login every " + this.sleepInterval + " milliseconds.");
         while(true) {
             LOG.info("sleeping.");
             try {
                 // TODO: make this configurable: should run after 80% of time
                 // until last ticket expiry.
-                Thread.sleep(10 * 60 * 1000); // 10 minutes.
+                Thread.sleep(sleepInterval);
             }
             catch (InterruptedException e) {
                 // A user of a LoginThread should call .interrupt() and .join() on its

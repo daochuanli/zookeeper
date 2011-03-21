@@ -298,7 +298,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
     }
 
     @Override
-    public void configure(InetSocketAddress addr, int maxClientCnxns, String requireClientAuthScheme)
+    public void configure(InetSocketAddress addr, int maxClientCnxns, String requireClientAuthScheme, int renewJaasLoginInterval)
             throws IOException
     {
         localAddress = addr;
@@ -307,7 +307,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         // Use presence/absence of java.security.auth.login.config property
         // as a boolean flag to decide where to start the LoginThread.
         if (System.getProperty("java.security.auth.login.config") != null) {
-            startLoginThread();
+            startLoginThread(renewJaasLoginInterval);
         }
 
         this.maxClientCnxns = maxClientCnxns;

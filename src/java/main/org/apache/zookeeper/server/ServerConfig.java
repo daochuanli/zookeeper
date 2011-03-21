@@ -48,6 +48,7 @@ public class ServerConfig {
     protected String authMech;
 
     protected String requireClientAuthScheme;
+    protected int jaasLoginRenew;
     /**
      * Parse arguments for server configuration
      * @param args clientPort dataDir and optional tickTime
@@ -100,6 +101,7 @@ public class ServerConfig {
       maxSessionTimeout = config.getMaxSessionTimeout();
       authMech = config.getAuthMech();
       requireClientAuthScheme = config.getRequireClientAuthScheme();
+      jaasLoginRenew = config.getJaasLoginRenew();
 
     }
 
@@ -120,4 +122,5 @@ public class ServerConfig {
     // TODO: respect authMech start-time configuration setting, which would be stored in here in authMech.
     public String getAuthMech() { return authMech; }
     public String getRequireClientAuthScheme() { return requireClientAuthScheme;}
+    public int getJaasLoginRenew() { return jaasLoginRenew;}
 }

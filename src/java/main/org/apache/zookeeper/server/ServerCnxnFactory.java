@@ -38,8 +38,6 @@ import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
-import javax.security.auth.login.LoginContext;
-import javax.security.auth.login.LoginException;
 import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.RealmCallback;
 import javax.security.sasl.Sasl;
@@ -48,15 +46,17 @@ import javax.security.sasl.SaslServer;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.LoginThread;
 import org.apache.zookeeper.jmx.MBeanRegistry;
-import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 
 public abstract class ServerCnxnFactory {
 
     LoginThread loginThread;
 
-    protected void startLoginThread() {
-        this.saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
-        this.loginThread = new LoginThread("Server",this.saslServerCallbackHandler);
+    protected LoginThread startLoginThread(int renewJaasLoginInterval) {
+        if (System.getProperty("java.security.auth.login.config") != null) {
+            this.saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
+            return new LoginThread("Server",this.saslServerCallbackHandler,renewJaasLoginInterval);
+        }
+        return null;
     }
 
     public static final String ZOOKEEPER_SERVER_CNXN_FACTORY = "zookeeper.serverCnxnFactory";
@@ -90,11 +90,11 @@ public abstract class ServerCnxnFactory {
     public void configure(InetSocketAddress addr,
             int maxClientCnxns) throws IOException {
         // requireClientAuthScheme is null: no client authentication scheme is required.
-        this.configure(addr,maxClientCnxns,null);
+        this.configure(addr,maxClientCnxns,(String)null,0);
     }
 
     public abstract void configure(InetSocketAddress addr,
-            int maxClientCnxns, String requireClientAuthScheme) throws IOException;
+            int maxClientCnxns, String requireClientAuthScheme, int renewJaasLoginInterval) throws IOException;
 
     public String getRequireClientAuthScheme() { return requireClientAuthScheme; }
 
@@ -214,20 +214,20 @@ public abstract class ServerCnxnFactory {
     static public ServerCnxnFactory createFactory(int clientPort,
             int maxClientCnxns) throws IOException
     {
-        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns, null);
+        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns, null, 0);
     }
 
     static public ServerCnxnFactory createFactory(int clientPort,
-            int maxClientCnxns, String requireClientAuthScheme) throws IOException
+            int maxClientCnxns, String requireClientAuthScheme, int renewJaasLoginInterval) throws IOException
     {
-        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns, requireClientAuthScheme);
+        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns, requireClientAuthScheme, renewJaasLoginInterval);
     }
 
     static public ServerCnxnFactory createFactory(InetSocketAddress addr,
-            int maxClientCnxns, String requireClientAuthScheme) throws IOException
+            int maxClientCnxns, String requireClientAuthScheme, int renewJaasLoginInterval) throws IOException
     {
         ServerCnxnFactory factory = createFactory();
-        factory.configure(addr, maxClientCnxns, requireClientAuthScheme);
+        factory.configure(addr, maxClientCnxns, requireClientAuthScheme, renewJaasLoginInterval);
         return factory;
     }
 
@@ -235,7 +235,7 @@ public abstract class ServerCnxnFactory {
             int maxClientCnxns) throws IOException
     {
         ServerCnxnFactory factory = createFactory();
-        factory.configure(addr, maxClientCnxns, null);
+        factory.configure(addr, maxClientCnxns, null,0);
         return factory;
     }
 

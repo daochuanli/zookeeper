@@ -84,7 +84,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
 
     Thread thread;
     @Override
-    public void configure(InetSocketAddress addr, int maxcc, String requireClientAuthScheme) throws IOException {
+    public void configure(InetSocketAddress addr, int maxcc, String requireClientAuthScheme, int renewJaasLoginInterval) throws IOException {
         thread = new Thread(this, "NIOServerCxn.Factory:" + addr);
         thread.setDaemon(true);
 
@@ -92,7 +92,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         // Use presence/absence of java.security.auth.login.config property
         // as a boolean flag to decide where to start the LoginThread.
         if (System.getProperty("java.security.auth.login.config") != null) {
-            startLoginThread();
+            this.loginThread = startLoginThread(renewJaasLoginInterval);
         }
 
         maxClientCnxns = maxcc;

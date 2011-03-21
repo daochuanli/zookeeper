@@ -73,6 +73,7 @@ public class QuorumPeerConfig {
 
     protected String authMech;
     protected String requireClientAuthScheme;
+    protected int jaasLoginRenew;
 
     @SuppressWarnings("serial")
     public static class ConfigException extends Exception {
@@ -167,6 +168,8 @@ public class QuorumPeerConfig {
                 authMech = value;
             } else if (key.equals("requireClientAuthScheme")) {
                 requireClientAuthScheme = value;
+            } else if (key.equals("jaasLoginRenew")) {
+                jaasLoginRenew = Integer.parseInt(value);
             }
             else if (key.startsWith("server.")) {
                 int dot = key.indexOf('.');
@@ -398,4 +401,7 @@ public class QuorumPeerConfig {
         return requireClientAuthScheme;
     }
 
+    public int getJaasLoginRenew() {
+        return jaasLoginRenew;
+    }
 }
