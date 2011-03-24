@@ -54,7 +54,7 @@ public class SaslAuthTest extends ClientBase {
             System.setProperty("java.security.auth.login.config",saslConfFile.getAbsolutePath());
         }
         catch (IOException e) {
-            // could not create tmp directory to hold JAAS conf file.
+            // could not create tmp directory to hold JAAS conf file : test will fail now.
         }
     }
 
