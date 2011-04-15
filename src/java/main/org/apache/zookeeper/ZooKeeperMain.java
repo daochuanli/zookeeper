@@ -40,6 +40,11 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 
+import javax.security.auth.Subject;
+
+
+
+
 /**
  * The command line client to ZooKeeper.
  *
@@ -55,6 +60,7 @@ public class ZooKeeperMain {
 
     protected ZooKeeper zk;
     protected String host = "";
+    protected Subject subject = null;
 
     public boolean getPrintWatches( ) {
         return printWatches;
@@ -258,10 +264,21 @@ public class ZooKeeperMain {
         if (zk != null && zk.getState().isAlive()) {
             zk.close();
         }
-        host = newHost;
-        zk = new ZooKeeper(host,
-                 Integer.parseInt(cl.getOption("timeout")),
-                 new MyWatcher());
+
+        String servicePrincipalName = null;
+        if (System.getProperty("java.security.auth.login.config") != null) {
+            // TODO: allow the service principal name to be configurable: for now, 
+            // service principal name must be "zookeeper/" + zkHostname.
+
+            // zkHostname is newHost minus the ":port" suffix.
+            int indexOf = newHost.indexOf(":");
+            String zkHostname = newHost.substring(0,indexOf);
+            servicePrincipalName = "zookeeper/"+zkHostname;
+        }
+        zk = new ZooKeeper(newHost,
+                           Integer.parseInt(cl.getOption("timeout")),
+                           new MyWatcher(),
+                           servicePrincipalName);
     }
     
     public static void main(String args[])
@@ -648,7 +665,7 @@ public class ZooKeeperMain {
             if (args.length >=2) {
                 connectToZK(args[1]);
             } else {
-                connectToZK(host);                
+                connectToZK(host);
             }
         } 
         
@@ -789,9 +806,9 @@ public class ZooKeeperMain {
             byte[] b = null;
             if (args.length >= 3)
                 b = args[2].getBytes();
-
             zk.addAuthInfo(args[1], b);
-        } else {
+        }
+        else {
             usage();
         }
         return watch;
@@ -837,4 +854,6 @@ public class ZooKeeperMain {
         }
         return acl;
     }
+
 }
+

@@ -20,6 +20,8 @@ package org.apache.zookeeper;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.security.Principal;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
@@ -28,6 +30,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.AsyncCallback.ACLCallback;
@@ -64,6 +67,19 @@ import org.apache.zookeeper.proto.SetDataResponse;
 import org.apache.zookeeper.proto.SyncRequest;
 import org.apache.zookeeper.proto.SyncResponse;
 import org.apache.zookeeper.server.DataTree;
+import javax.security.auth.Subject;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.NameCallback;
+import javax.security.auth.callback.PasswordCallback;
+import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.auth.login.LoginContext;
+import javax.security.auth.login.LoginException;
+import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslException;
+import javax.security.sasl.AuthorizeCallback;
+import javax.security.sasl.RealmCallback;
+import javax.security.sasl.SaslClient;
 
 /**
  * This is the main class of ZooKeeper client library. To use a ZooKeeper
@@ -115,7 +131,6 @@ public class ZooKeeper {
 
         Environment.logEnv("Client environment:", LOG);
     }
-
 
     private final ZKWatchManager watchManager = new ZKWatchManager();
 
@@ -320,7 +335,7 @@ public class ZooKeeper {
     }
 
     public enum States {
-        CONNECTING, ASSOCIATING, CONNECTED, CLOSED, AUTH_FAILED;
+        CONNECTING, ASSOCIATING, CONNECTED, CLOSED, AUTH_FAILED, SASL_INITIAL, SASL;
 
         public boolean isAlive() {
             return this != CLOSED && this != AUTH_FAILED;
@@ -366,28 +381,98 @@ public class ZooKeeper {
      * @param watcher
      *            a watcher object which will be notified of state changes, may
      *            also be notified for node events
+     * @param service_principal
+     *            The name of the principal that the zookeeper server is using.
+     *            This client will authenticate with this principal if using GSSAPI as
+     *            the SASL authentication mechanism.
+     *            If service_principal is non-null, a LoginThread is started, which 
+     *            obtains and periodically refreshes a javax.security.auth.Subject object.
      *
      * @throws IOException
      *             in cases of network failure
      * @throws IllegalArgumentException
      *             if an invalid chroot path is specified
      */
-    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher)
+    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
+                     String service_principal)
         throws IOException
     {
         LOG.info("Initiating client connection, connectString=" + connectString
                 + " sessionTimeout=" + sessionTimeout + " watcher=" + watcher);
 
         watchManager.defaultWatcher = watcher;
-
-        ConnectStringParser connectStringParser = new ConnectStringParser(
-                connectString);
+        ConnectStringParser connectStringParser = new ConnectStringParser(connectString);
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
+
+        SaslClient saslClient = null;
+        LoginThread loginThread = null;
+
+        if (service_principal != null) {
+            // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
+            loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
+            saslClient = createSaslClient(service_principal,loginThread);
+        }
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
-                hostProvider, sessionTimeout, this, watchManager,
-                getClientCnxnSocket());
+                              hostProvider, sessionTimeout, this, watchManager,
+                              getClientCnxnSocket(),loginThread,saslClient);
         cnxn.start();
+    }
+
+    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher)
+        throws IOException
+    {
+        this(connectString,sessionTimeout,watcher,null);
+    }
+
+    // CallbackHandler here refers to javax.security.auth.callback.CallbackHandler.
+    // (not to be confused with packet callbacks like ServerSaslResponseCallback, defined above).
+    private static class ClientCallbackHandler implements CallbackHandler {
+        private String password = null;
+
+        public ClientCallbackHandler(String password) {
+            this.password = password;
+        }
+
+        public void handle(Callback[] callbacks) throws
+                UnsupportedCallbackException {
+            for (Callback callback : callbacks) {
+                if (callback instanceof NameCallback) {
+                    NameCallback nc = (NameCallback) callback;
+                    nc.setName(nc.getDefaultName());
+                }
+                else {
+                    if (callback instanceof PasswordCallback) {
+                        PasswordCallback pc = (PasswordCallback)callback;
+                        pc.setPassword(this.password.toCharArray());
+                    }
+                    else {
+                        if (callback instanceof RealmCallback) {
+                            RealmCallback rc = (RealmCallback) callback;
+                            rc.setText(rc.getDefaultText());
+                        }
+                        else {
+                            if (callback instanceof AuthorizeCallback) {
+                                AuthorizeCallback ac = (AuthorizeCallback) callback;
+                                String authid = ac.getAuthenticationID();
+                                String authzid = ac.getAuthorizationID();
+                                if (authid.equals(authzid)) {
+                                    ac.setAuthorized(true);
+                                } else {
+                                    ac.setAuthorized(false);
+                                }
+                                if (ac.isAuthorized()) {
+                                    ac.setAuthorizedID(authzid);
+                                }
+                            }
+                            else {
+                                throw new UnsupportedCallbackException(callback,"Unrecognized SASL ClientCallback");
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -437,13 +522,16 @@ public class ZooKeeper {
      *            specific session id to use if reconnecting
      * @param sessionPasswd
      *            password for this session
+     * @param service_principal
+     *            Zookeeper Quorum member service principal name
+     * // TODO: remove: should be able to get service_principal_hostname from connectString.
      *
      * @throws IOException in cases of network failure
      * @throws IllegalArgumentException if an invalid chroot path is specified
      * @throws IllegalArgumentException for an invalid list of ZooKeeper hosts
      */
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
-            long sessionId, byte[] sessionPasswd)
+                     long sessionId, byte[] sessionPasswd, String service_principal)
         throws IOException
     {
         LOG.info("Initiating client connection, connectString=" + connectString
@@ -459,12 +547,102 @@ public class ZooKeeper {
                 connectString);
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
+
+        SaslClient saslClient = null;
+        LoginThread loginThread = null;
+
+        // Use presence/absence of service_principal
+        // as a boolean flag to decide whether to start the LoginThread and obtain a Subject for this client.
+        if ((service_principal != null) && (System.getProperty("java.security.auth.login.config") != null)) {
+            // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
+            loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
+            saslClient = createSaslClient(service_principal,loginThread);
+        }
+
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
-                hostProvider, sessionTimeout, this, watchManager,
-                getClientCnxnSocket(), sessionId, sessionPasswd);
+                              hostProvider, sessionTimeout, this, watchManager,
+                              getClientCnxnSocket(), sessionId, sessionPasswd, loginThread, saslClient);
         cnxn.start();
     }
 
+    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
+                long sessionId, byte[] sessionPasswd)
+            throws IOException
+     {
+            LOG.info("Initiating client connection, connectString=" + connectString
+                    + " sessionTimeout=" + sessionTimeout
+                    + " watcher=" + watcher
+                    + " sessionId=" + Long.toHexString(sessionId)
+                    + " sessionPasswd="
+                    + (sessionPasswd == null ? "<null>" : "<hidden>"));
+
+            watchManager.defaultWatcher = watcher;
+
+            ConnectStringParser connectStringParser = new ConnectStringParser(
+                    connectString);
+            HostProvider hostProvider = new StaticHostProvider(
+                    connectStringParser.getServerAddresses());
+
+            cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
+                                  hostProvider, sessionTimeout, this, watchManager,
+                                  getClientCnxnSocket(), sessionId, sessionPasswd, null,null);
+            cnxn.start();
+     }
+
+    private static SaslClient createSaslClient(final String servicePrincipal, LoginThread loginThread) {
+
+        int indexOf = servicePrincipal.indexOf("/");
+        
+        final String serviceName = servicePrincipal.substring(0, indexOf);
+        final String serviceHostname = servicePrincipal.substring(indexOf+1,servicePrincipal.length());
+
+        try {
+            loginThread.start();
+            synchronized(loginThread) {
+                Subject subject = loginThread.getLogin().getSubject();
+                SaslClient saslClient = null;
+                // Use subject.getPrincipals().isEmpty() as an indication of which SASL mechanism to use: if empty, use DIGEST-MD5; otherwise, use GSSAPI.
+                if (subject.getPrincipals().isEmpty() == true) {
+                    // no principals: must not be GSSAPI: use DIGEST-MD5 mechanism instead.
+                    LOG.info("Client will use DIGEST-MD5 as SASL mechanism.");
+                    String[] mechs = {"DIGEST-MD5"};
+                    String username = (String)(subject.getPublicCredentials().toArray()[0]);
+                    String password = (String)(subject.getPrivateCredentials().toArray()[0]);
+                    // "zk-sasl-md5" is a hard-wired 'domain' parameter used also by server.
+                    saslClient = Sasl.createSaslClient(mechs,username,serviceName,"zk-sasl-md5",null,new ClientCallbackHandler(password));
+                    return saslClient;
+                }
+                else { // GSSAPI.
+                    final Object[] principals = subject.getPrincipals().toArray();
+                    // determine client principal from subject.
+                    final Principal clientPrincipal = (Principal)principals[0];
+                    final String clientPrincipalName = clientPrincipal.getName();
+                    
+                    try {
+                        saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
+                                public SaslClient run() throws SaslException {
+                                    LOG.info("Client will use GSSAPI as SASL mechanism.");
+                                    String[] mechs = {"GSSAPI"};
+                                    LOG.debug("creating sasl client: client="+clientPrincipalName+";service="+serviceName+";serviceHostname="+serviceHostname);
+                                    SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,serviceName,serviceHostname,null,new ClientCallbackHandler(null));
+                                    return saslClient;
+                                }
+                            });
+                        return saslClient;
+                    }
+                    catch (Exception e) {
+                        LOG.error("Error creating SASL client:" + e);
+                        e.printStackTrace();
+                        return null;
+                    }
+                }
+            }
+        }
+        catch (Exception e) {
+            LOG.error("Exception while trying to create SASL client.");
+            return null;
+        }
+    }
     /**
      * The session id for this ZooKeeper client instance. The value returned is
      * not valid until the client connects to a server and may change after a
@@ -1664,6 +1842,23 @@ public class ZooKeeper {
                     + clientCnxnSocketName);
             ioe.initCause(e);
             throw ioe;
+        }
+    }
+
+    // This is only used by JAAS-based authentication.
+    // currently no Callback types are supported (all attempts to
+    // garner login information (user,realm,password) will return UnsupportedCallbackException).
+    private static class LoginCallbackHandler implements CallbackHandler {
+        public LoginCallbackHandler() {
+            super();
+        }
+
+        public void handle(Callback[] callbacks)
+            throws IOException, UnsupportedCallbackException {
+            for (int i = 0; i < callbacks.length; i++) {
+                Callback callback = callbacks[i];
+                throw new UnsupportedCallbackException(callbacks[i], "Unrecognized callback: " + callback);
+            }
         }
     }
 }

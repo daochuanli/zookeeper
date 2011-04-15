@@ -35,6 +35,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable {
+
     private static final Logger LOG = Logger.getLogger(NIOServerCnxnFactory.class);
 
     static {
@@ -72,7 +73,6 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
 
     int maxClientCnxns = 60;
 
-
     /**
      * Construct a new server connection factory which will accept an unlimited number
      * of concurrent connections from each client (up to the file descriptor
@@ -84,9 +84,17 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
 
     Thread thread;
     @Override
-    public void configure(InetSocketAddress addr, int maxcc) throws IOException {
+    public void configure(InetSocketAddress addr, int maxcc, String requireClientAuthScheme, int renewJaasLoginInterval) throws IOException {
         thread = new Thread(this, "NIOServerCxn.Factory:" + addr);
         thread.setDaemon(true);
+
+        this.requireClientAuthScheme = requireClientAuthScheme;
+        // Use presence/absence of java.security.auth.login.config property
+        // as a boolean flag to decide where to start the LoginThread.
+        if (System.getProperty("java.security.auth.login.config") != null) {
+            this.loginThread = startLoginThread(renewJaasLoginInterval);
+        }
+
         maxClientCnxns = maxcc;
         this.ss = ServerSocketChannel.open();
         ss.socket().setReuseAddress(true);
@@ -95,6 +103,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         ss.configureBlocking(false);
         ss.register(selector, SelectionKey.OP_ACCEPT);
     }
+
 
     /** {@inheritDoc} */
     public int getMaxClientCnxnsPerHost() {
@@ -253,6 +262,10 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
             closeAll();
             thread.interrupt();
             thread.join();
+            if (loginThread != null) {
+                loginThread.interrupt();
+                loginThread.join();
+            }
         } catch (InterruptedException e) {
             LOG.warn("Ignoring interrupted exception during shutdown", e);
         } catch (Exception e) {

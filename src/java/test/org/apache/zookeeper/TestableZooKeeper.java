@@ -27,9 +27,16 @@ public class TestableZooKeeper extends ZooKeeper {
 
     public TestableZooKeeper(String host, int sessionTimeout,
             Watcher watcher) throws IOException {
-        super(host, sessionTimeout, watcher);
+	super(host, sessionTimeout, watcher, 
+	      (System.getProperty("java.security.auth.login.config") != null) 
+	      ? "zookeeper/"+host.substring(0,host.indexOf(":")) : null);
     }
-    
+
+    public TestableZooKeeper(String host, int sessionTimeout,
+            Watcher watcher, String servicePrincipal) throws IOException {
+        super(host, sessionTimeout, watcher, servicePrincipal);
+    }
+
     @Override
     public List<String> getChildWatches() {
         return super.getChildWatches();
