@@ -378,7 +378,9 @@ public class FinalRequestProcessor implements RequestProcessor {
                         responseToken = saslServer.evaluateResponse(clientToken);
 
                         if (saslServer.isComplete() == true) {
-                            cnxn.addAuthInfo(new Id("sasl",saslServer.getAuthorizationID()));
+			    String authorizationID = saslServer.getAuthorizationID();
+			    LOG.info("adding SASL authorization for authorizationID: " + authorizationID);
+                            cnxn.addAuthInfo(new Id("sasl",authorizationID));
                         }
                     }
                     catch (SaslException e) {

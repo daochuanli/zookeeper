@@ -356,7 +356,15 @@ public abstract class ServerCnxnFactory {
                                 }
                                 if (ac.isAuthorized()) {
                                     LOG.debug("isAuthorized() since ac.isAuthorized() == true");
-                                    ac.setAuthorizedID(authorizationID);
+				    // canonicalize authorization id: remove hostname (if any).
+				    String userName = authorizationID;
+				    int slashIndex = userName.indexOf('/');
+				    if (slashIndex != -1) {
+					LOG.debug("Removing hostname from authorizationID: " + authorizationID);
+					userName = userName.substring(0,slashIndex);
+				    }
+				    LOG.info("Setting authorizedID to username: " + userName);
+                                    ac.setAuthorizedID(userName);
                                 }
                             }
                         }
