@@ -182,6 +182,9 @@ public class ClientCnxn {
 
                 if (saslClient.isComplete() == true) {
                     LOG.info("SASL authentication with Zookeeper server is successful.");
+                    eventThread.queueEvent(new WatchedEvent(
+                      Watcher.Event.EventType.None,
+                      Watcher.Event.KeeperState.SaslAuthenticated, null));
                 }
 
             } catch (SaslException e) {
@@ -1017,6 +1020,9 @@ public class ClientCnxn {
                             // not. ZK server knows, but client (running this code here)
                             // does not.
                             state = States.CONNECTED;
+                            eventThread.queueEvent(new WatchedEvent(
+                              Event.EventType.None,
+                              Event.KeeperState.SaslAuthenticated, null));
                         }
                     }
 
