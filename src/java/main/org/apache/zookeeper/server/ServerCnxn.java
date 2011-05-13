@@ -71,7 +71,9 @@ public abstract class ServerCnxn implements Stats, Watcher {
     }
 
     public void addAuthInfo(Id id) {
-        authInfo.add(id);
+        if (authInfo.contains(id) == false) {
+            authInfo.add(id);
+        }
     }
 
     public boolean removeAuthInfo(Id id) {
