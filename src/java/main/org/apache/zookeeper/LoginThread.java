@@ -55,6 +55,7 @@ public class LoginThread extends Thread {
         this.loginContextName = loginContextName;
         this.callbackHandler = callbackHandler;
         this.sleepInterval = sleepInterval;
+        this.setDaemon(true);
 
         this.login();
     }
