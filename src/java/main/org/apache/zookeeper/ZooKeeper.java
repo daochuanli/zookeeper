@@ -405,17 +405,15 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        SaslClient saslClient = null;
         LoginThread loginThread = null;
 
         if (service_principal != null) {
             // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
             loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
-            saslClient = createSaslClient(service_principal,loginThread);
         }
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                               hostProvider, sessionTimeout, this, watchManager,
-                              getClientCnxnSocket(),loginThread,saslClient);
+                              getClientCnxnSocket(),loginThread);
         cnxn.start();
     }
 
@@ -427,7 +425,7 @@ public class ZooKeeper {
 
     // CallbackHandler here refers to javax.security.auth.callback.CallbackHandler.
     // (not to be confused with packet callbacks like ServerSaslResponseCallback, defined above).
-    private static class ClientCallbackHandler implements CallbackHandler {
+    public static class ClientCallbackHandler implements CallbackHandler {
         private String password = null;
 
         public ClientCallbackHandler(String password) {
@@ -522,9 +520,8 @@ public class ZooKeeper {
      *            specific session id to use if reconnecting
      * @param sessionPasswd
      *            password for this session
-     * @param service_principal
-     *            Zookeeper Quorum member service principal name
-     * // TODO: remove: should be able to get service_principal_hostname from connectString.
+     * @param  service_principal
+     *            ignored and will be removed. See Zookeeper#12.
      *
      * @throws IOException in cases of network failure
      * @throws IllegalArgumentException if an invalid chroot path is specified
@@ -548,7 +545,6 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        SaslClient saslClient = null;
         LoginThread loginThread = null;
 
         // Use presence/absence of service_principal
@@ -556,12 +552,11 @@ public class ZooKeeper {
         if ((service_principal != null) && (System.getProperty("java.security.auth.login.config") != null)) {
             // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
             loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
-            saslClient = createSaslClient(service_principal,loginThread);
         }
 
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                               hostProvider, sessionTimeout, this, watchManager,
-                              getClientCnxnSocket(), sessionId, sessionPasswd, loginThread, saslClient);
+                              getClientCnxnSocket(), sessionId, sessionPasswd, loginThread);
         cnxn.start();
     }
 
@@ -585,64 +580,10 @@ public class ZooKeeper {
 
             cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                                   hostProvider, sessionTimeout, this, watchManager,
-                                  getClientCnxnSocket(), sessionId, sessionPasswd, null,null);
+                                  getClientCnxnSocket(), sessionId, sessionPasswd, null);
             cnxn.start();
      }
 
-    private static SaslClient createSaslClient(final String servicePrincipal, LoginThread loginThread) {
-
-        int indexOf = servicePrincipal.indexOf("/");
-        
-        final String serviceName = servicePrincipal.substring(0, indexOf);
-        final String serviceHostname = servicePrincipal.substring(indexOf+1,servicePrincipal.length());
-
-        try {
-            loginThread.start();
-            synchronized(loginThread) {
-                Subject subject = loginThread.getLogin().getSubject();
-                SaslClient saslClient = null;
-                // Use subject.getPrincipals().isEmpty() as an indication of which SASL mechanism to use: if empty, use DIGEST-MD5; otherwise, use GSSAPI.
-                if (subject.getPrincipals().isEmpty() == true) {
-                    // no principals: must not be GSSAPI: use DIGEST-MD5 mechanism instead.
-                    LOG.info("Client will use DIGEST-MD5 as SASL mechanism.");
-                    String[] mechs = {"DIGEST-MD5"};
-                    String username = (String)(subject.getPublicCredentials().toArray()[0]);
-                    String password = (String)(subject.getPrivateCredentials().toArray()[0]);
-                    // "zk-sasl-md5" is a hard-wired 'domain' parameter used also by server.
-                    saslClient = Sasl.createSaslClient(mechs,username,serviceName,"zk-sasl-md5",null,new ClientCallbackHandler(password));
-                    return saslClient;
-                }
-                else { // GSSAPI.
-                    final Object[] principals = subject.getPrincipals().toArray();
-                    // determine client principal from subject.
-                    final Principal clientPrincipal = (Principal)principals[0];
-                    final String clientPrincipalName = clientPrincipal.getName();
-                    
-                    try {
-                        saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
-                                public SaslClient run() throws SaslException {
-                                    LOG.info("Client will use GSSAPI as SASL mechanism.");
-                                    String[] mechs = {"GSSAPI"};
-                                    LOG.debug("creating sasl client: client="+clientPrincipalName+";service="+serviceName+";serviceHostname="+serviceHostname);
-                                    SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,serviceName,serviceHostname,null,new ClientCallbackHandler(null));
-                                    return saslClient;
-                                }
-                            });
-                        return saslClient;
-                    }
-                    catch (Exception e) {
-                        LOG.error("Error creating SASL client:" + e);
-                        e.printStackTrace();
-                        return null;
-                    }
-                }
-            }
-        }
-        catch (Exception e) {
-            LOG.error("Exception while trying to create SASL client.");
-            return null;
-        }
-    }
     /**
      * The session id for this ZooKeeper client instance. The value returned is
      * not valid until the client connects to a server and may change after a

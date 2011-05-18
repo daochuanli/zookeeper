@@ -24,6 +24,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.LinkedList;
@@ -32,6 +33,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.LinkedBlockingQueue;
 import javax.security.auth.Subject;
+import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 
@@ -379,9 +381,9 @@ public class ClientCnxn {
      * @throws IOException
      */
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
-                      ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, LoginThread loginThread, SaslClient saslClient)
+                      ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, LoginThread loginThread)
             throws IOException {
-      this(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher, clientCnxnSocket, 0, new byte[16], loginThread, saslClient);
+      this(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher, clientCnxnSocket, 0, new byte[16], loginThread);
     }
 
     /**
@@ -407,7 +409,7 @@ public class ClientCnxn {
      */
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
             ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket,
-                      long sessionId, byte[] sessionPasswd, LoginThread loginThread, SaslClient saslClient) {
+                      long sessionId, byte[] sessionPasswd, LoginThread loginThread) {
         this.zooKeeper = zooKeeper;
         this.watcher = watcher;
         this.sessionId = sessionId;
@@ -415,7 +417,6 @@ public class ClientCnxn {
         this.sessionTimeout = sessionTimeout;
         this.hostProvider = hostProvider;
         this.chrootPath = chrootPath;
-        this.saslClient = saslClient;
 
         connectTimeout = sessionTimeout / hostProvider.size();
         readTimeout = sessionTimeout * 2 / 3;
@@ -950,6 +951,13 @@ public class ClientCnxn {
             setName(getName().replaceAll("\\(.*\\)",
                     "(" + addr.getHostName() + ":" + addr.getPort() + ")"));
 
+            if (System.getProperty("java.security.auth.login.config") != null) {
+              saslClient = createSaslClient("zookeeper/"+addr.getHostName(),loginThread);
+            }
+            else {
+              saslClient = null;
+            }
+
             clientCnxnSocket.connect(addr);
         }
 
@@ -1272,5 +1280,59 @@ public class ClientCnxn {
         return state;
     }
 
+    private static SaslClient createSaslClient(final String servicePrincipal, LoginThread loginThread) {
+
+        int indexOf = servicePrincipal.indexOf("/");
+
+        final String serviceName = servicePrincipal.substring(0, indexOf);
+        final String serviceHostname = servicePrincipal.substring(indexOf+1,servicePrincipal.length());
+
+        try {
+            loginThread.start();
+            synchronized(loginThread) {
+                Subject subject = loginThread.getLogin().getSubject();
+                SaslClient saslClient = null;
+                // Use subject.getPrincipals().isEmpty() as an indication of which SASL mechanism to use: if empty, use DIGEST-MD5; otherwise, use GSSAPI.
+                if (subject.getPrincipals().isEmpty() == true) {
+                    // no principals: must not be GSSAPI: use DIGEST-MD5 mechanism instead.
+                    LOG.info("Client will use DIGEST-MD5 as SASL mechanism.");
+                    String[] mechs = {"DIGEST-MD5"};
+                    String username = (String)(subject.getPublicCredentials().toArray()[0]);
+                    String password = (String)(subject.getPrivateCredentials().toArray()[0]);
+                    // "zk-sasl-md5" is a hard-wired 'domain' parameter used also by server.
+                    saslClient = Sasl.createSaslClient(mechs, username, serviceName, "zk-sasl-md5", null, new ZooKeeper.ClientCallbackHandler(password));
+                    return saslClient;
+                }
+                else { // GSSAPI.
+                    final Object[] principals = subject.getPrincipals().toArray();
+                    // determine client principal from subject.
+                    final Principal clientPrincipal = (Principal)principals[0];
+                    final String clientPrincipalName = clientPrincipal.getName();
+
+                    try {
+                        saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
+                                public SaslClient run() throws SaslException {
+                                    LOG.info("Client will use GSSAPI as SASL mechanism.");
+                                    String[] mechs = {"GSSAPI"};
+                                    LOG.debug("creating sasl client: client="+clientPrincipalName+";service="+serviceName+";serviceHostname="+serviceHostname);
+                                    SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,serviceName,serviceHostname,null,new ZooKeeper.ClientCallbackHandler(null));
+                                    return saslClient;
+                                }
+                            });
+                        return saslClient;
+                    }
+                    catch (Exception e) {
+                        LOG.error("Error creating SASL client:" + e);
+                        e.printStackTrace();
+                        return null;
+                    }
+                }
+            }
+        }
+        catch (Exception e) {
+            LOG.error("Exception while trying to create SASL client.");
+            return null;
+        }
+    }
 
 }
