@@ -1288,7 +1288,9 @@ public class ClientCnxn {
         final String serviceHostname = servicePrincipal.substring(indexOf+1,servicePrincipal.length());
 
         try {
-            loginThread.start();
+            if (loginThread.isAlive() == false) {
+              loginThread.start();
+            }
             synchronized(loginThread) {
                 Subject subject = loginThread.getLogin().getSubject();
                 SaslClient saslClient = null;
@@ -1330,7 +1332,7 @@ public class ClientCnxn {
             }
         }
         catch (Exception e) {
-            LOG.error("Exception while trying to create SASL client.");
+            LOG.error("Exception while trying to create SASL client: " + e);
             return null;
         }
     }
