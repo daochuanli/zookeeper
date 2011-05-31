@@ -468,7 +468,7 @@ public class ClientCnxn {
         readTimeout = sessionTimeout * 2 / 3;
         readOnly = canBeReadOnly;
 
-        sendThread = new SendThread(clientCnxnSocket);
+        sendThread = new SendThread(clientCnxnSocket, this);
         eventThread = new EventThread();
         this.loginThread = loginThread;
     }

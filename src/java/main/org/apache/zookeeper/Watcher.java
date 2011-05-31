@@ -69,23 +69,17 @@ public interface Watcher {
              */
             ConnectedReadOnly (5),
 
+            /**
+              * SaslAuthenticated: used to notify clients that they are SASL-authenticated,
+              * so that they can perform Zookeeper actions with their SASL-authorized permissions.
+              */
+            SaslAuthenticated(6),
+
             /** The serving cluster has expired this session. The ZooKeeper
              * client connection (the session) is no longer valid. You must
              * create a new client connection (instantiate a new ZooKeeper
              * instance) if you with to access the ensemble. */
-            Expired (-112),
-
-            /**
-             * Auth failed state
-             * 
-             */
-            AuthFailed(4),
-
-            /** 
-              * SaslAuthenticated: used to notify clients that they are SASL-authenticated,
-              * so that they can perform Zookeeper actions with their SASL-authorized permissions.
-              */
-            SaslAuthenticated(5);
+            Expired (-112);
 
             private final int intValue;     // Integer representation of value
                                             // for sending over wire

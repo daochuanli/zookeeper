@@ -45,7 +45,6 @@ import javax.security.sasl.RealmCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
-import org.apache.log4j.Logger;
 import org.apache.zookeeper.LoginThread;
 import org.apache.zookeeper.jmx.MBeanRegistry;
 
