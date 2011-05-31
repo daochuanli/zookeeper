@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 
 import javax.management.JMException;
+import javax.security.auth.Subject;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -121,8 +122,9 @@ public class QuorumPeerMain {
       try {
           ServerCnxnFactory cnxnFactory = ServerCnxnFactory.createFactory();
           cnxnFactory.configure(config.getClientPortAddress(),
-                                config.getMaxClientCnxns());
-  
+                                config.getMaxClientCnxns(),
+                                config.getRequireClientAuthScheme(),
+                                config.getJaasLoginRenew());
           quorumPeer = new QuorumPeer();
           quorumPeer.setClientPortAddress(config.getClientPortAddress());
           quorumPeer.setTxnFactory(new FileTxnSnapLog(

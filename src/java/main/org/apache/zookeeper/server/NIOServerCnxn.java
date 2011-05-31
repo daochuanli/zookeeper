@@ -35,7 +35,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
-
 import org.apache.jute.BinaryInputArchive;
 import org.apache.jute.BinaryOutputArchive;
 import org.apache.jute.Record;
@@ -98,6 +97,8 @@ public class NIOServerCnxn extends ServerCnxn {
         this.sock = sock;
         this.sk = sk;
         this.factory = factory;
+        this.saslServer = factory.createSaslServer();
+
         if (zk != null) { 
             outstandingLimit = zk.getGlobalOutstandingLimit();
         }
@@ -478,7 +479,7 @@ public class NIOServerCnxn extends ServerCnxn {
     /**
      * Set of threads for commmand ports. All the 4
      * letter commands are run via a thread. Each class
-     * maps to a correspoding 4 letter command. CommandThread
+     * maps to a corresponding 4 letter command. CommandThread
      * is the abstract class from which all the others inherit.
      */
     private abstract class CommandThread extends Thread {

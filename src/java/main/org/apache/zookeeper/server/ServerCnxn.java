@@ -36,6 +36,7 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.RequestHeader;
+import javax.security.sasl.SaslServer;
 
 /**
  * Interface to a Server connection - represents a connection from a client
@@ -77,7 +78,9 @@ public abstract class ServerCnxn implements Stats, Watcher {
     }
 
     public void addAuthInfo(Id id) {
-        authInfo.add(id);
+        if (authInfo.contains(id) == false) {
+            authInfo.add(id);
+        }
     }
 
     public boolean removeAuthInfo(Id id) {
@@ -91,6 +94,8 @@ public abstract class ServerCnxn implements Stats, Watcher {
     abstract void disableRecv();
 
     abstract void setSessionTimeout(int sessionTimeout);
+
+    protected SaslServer saslServer = null;
 
     protected static class CloseRequestException extends IOException {
         private static final long serialVersionUID = -7854505709816442681L;
@@ -445,3 +450,4 @@ public abstract class ServerCnxn implements Stats, Watcher {
     }
 
 }
+
