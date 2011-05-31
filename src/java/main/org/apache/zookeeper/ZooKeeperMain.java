@@ -270,21 +270,10 @@ public class ZooKeeperMain {
         host = newHost;
         boolean readOnly = cl.getOption("readonly") != null;
 
-        String servicePrincipalName = null;
-        if (System.getProperty("java.security.auth.login.config") != null) {
-            // TODO: allow the service principal name to be configurable: for now, 
-            // service principal name must be "zookeeper/" + zkHostname.
-
-            // zkHostname is newHost minus the ":port" suffix.
-            int indexOf = newHost.indexOf(":");
-            String zkHostname = newHost.substring(0,indexOf);
-            servicePrincipalName = "zookeeper/"+zkHostname;
-        }
-
         zk = new ZooKeeper(newHost,
                            Integer.parseInt(cl.getOption("timeout")),
-                           new MyWatcher(),readOnly,
-                           servicePrincipalName);
+                           new MyWatcher(),readOnly);
+
     }
     
     public static void main(String args[])

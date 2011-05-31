@@ -391,6 +391,57 @@ public class ZooKeeper {
      * @param watcher
      *            a watcher object which will be notified of state changes, may
      *            also be notified for node events
+     *
+     * @throws IOException
+     *             in cases of network failure
+     * @throws IllegalArgumentException
+     *             if an invalid chroot path is specified
+     */
+    public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher)
+       throws IOException
+    {
+      this(connectString, sessionTimeout, watcher, false);
+    }
+
+
+
+    /**
+     * To create a ZooKeeper client object, the application needs to pass a
+     * connection string containing a comma separated list of host:port pairs,
+     * each corresponding to a ZooKeeper server.
+     * <p>
+     * Session establishment is asynchronous. This constructor will initiate
+     * connection to the server and return immediately - potentially (usually)
+     * before the session is fully established. The watcher argument specifies
+     * the watcher that will be notified of any changes in state. This
+     * notification can come at any point before or after the constructor call
+     * has returned.
+     * <p>
+     * The instantiated ZooKeeper client object will pick an arbitrary server
+     * from the connectString and attempt to connect to it. If establishment of
+     * the connection fails, another server in the connect string will be tried
+     * (the order is non-deterministic, as we random shuffle the list), until a
+     * connection is established. The client will continue attempts until the
+     * session is explicitly closed.
+     * <p>
+     * Added in 3.2.0: An optional "chroot" suffix may also be appended to the
+     * connection string. This will run the client commands while interpreting
+     * all paths relative to this root (similar to the unix chroot command).
+     *
+     * @param connectString
+     *            comma separated host:port pairs, each corresponding to a zk
+     *            server. e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002" If
+     *            the optional chroot suffix is used the example would look
+     *            like: "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002/app/a"
+     *            where the client would be rooted at "/app/a" and all paths
+     *            would be relative to this root - ie getting/setting/etc...
+     *            "/foo/bar" would result in operations being run on
+     *            "/app/a/foo/bar" (from the server perspective).
+     * @param sessionTimeout
+     *            session timeout in milliseconds
+     * @param watcher
+     *            a watcher object which will be notified of state changes, may
+     *            also be notified for node events
      * @param canBeReadOnly
      *            (added in 3.4) whether the created client is allowed to go to
      *            read-only mode in case of partitioning. Read-only mode
@@ -399,12 +450,6 @@ public class ZooKeeper {
      *            connects to one in read-only mode, i.e. read requests are
      *            allowed while write requests are not. It continues seeking for
      *            majority in the background.
-     * @param service_principal
-     *            The name of the principal that the zookeeper server is using.
-     *            This client will authenticate with this principal if using GSSAPI as
-     *            the SASL authentication mechanism.
-     *            If service_principal is non-null, a LoginThread is started, which
-     *            obtains and periodically refreshes a javax.security.auth.Subject object.
      *
      * @throws IOException
      *             in cases of network failure
@@ -412,7 +457,7 @@ public class ZooKeeper {
      *             if an invalid chroot path is specified
      */
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
-            boolean canBeReadOnly, String service_principal)
+            boolean canBeReadOnly)
         throws IOException
     {
         LOG.info("Initiating client connection, connectString=" + connectString
@@ -425,7 +470,7 @@ public class ZooKeeper {
 
         LoginThread loginThread = null;
 
-        if (service_principal != null) {
+        if (System.getProperty("java.security.auth.login.config") != null) {
             // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
             loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
         }
@@ -591,8 +636,6 @@ public class ZooKeeper {
      *            specific session id to use if reconnecting
      * @param sessionPasswd
      *            password for this session
-     * @param servicePrincipal
-     *            ignored and will be removed.
      * @param canBeReadOnly
      *            (added in 3.4) whether the created client is allowed to go to
      *            read-only mode in case of partitioning. Read-only mode
@@ -625,8 +668,6 @@ public class ZooKeeper {
 
         LoginThread loginThread = null;
 
-        // Use presence/absence of service_principal
-        // as a boolean flag to decide whether to start the LoginThread and obtain a Subject for this client.
         if (System.getProperty("java.security.auth.login.config") != null) {
             // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
             loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
