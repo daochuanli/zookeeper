@@ -216,6 +216,20 @@ BUGFIXES:
   ZOOKEEPER-1058. fix typo in opToString for getData. (camille)
   
   ZOOKEEPER-1046. Creating a new sequential node results in a ZNODEEXISTS error. (Vishal K via camille) 
+  
+  ZOOKEEPER-1069. Calling shutdown() on a QuorumPeer too quickly can lead to a corrupt log. (Vishal K via camille) 
+
+  ZOOKEEPER-1083. Javadoc for WatchedEvent not being generated. (Ivan Kelly via michim)
+
+  ZOOKEEPER-1086. zookeeper test jar has non mavenised dependency. (Ivan Kelly via michim)
+
+  ZOOKEEPER-335. zookeeper servers should commit the new leader txn to their logs. (breed)
+
+  ZOOKEEPER-1081. modify leader/follower code to correctly deal with new leader (breed)
+
+  ZOOKEEPER-1082. modify leader election to correctly take into account current epoch (fpj via breed)
+
+  ZOOKEEPER-1060. QuorumPeer takes a long time to shutdown (Vishal via fpj)
 
 IMPROVEMENTS:
   ZOOKEEPER-724. Improve junit test integration - log harness information 
@@ -293,6 +307,8 @@ IMPROVEMENTS:
   ZOOKEEPER-874. FileTxnSnapLog.restore does not call listener (diogo via fpj)
 
   ZOOKEEPER-1052. Findbugs warning in QuorumPeer.ResponderThread.run()  (fpj via michim)
+
+  ZOOKEEPER-1094. Small improvements to LeaderElection and Vote classes (henryr via breed)
 
 NEW FEATURES:
   ZOOKEEPER-729. Java client API to recursively delete a subtree.
