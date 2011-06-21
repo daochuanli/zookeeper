@@ -1055,9 +1055,8 @@ public class ClientCnxn {
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
 
-                    // TODO: ugly: handle this better: if not using SASL, should never be in SASL_INITIAL in the first place.
-                    // could be avoided by going straight to CONNECTED and only going to SASL_INITIAL if client
-                    // explicitly does 'sasl' command.
+                    // If saslClient is null at this point, either client is not configured to use SASL, or saslClient was not initialized properly in startConnect().
+                    // Print a log message appropriate to either situation.
                     if ((state == States.SASL_INITIAL) && (saslClient == null)) {
                         if (System.getProperty("java.security.auth.login.config") != null) {
                             LOG.warn("Client could not SASL authenticate using supplied configuration:" + System.getProperty("java.security.auth.login.config"));
@@ -1070,8 +1069,8 @@ public class ClientCnxn {
 
                     if (state == States.SASL_INITIAL) {
                         if (saslClient.isComplete() == true) {
-                            // TODO: this happens when client re-connects after authenticating:
-                            // should re-authenticate in this case rather than going straight to CONNECTED.
+                            // It should never be possible for the client to be in SASL_INITIAL state
+                            // with a saslClient being in Complete state.
                             state = States.AUTH_FAILED;
                             LOG.warn("Unexpectedly, SASL negotiation object is in completed state, while client's state is in SASL_INITIAL state. Going to AUTH_FAILED without attempting SASL negotiation with Zookeeper Quorum member.");
                         }
