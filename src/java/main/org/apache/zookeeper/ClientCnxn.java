@@ -419,7 +419,6 @@ public class ClientCnxn {
      *                whether the connection is allowed to go to read-only
      *                mode in case of partitioning
      * @param loginThread used to determine subject used for SASL authentication.
-     * @param saslClient used to exchange SASL tokens with Zookeeper server using loginThread's subject.
 
      * @throws IOException
      */
@@ -450,7 +449,6 @@ public class ClientCnxn {
      *                whether the connection is allowed to go to read-only
      *                mode in case of partitioning
      * @param loginThread used to determine subject used for SASL authentication.
-     * @param saslClient used to exchange SASL tokens with Zookeeper server using loginThread's subject.
      * @throws IOException
      */
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
