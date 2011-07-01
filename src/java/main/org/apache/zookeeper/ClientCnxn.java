@@ -466,7 +466,7 @@ public class ClientCnxn {
         readTimeout = sessionTimeout * 2 / 3;
         readOnly = canBeReadOnly;
 
-        sendThread = new SendThread(clientCnxnSocket, this);
+        sendThread = new SendThread(clientCnxnSocket);
         eventThread = new EventThread();
         this.loginThread = loginThread;
     }
@@ -914,13 +914,10 @@ public class ClientCnxn {
             }
         }
 
-        final ClientCnxn cnxn;
-
-        SendThread(ClientCnxnSocket clientCnxnSocket, final ClientCnxn cnxn) {
+        SendThread(ClientCnxnSocket clientCnxnSocket) {
             super(makeThreadName("-SendThread()"));
             state = States.CONNECTING;
             this.clientCnxnSocket = clientCnxnSocket;
-            this.cnxn = cnxn;
             setUncaughtExceptionHandler(uncaughtExceptionHandler);
             setDaemon(true);
         }
@@ -1075,15 +1072,15 @@ public class ClientCnxn {
                         else {
                             if (saslClient.hasInitialResponse() == true) {
                                 LOG.debug("saslClient.hasInitialResponse()==true");
-                                LOG.debug("hasInitialResponse() == true; (1) SASL token length = " + cnxn.saslToken.length);
-                                cnxn.saslToken = createSaslToken(cnxn.saslToken,cnxn.saslClient);
-                                LOG.debug("hasInitialResponse() == true; (2) SASL token length = " + cnxn.saslToken.length);
-                                if (cnxn.saslToken == null) {
+                                LOG.debug("hasInitialResponse() == true; (1) SASL token length = " + saslToken.length);
+                                saslToken = createSaslToken(saslToken,saslClient);
+                                LOG.debug("hasInitialResponse() == true; (2) SASL token length = " + saslToken.length);
+                                if (saslToken == null) {
                                     state = States.AUTH_FAILED;
                                     LOG.warn("SASL negotiation with Zookeeper Quorum member failed: client state is now AUTH_FAILED.");
                                 }
                                 else {
-                                    queueSaslPacket(cnxn.saslToken);
+                                    queueSaslPacket(saslToken);
                                     state = States.SASL;
                                 }
                             }
