@@ -21,6 +21,7 @@ package org.apache.zookeeper.server;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import java.nio.ByteBuffer;
 
 import org.apache.jute.Index;
 import org.apache.jute.InputArchive;
@@ -56,7 +59,15 @@ import org.apache.zookeeper.txn.DeleteTxn;
 import org.apache.zookeeper.txn.ErrorTxn;
 import org.apache.zookeeper.txn.SetACLTxn;
 import org.apache.zookeeper.txn.SetDataTxn;
+import org.apache.zookeeper.txn.CheckVersionTxn;
+import org.apache.zookeeper.txn.Txn;
+import org.apache.zookeeper.txn.MultiTxn;
 import org.apache.zookeeper.txn.TxnHeader;
+
+import org.apache.zookeeper.proto.CreateRequest;
+import org.apache.zookeeper.proto.DeleteRequest;
+import org.apache.zookeeper.proto.SetACLRequest;
+import org.apache.zookeeper.proto.SetDataRequest;
 
 /**
  * This class maintains the tree data structure. It doesn't have any networking
@@ -379,11 +390,11 @@ public class DataTree {
         synchronized (node) {
             thisStats = new StatsTrack(new String(node.data));
         }
-        if (thisStats.getCount() < updatedStat.getCount()) {
+        if (thisStats.getCount() > -1 && (thisStats.getCount() < updatedStat.getCount())) {
             LOG
-                    .warn("Quota exceeded: " + lastPrefix + " count="
-                            + updatedStat.getCount() + " limit="
-                            + thisStats.getCount());
+            .warn("Quota exceeded: " + lastPrefix + " count="
+                    + updatedStat.getCount() + " limit="
+                    + thisStats.getCount());
         }
     }
 
@@ -425,11 +436,11 @@ public class DataTree {
         synchronized (node) {
             thisStats = new StatsTrack(new String(node.data));
         }
-        if (thisStats.getBytes() < updatedStat.getBytes()) {
+        if (thisStats.getBytes() > -1 && (thisStats.getBytes() < updatedStat.getBytes())) {
             LOG
-                    .warn("Quota exceeded: " + lastPrefix + " bytes="
-                            + updatedStat.getBytes() + " limit="
-                            + thisStats.getBytes());
+            .warn("Quota exceeded: " + lastPrefix + " bytes="
+                    + updatedStat.getBytes() + " limit="
+                    + thisStats.getBytes());
         }
     }
 
@@ -446,7 +457,7 @@ public class DataTree {
      * @throws KeeperException
      */
     public String createNode(String path, byte data[], List<ACL> acl,
-            long ephemeralOwner, long zxid, long time)
+            long ephemeralOwner, int parentCVersion, long zxid, long time)
             throws KeeperException.NoNodeException,
             KeeperException.NodeExistsException {
         int lastSlash = path.lastIndexOf('/');
@@ -472,9 +483,12 @@ public class DataTree {
                     throw new KeeperException.NodeExistsException();
                 }
             }
-            int cver = parent.stat.getCversion();
-            cver++;
-            parent.stat.setCversion(cver);
+            
+            if (parentCVersion == -1) {
+                parentCVersion = parent.stat.getCversion();
+                parentCVersion++;
+            }    
+            parent.stat.setCversion(parentCVersion);
             parent.stat.setPzxid(zxid);
             Long longval = convertAcls(acl);
             DataNode child = new DataNode(parent, data, longval, stat);
@@ -505,8 +519,8 @@ public class DataTree {
             }
         }
         // also check to update the quotas for this node
-        String lastPrefix = pTrie.findMaxPrefix(path);
-        if (!rootZookeeper.equals(lastPrefix) && !("".equals(lastPrefix))) {
+        String lastPrefix;
+        if((lastPrefix = getMaxPrefixWithQuota(path)) != null) {
             // ok we have some match and need to update
             updateCount(lastPrefix, 1);
             updateBytes(lastPrefix, data == null ? 0 : data.length);
@@ -542,7 +556,6 @@ public class DataTree {
         }
         synchronized (parent) {
             parent.removeChild(childName);
-            parent.stat.setCversion(parent.stat.getCversion() + 1);
             parent.stat.setPzxid(zxid);
             long eowner = node.stat.getEphemeralOwner();
             if (eowner != 0) {
@@ -565,8 +578,8 @@ public class DataTree {
         }
 
         // also check to update the quotas for this node
-        String lastPrefix = pTrie.findMaxPrefix(path);
-        if (!rootZookeeper.equals(lastPrefix) && !("".equals(lastPrefix))) {
+        String lastPrefix;
+        if((lastPrefix = getMaxPrefixWithQuota(path)) != null) {
             // ok we have some match and need to update
             updateCount(lastPrefix, -1);
             int bytes = 0;
@@ -605,16 +618,33 @@ public class DataTree {
             n.copyStat(s);
         }
         // now update if the path is in a quota subtree.
-        String lastPrefix = pTrie.findMaxPrefix(path);
-        // do nothing for the root.
-        // we are not keeping a quota on the zookeeper
-        // root node for now.
-        if (!rootZookeeper.equals(lastPrefix) && !("".equals(lastPrefix))) {
-            this.updateBytes(lastPrefix, (data == null ? 0 : data.length)
-                    - (lastdata == null ? 0 : lastdata.length));
+        String lastPrefix;
+        if((lastPrefix = getMaxPrefixWithQuota(path)) != null) {
+          this.updateBytes(lastPrefix, (data == null ? 0 : data.length)
+              - (lastdata == null ? 0 : lastdata.length));
         }
         dataWatches.triggerWatch(path, EventType.NodeDataChanged);
         return s;
+    }
+
+    /**
+     * If there is a quota set, return the appropriate prefix for that quota
+     * Else return null
+     * @param The ZK path to check for quota
+     * @return Max quota prefix, or null if none
+     */
+    public String getMaxPrefixWithQuota(String path) {
+        // do nothing for the root.
+        // we are not keeping a quota on the zookeeper
+        // root node for now.
+        String lastPrefix = pTrie.findMaxPrefix(path);
+
+        if (!rootZookeeper.equals(lastPrefix) && !("".equals(lastPrefix))) {
+            return lastPrefix;
+        }
+        else {
+            return null;
+        }
     }
 
     public byte[] getData(String path, Stat stat, Watcher watcher)
@@ -717,6 +747,8 @@ public class DataTree {
 
         public Stat stat;
 
+        public List<ProcessTxnResult> multiResult;
+        
         /**
          * Equality is defined as the clientId and the cxid being the same. This
          * allows us to use hash tables to track completion of transactions.
@@ -747,7 +779,8 @@ public class DataTree {
 
     public volatile long lastProcessedZxid = 0;
 
-    public ProcessTxnResult processTxn(TxnHeader header, Record txn) {
+    public ProcessTxnResult processTxn(TxnHeader header, Record txn)
+    {
         ProcessTxnResult rc = new ProcessTxnResult();
 
         String debug = "";
@@ -757,6 +790,7 @@ public class DataTree {
             rc.zxid = header.getZxid();
             rc.type = header.getType();
             rc.err = 0;
+            rc.multiResult = null;
             if (rc.zxid > lastProcessedZxid) {
                 lastProcessedZxid = rc.zxid;
             }
@@ -770,6 +804,7 @@ public class DataTree {
                             createTxn.getData(),
                             createTxn.getAcl(),
                             createTxn.getEphemeral() ? header.getClientId() : 0,
+                            createTxn.getParentCVersion(),
                             header.getZxid(), header.getTime());
                     break;
                 case OpCode.delete:
@@ -780,15 +815,16 @@ public class DataTree {
                     break;
                 case OpCode.setData:
                     SetDataTxn setDataTxn = (SetDataTxn) txn;
-                    debug = "Set data for  transaction for "
-                            + setDataTxn.getPath();
+                    debug = "Set data transaction for "
+                            + setDataTxn.getPath()
+                            + " to new value=" + Arrays.toString(setDataTxn.getData());
                     rc.stat = setData(setDataTxn.getPath(), setDataTxn
                             .getData(), setDataTxn.getVersion(), header
                             .getZxid(), header.getTime());
                     break;
                 case OpCode.setACL:
                     SetACLTxn setACLTxn = (SetACLTxn) txn;
-                    debug = "Set ACL for  transaction for "
+                    debug = "Set ACL transaction for "
                             + setACLTxn.getPath();
                     rc.stat = setACL(setACLTxn.getPath(), setACLTxn.getAcl(),
                             setACLTxn.getVersion());
@@ -800,10 +836,83 @@ public class DataTree {
                     ErrorTxn errTxn = (ErrorTxn) txn;
                     rc.err = errTxn.getErr();
                     break;
+                case OpCode.check:
+                    CheckVersionTxn checkTxn = (CheckVersionTxn) txn;
+                    debug = "Check Version transaction for "
+                            + checkTxn.getPath() 
+                            + " and version="
+                            + checkTxn.getVersion();
+                    rc.path = checkTxn.getPath();
+                    break;
+                case OpCode.multi:
+                    MultiTxn multiTxn = (MultiTxn) txn ;
+                    List<Txn> txns = multiTxn.getTxns();
+                    debug = "Multi transaction with " + txns.size() + " operations";
+                    rc.multiResult = new ArrayList<ProcessTxnResult>();
+                    boolean failed = false;
+                    for (Txn subtxn : txns) {
+                        if (subtxn.getType() == OpCode.error) {
+                            failed = true;
+                            break;
+                        }
+                    }
+
+                    boolean post_failed = false;
+                    for (Txn subtxn : txns) {
+                        ByteBuffer bb = ByteBuffer.wrap(subtxn.getData());
+                        Record record = null;
+                        switch (subtxn.getType()) {
+                            case OpCode.create:
+                                record = new CreateTxn();
+                                break;
+                            case OpCode.delete:
+                                record = new DeleteTxn();
+                                break;
+                            case OpCode.setData:
+                                record = new SetDataTxn();
+                                break;
+                            case OpCode.error:
+                                record = new ErrorTxn();
+                                post_failed = true;
+                                break;
+                            case OpCode.check:
+                                record = new CheckVersionTxn();
+                                break;
+                            default:
+                                throw new IOException("Invalid type of op: " + subtxn.getType());
+                        }
+                        assert(record != null);
+
+                        ZooKeeperServer.byteBuffer2Record(bb, record);
+                       
+                        if (failed && subtxn.getType() != OpCode.error){
+                            int ec = post_failed ? Code.RUNTIMEINCONSISTENCY.intValue() 
+                                                 : Code.OK.intValue();
+
+                            subtxn.setType(OpCode.error);
+                            record = new ErrorTxn(ec);
+                        }
+
+                        if (failed) {
+                            assert(subtxn.getType() == OpCode.error) ;
+                        }
+
+                        TxnHeader subHdr = new TxnHeader(header.getClientId(), header.getCxid(),
+                                                         header.getZxid(), header.getTime(), 
+                                                         subtxn.getType());
+                        ProcessTxnResult subRc = processTxn(subHdr, record);
+                        rc.multiResult.add(subRc);
+                        if (subRc.err != 0 && rc.err == 0) {
+                            rc.err = subRc.err ;
+                        }
+                    }
+                    break;
             }
         } catch (KeeperException e) {
-             LOG.debug("Failed: " + debug, e);
+             LOG.warn("Failed: " + debug, e);
              rc.err = e.code().intValue();
+        } catch (IOException e) {
+            LOG.warn("Failed:" + debug, e);
         }
         return rc;
     }
@@ -916,26 +1025,24 @@ public class DataTree {
                 children = childs.toArray(new String[childs.size()]);
             }
         }
-        if (children != null) {
-            if (children.length == 0) {
-                // this node does not have a child
-                // is the leaf node
-                // check if its the leaf node
-                String endString = "/" + Quotas.limitNode;
-                if (path.endsWith(endString)) {
-                    // ok this is the limit node
-                    // get the real node and update
-                    // the count and the bytes
-                    String realPath = path.substring(Quotas.quotaZookeeper
-                            .length(), path.indexOf(endString));
-                    updateQuotaForPath(realPath);
-                    this.pTrie.addPath(realPath);
-                }
-                return;
+        if (children == null || children.length == 0) {
+            // this node does not have a child
+            // is the leaf node
+            // check if its the leaf node
+            String endString = "/" + Quotas.limitNode;
+            if (path.endsWith(endString)) {
+                // ok this is the limit node
+                // get the real node and update
+                // the count and the bytes
+                String realPath = path.substring(Quotas.quotaZookeeper
+                        .length(), path.indexOf(endString));
+                updateQuotaForPath(realPath);
+                this.pTrie.addPath(realPath);
             }
-            for (String child : children) {
-                traverseNode(path + "/" + child);
-            }
+            return;
+        }
+        for (String child : children) {
+            traverseNode(path + "/" + child);
         }
     }
 
