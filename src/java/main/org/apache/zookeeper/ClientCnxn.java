@@ -60,6 +60,7 @@ import org.apache.zookeeper.ZooDefs.OpCode;
 import org.apache.zookeeper.ZooKeeper.States;
 import org.apache.zookeeper.ZooKeeper.WatchRegistration;
 import org.apache.zookeeper.client.HostProvider;
+import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.proto.AuthPacket;
 import org.apache.zookeeper.proto.ConnectRequest;
 import org.apache.zookeeper.proto.CreateResponse;
@@ -192,9 +193,13 @@ public class ClientCnxn {
      * then non-zero sessionId is fake, otherwise it is valid.
      */
     volatile boolean seenRwServerBefore = false;
+
+
+    private ZooKeeperSaslClient zooKeeperSaslClient;
     private LoginThread loginThread;
     private SaslClient saslClient;
     private byte[] saslToken = new byte[0];
+
 
     public void prepareSaslResponseToServer(byte[] serverToken) {
         saslToken = serverToken;
