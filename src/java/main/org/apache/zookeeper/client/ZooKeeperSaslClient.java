@@ -62,8 +62,7 @@ public class ZooKeeperSaslClient {
       this.saslClient = createSaslClient(serverPrincipal,loginThread);
     }
 
-    // TODO: make private.
-    public static SaslClient createSaslClient(final String servicePrincipal, LoginThread loginThread) {
+    private static SaslClient createSaslClient(final String servicePrincipal, LoginThread loginThread) {
 
         int indexOf = servicePrincipal.indexOf("/");
 
@@ -196,7 +195,7 @@ public class ZooKeeperSaslClient {
             // data[] contains the Zookeeper Server's SASL token.
             // ctx is the ZooKeeperSaslClient object. We use this object's prepareSaslResponseToServer() method
             // to reply to the Zookeeper Server's SASL token
-            ZooKeeperSaslClient client = (ZooKeeperSaslClient)ctx;
+            ZooKeeperSaslClient client = ((ClientCnxn)ctx).zooKeeperSaslClient;
             byte[] usedata = data;
             if (data != null) {
                 LOG.debug("ServerSaslResponseCallback(): saslToken server response: (length="+usedata.length+")");
@@ -212,7 +211,8 @@ public class ZooKeeperSaslClient {
     // TODO: make private once more sasl code is extracted from
     // ClientCnxn.run().
     public void queueSaslPacket(byte[] saslToken) {
-        LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
+        LOG.info("cnxn: " + cnxn.toString());
+        LOG.info("ClientCnxn:sendSaslPacket:length="+saslToken.length);
         RequestHeader h = new RequestHeader();
         h.setType(ZooDefs.OpCode.sasl);
         GetSASLRequest request = new GetSASLRequest();

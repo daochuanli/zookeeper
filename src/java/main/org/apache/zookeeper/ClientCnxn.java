@@ -195,7 +195,7 @@ public class ClientCnxn {
     volatile boolean seenRwServerBefore = false;
 
 
-    private ZooKeeperSaslClient zooKeeperSaslClient;
+    public ZooKeeperSaslClient zooKeeperSaslClient;
 
     public long getSessionId() {
         return sessionId;
@@ -379,7 +379,6 @@ public class ClientCnxn {
         this.sessionTimeout = sessionTimeout;
         this.hostProvider = hostProvider;
         this.chrootPath = chrootPath;
-
         connectTimeout = sessionTimeout / hostProvider.size();
         readTimeout = sessionTimeout * 2 / 3;
         readOnly = canBeReadOnly;
@@ -831,6 +830,7 @@ public class ClientCnxn {
             state = States.CONNECTING;
             this.clientCnxnSocket = clientCnxnSocket;
             this.loginThread = loginThread;
+            this.cnxn = cnxn;
             setUncaughtExceptionHandler(uncaughtExceptionHandler);
             setDaemon(true);
         }
