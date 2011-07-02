@@ -31,6 +31,8 @@ import org.apache.zookeeper.proto.GetSASLRequest;
 import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.RequestHeader;
 import org.apache.zookeeper.proto.SetSASLResponse;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.WatchedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,8 +51,9 @@ public class ZooKeeperSaslClient {
     private byte[] saslToken = new byte[0];
     private ClientCnxn cnxn;
 
-    public ZooKeeperSaslClient(ClientCnxn cnxn) {
+    public ZooKeeperSaslClient(ClientCnxn cnxn, LoginThread loginThread) {
       this.cnxn = cnxn;
+      this.loginThread = loginThread;
     }
 
     public void prepareSaslResponseToServer(byte[] serverToken) {
@@ -68,10 +71,9 @@ public class ZooKeeperSaslClient {
 
                 if (saslClient.isComplete() == true) {
                     LOG.info("SASL authentication with Zookeeper server is successful.");
-                    // FIXME: cnxn.eventThread is not visible from here.
-/*                    cnxn.eventThread.queueEvent(new WatchedEvent(
+                    cnxn.queueEvent(new WatchedEvent(
                       Watcher.Event.EventType.None,
-                      Watcher.Event.KeeperState.SaslAuthenticated, null));*/
+                      Watcher.Event.KeeperState.SaslAuthenticated, null));
                 }
 
             } catch (SaslException e) {
@@ -124,12 +126,12 @@ public class ZooKeeperSaslClient {
         }
     }
 
-     static class ServerSaslResponseCallback implements AsyncCallback.DataCallback {
+    static class ServerSaslResponseCallback implements AsyncCallback.DataCallback {
         public void processResult(int rc, String path, Object ctx, byte data[], Stat stat) {
             // data[] contains the Zookeeper Server's SASL token.
-            // ctx is the ClientCnxn object. We use this object's prepareSaslResponseToServer() method
+            // ctx is the ZooKeeperSaslClient object. We use this object's prepareSaslResponseToServer() method
             // to reply to the Zookeeper Server's SASL token
-            ClientCnxn cnxn = (ClientCnxn)ctx;
+            ZooKeeperSaslClient client = (ZooKeeperSaslClient)ctx;
             byte[] usedata = data;
             if (data != null) {
                 LOG.debug("ServerSaslResponseCallback(): saslToken server response: (length="+usedata.length+")");
@@ -138,7 +140,7 @@ public class ZooKeeperSaslClient {
                 usedata = new byte[0];
                 LOG.debug("ServerSaslResponseCallback(): using empty data[] as server response (length="+usedata.length+")");
             }
-            cnxn.prepareSaslResponseToServer(usedata);
+            client.prepareSaslResponseToServer(usedata);
         }
     }
 
@@ -153,8 +155,7 @@ public class ZooKeeperSaslClient {
         ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
 
         ReplyHeader r = new ReplyHeader();
-// FIXME: cnxn.queuePacket is not visible from here:
-//        cnxn.queuePacket(h, r, request, response, cb, null, null, this, null);
+        cnxn.queuePacket(h,r,request,response,cb);
     }
 
 }

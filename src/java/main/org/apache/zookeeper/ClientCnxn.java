@@ -473,8 +473,19 @@ public class ClientCnxn {
 
         sendThread = new SendThread(clientCnxnSocket);
         eventThread = new EventThread();
-        this.loginThread = loginThread;
+        zooKeeperSaslClient = new ZooKeeperSaslClient(this, loginThread);
     }
+
+    public void queueEvent(WatchedEvent event) {
+        eventThread.queueEvent(event);
+    }
+
+    public void queuePacket(RequestHeader h, ReplyHeader r, Record request,
+            Record response, AsyncCallback cb) {
+        queuePacket(h,r,request,response, cb, null, null, this, null);
+    }
+
+
 
     /**
      * tests use this to check on reset of watches
