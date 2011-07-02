@@ -19,13 +19,13 @@
 package org.apache.zookeeper.client;
 
 import javax.security.auth.Subject;
+import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.ClientCnxn;
 import org.apache.zookeeper.LoginThread;
-import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.GetSASLRequest;
 import org.apache.zookeeper.proto.ReplyHeader;
@@ -33,9 +33,12 @@ import org.apache.zookeeper.proto.RequestHeader;
 import org.apache.zookeeper.proto.SetSASLResponse;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.ZooDefs;
+import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 
@@ -48,13 +51,75 @@ public class ZooKeeperSaslClient {
     private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperSaslClient.class);
     private LoginThread loginThread;
     private SaslClient saslClient;
-    private byte[] saslToken = new byte[0];
+    // TODO: will be private when more
+    // more SASL processing is moved out of ClientCnxn.run() to here.
+    public byte[] saslToken = new byte[0];
     private ClientCnxn cnxn;
 
-    public ZooKeeperSaslClient(ClientCnxn cnxn, LoginThread loginThread) {
+    public ZooKeeperSaslClient(ClientCnxn cnxn, String serverPrincipal, LoginThread loginThread) {
       this.cnxn = cnxn;
       this.loginThread = loginThread;
+      this.saslClient = createSaslClient(serverPrincipal,loginThread);
     }
+
+    // TODO: make private.
+    public static SaslClient createSaslClient(final String servicePrincipal, LoginThread loginThread) {
+
+        int indexOf = servicePrincipal.indexOf("/");
+
+        final String serviceName = servicePrincipal.substring(0, indexOf);
+        final String serviceHostname = servicePrincipal.substring(indexOf+1,servicePrincipal.length());
+
+        try {
+            if (loginThread.isAlive() == false) {
+              loginThread.start();
+            }
+            synchronized(loginThread) {
+                Subject subject = loginThread.getLogin().getSubject();
+                SaslClient saslClient = null;
+                // Use subject.getPrincipals().isEmpty() as an indication of which SASL mechanism to use: if empty, use DIGEST-MD5; otherwise, use GSSAPI.
+                if (subject.getPrincipals().isEmpty() == true) {
+                    // no principals: must not be GSSAPI: use DIGEST-MD5 mechanism instead.
+                    LOG.info("Client will use DIGEST-MD5 as SASL mechanism.");
+                    String[] mechs = {"DIGEST-MD5"};
+                    String username = (String)(subject.getPublicCredentials().toArray()[0]);
+                    String password = (String)(subject.getPrivateCredentials().toArray()[0]);
+                    // "zk-sasl-md5" is a hard-wired 'domain' parameter used also by server.
+                    saslClient = Sasl.createSaslClient(mechs, username, serviceName, "zk-sasl-md5", null, new ZooKeeper.ClientCallbackHandler(password));
+                    return saslClient;
+                }
+                else { // GSSAPI.
+                    final Object[] principals = subject.getPrincipals().toArray();
+                    // determine client principal from subject.
+                    final Principal clientPrincipal = (Principal)principals[0];
+                    final String clientPrincipalName = clientPrincipal.getName();
+
+                    try {
+                        saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
+                                public SaslClient run() throws SaslException {
+                                    LOG.info("Client will use GSSAPI as SASL mechanism.");
+                                    String[] mechs = {"GSSAPI"};
+                                    LOG.debug("creating sasl client: client="+clientPrincipalName+";service="+serviceName+";serviceHostname="+serviceHostname);
+                                    SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,serviceName,serviceHostname,null,new ZooKeeper.ClientCallbackHandler(null));
+                                    return saslClient;
+                                }
+                            });
+                        return saslClient;
+                    }
+                    catch (Exception e) {
+                        LOG.error("Error creating SASL client:" + e);
+                        e.printStackTrace();
+                        return null;
+                    }
+                }
+            }
+        }
+        catch (Exception e) {
+            LOG.error("Exception while trying to create SASL client: " + e);
+            return null;
+        }
+    }
+
 
     public void prepareSaslResponseToServer(byte[] serverToken) {
         saslToken = serverToken;
@@ -63,7 +128,7 @@ public class ZooKeeperSaslClient {
 
         if (!(saslClient.isComplete() == true)) {
             try {
-                saslToken = createSaslToken(saslToken, saslClient);
+                saslToken = createSaslToken(saslToken);
                 if (saslToken != null) {
                     LOG.debug("saslToken (client) length: " + saslToken.length);
                     queueSaslPacket(saslToken);
@@ -83,7 +148,7 @@ public class ZooKeeperSaslClient {
         }
     }
 
-    byte[] createSaslToken(final byte[] saslToken, final SaslClient saslClient) throws SaslException {
+    public byte[] createSaslToken(final byte[] saslToken) throws SaslException {
         if (saslToken == null) {
             // TODO: introspect about runtime environment (such as jaas.conf)
             throw new SaslException("Error in authenticating with a Zookeeper Quorum member: the quorum member's saslToken is null.");
@@ -97,7 +162,7 @@ public class ZooKeeperSaslClient {
                         Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
                                 public byte[] run() throws SaslException {
                                     try {
-                                        LOG.debug("ClientCnxn:createSaslToken(): ->saslClient.evaluateChallenge(len="+saslToken.length+")");
+                                        LOG.debug("saslClient.evaluateChallenge(len="+saslToken.length+")");
                                         return saslClient.evaluateChallenge(saslToken);
                                     }
                                     catch (NullPointerException e) {
@@ -126,7 +191,7 @@ public class ZooKeeperSaslClient {
         }
     }
 
-    static class ServerSaslResponseCallback implements AsyncCallback.DataCallback {
+    public static class ServerSaslResponseCallback implements AsyncCallback.DataCallback {
         public void processResult(int rc, String path, Object ctx, byte data[], Stat stat) {
             // data[] contains the Zookeeper Server's SASL token.
             // ctx is the ZooKeeperSaslClient object. We use this object's prepareSaslResponseToServer() method
@@ -144,7 +209,9 @@ public class ZooKeeperSaslClient {
         }
     }
 
-    private void queueSaslPacket(byte[] saslToken) {
+    // TODO: make private once more sasl code is extracted from
+    // ClientCnxn.run().
+    public void queueSaslPacket(byte[] saslToken) {
         LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
         RequestHeader h = new RequestHeader();
         h.setType(ZooDefs.OpCode.sasl);
@@ -156,6 +223,14 @@ public class ZooKeeperSaslClient {
 
         ReplyHeader r = new ReplyHeader();
         cnxn.queuePacket(h,r,request,response,cb);
+    }
+
+    public boolean isComplete() {
+        return saslClient.isComplete();
+    }
+
+    public boolean hasInitialResponse() {
+        return saslClient.hasInitialResponse();
     }
 
 }

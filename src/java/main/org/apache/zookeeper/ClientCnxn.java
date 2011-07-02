@@ -25,7 +25,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.security.Principal;
-import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.LinkedList;
 import java.util.Random;
@@ -41,6 +40,7 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 
+import com.sun.xml.internal.ws.wsdl.writer.document.http.Address;
 import org.apache.jute.BinaryInputArchive;
 import org.apache.jute.BinaryOutputArchive;
 import org.apache.jute.Record;
@@ -196,94 +196,6 @@ public class ClientCnxn {
 
 
     private ZooKeeperSaslClient zooKeeperSaslClient;
-    private LoginThread loginThread;
-    private SaslClient saslClient;
-    private byte[] saslToken = new byte[0];
-
-
-    public void prepareSaslResponseToServer(byte[] serverToken) {
-        saslToken = serverToken;
-
-        LOG.debug("saslToken (server) length: " + saslToken.length);
-
-        if (!(saslClient.isComplete() == true)) {
-            try {
-                saslToken = createSaslToken(saslToken, saslClient);
-                if (saslToken != null) {
-                    LOG.debug("saslToken (client) length: " + saslToken.length);
-                    queueSaslPacket(saslToken);
-                }
-
-                if (saslClient.isComplete() == true) {
-                    LOG.info("SASL authentication with Zookeeper server is successful.");
-                    eventThread.queueEvent(new WatchedEvent(
-                      Watcher.Event.EventType.None,
-                      Watcher.Event.KeeperState.SaslAuthenticated, null));
-                }
-
-            } catch (SaslException e) {
-                // TODO sendThread should set state to AUTH_FAILED; but currently only sendThread modifies state.
-                LOG.error("SASL authentication failed.");
-            }
-        }
-    }
-
-    byte[] createSaslToken(final byte[] saslToken, final SaslClient saslClient) throws SaslException {
-        if (saslToken == null) {
-            // TODO: introspect about runtime environment (such as jaas.conf)
-            throw new SaslException("Error in authenticating with a Zookeeper Quorum member: the quorum member's saslToken is null.");
-        }
-
-        Subject subject = this.loginThread.getLogin().getSubject();
-        if (subject != null) {
-            synchronized(this.loginThread) {
-                try {
-                    final byte[] retval =
-                        Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
-                                public byte[] run() throws SaslException {
-                                    try {
-                                        LOG.debug("ClientCnxn:createSaslToken(): ->saslClient.evaluateChallenge(len="+saslToken.length+")");
-                                        return saslClient.evaluateChallenge(saslToken);
-                                    }
-                                    catch (NullPointerException e) {
-                                        LOG.error("Quorum Member's SASL challenge was null.");
-                                    }
-                                    // NOTE: saslClient.evaluateChallenge() will throw a SaslException if authentication fails.
-                                    // returning null here will cause another (new) SaslException to be thrown.
-                                    return null;
-                                }
-                            });
-                    
-                    if (retval != null) {
-                        LOG.debug("Successfully created token with length:"+retval.length);
-                    }
-                    
-                    return retval;
-                }
-                catch (PrivilegedActionException e) {
-                    LOG.error("An error: " + e + " occurred when evaluating Zookeeper Quorum Member's received SASL token. Client will go to AUTH_FAILED state.");
-                    throw new SaslException("An error: " + e + " occurred when evaluating Zookeeper Quorum Member's received SASL token. Client will go to AUTH_FAILED state.");
-                }
-            }
-        }
-        else {
-            throw new SaslException("Cannot make SASL TOKEN without subject defined.");
-        }
-    }
-
-    private void queueSaslPacket(byte[] saslToken) {
-        LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
-        RequestHeader h = new RequestHeader();
-        h.setType(ZooDefs.OpCode.sasl);
-        GetSASLRequest request = new GetSASLRequest();
-        request.setToken(saslToken);
-        SetSASLResponse response = new SetSASLResponse();
-
-        ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
-
-        ReplyHeader r = new ReplyHeader();
-        queuePacket(h, r, request, response, cb, null, null, this, null);
-    }
 
     public long getSessionId() {
         return sessionId;
@@ -456,6 +368,7 @@ public class ClientCnxn {
      * @param loginThread used to determine subject used for SASL authentication.
      * @throws IOException
      */
+    // TODO: move loginThread to ZooKeeperSaslClient.
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
             ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket,
             long sessionId, byte[] sessionPasswd, boolean canBeReadOnly, LoginThread loginThread) {
@@ -471,9 +384,9 @@ public class ClientCnxn {
         readTimeout = sessionTimeout * 2 / 3;
         readOnly = canBeReadOnly;
 
-        sendThread = new SendThread(clientCnxnSocket);
+        sendThread = new SendThread(clientCnxnSocket,loginThread, this);
         eventThread = new EventThread();
-        zooKeeperSaslClient = new ZooKeeperSaslClient(this, loginThread);
+
     }
 
     public void queueEvent(WatchedEvent event) {
@@ -654,8 +567,8 @@ public class ClientCnxn {
                       } else {
                           cb.processResult(rc, clientPath, p.ctx, null);
                       }
-                  } else if (p.cb instanceof ServerSaslResponseCallback) {
-                      ServerSaslResponseCallback cb = (ServerSaslResponseCallback) p.cb;
+                  } else if (p.cb instanceof ZooKeeperSaslClient.ServerSaslResponseCallback) {
+                      ZooKeeperSaslClient.ServerSaslResponseCallback cb = (ZooKeeperSaslClient.ServerSaslResponseCallback) p.cb;
                       SetSASLResponse rsp = (SetSASLResponse) p.response;
                       // TODO : check rc (== 0, etc) as with other packet types.
                       cb.processResult(rc,null,p.ctx,rsp.getToken(),null);
@@ -797,25 +710,6 @@ public class ClientCnxn {
     public static final int packetLen = Integer.getInteger("jute.maxbuffer",
             4096 * 1024);
 
-
-    static class ServerSaslResponseCallback implements DataCallback {
-        public void processResult(int rc, String path, Object ctx, byte data[], Stat stat) {
-            // data[] contains the Zookeeper Server's SASL token.
-            // ctx is the ClientCnxn object. We use this object's prepareSaslResponseToServer() method
-            // to reply to the Zookeeper Server's SASL token
-            ClientCnxn cnxn = (ClientCnxn)ctx;
-            byte[] usedata = data;
-            if (data != null) {
-                LOG.debug("ServerSaslResponseCallback(): saslToken server response: (length="+usedata.length+")");
-            }
-            else {
-                usedata = new byte[0];
-                LOG.debug("ServerSaslResponseCallback(): using empty data[] as server response (length="+usedata.length+")");
-            }
-            cnxn.prepareSaslResponseToServer(usedata);
-        }
-    }
-
     /**
      * This class services the outgoing request queue and generates the heart
      * beats. It also spawns the ReadThread.
@@ -825,6 +719,8 @@ public class ClientCnxn {
         private final ClientCnxnSocket clientCnxnSocket;
         private Random r = new Random(System.nanoTime());        
         private boolean isFirstConnect = true;
+        private LoginThread loginThread;
+        private ClientCnxn cnxn;
 
         void readResponse(ByteBuffer incomingBuffer) throws IOException {
             ByteBufferInputStream bbis = new ByteBufferInputStream(
@@ -930,10 +826,11 @@ public class ClientCnxn {
             }
         }
 
-        SendThread(ClientCnxnSocket clientCnxnSocket) {
+        SendThread(ClientCnxnSocket clientCnxnSocket, LoginThread loginThread, ClientCnxn cnxn) {
             super(makeThreadName("-SendThread()"));
             state = States.CONNECTING;
             this.clientCnxnSocket = clientCnxnSocket;
+            this.loginThread = loginThread;
             setUncaughtExceptionHandler(uncaughtExceptionHandler);
             setDaemon(true);
         }
@@ -1036,10 +933,7 @@ public class ClientCnxn {
                     "(" + addr.getHostName() + ":" + addr.getPort() + ")"));
 
             if (System.getProperty("java.security.auth.login.config") != null) {
-              saslClient = createSaslClient("zookeeper/"+addr.getHostName(),loginThread);
-            }
-            else {
-              saslClient = null;
+                zooKeeperSaslClient = new ZooKeeperSaslClient(cnxn, "zookeeper"+"/"+ addr.getHostName(),loginThread);
             }
 
             clientCnxnSocket.connect(addr);
@@ -1068,7 +962,7 @@ public class ClientCnxn {
 
                     // If saslClient is null at this point, either client is not configured to use SASL, or saslClient was not initialized properly in startConnect().
                     // Print a log message appropriate to either situation.
-                    if ((state == States.SASL_INITIAL) && (saslClient == null)) {
+                    if ((state == States.SASL_INITIAL) && (zooKeeperSaslClient == null)) {
                         if (System.getProperty("java.security.auth.login.config") != null) {
                             LOG.warn("Client could not SASL authenticate using supplied configuration:" + System.getProperty("java.security.auth.login.config"));
                         }
@@ -1079,24 +973,24 @@ public class ClientCnxn {
                     }
 
                     if (state == States.SASL_INITIAL) {
-                        if (saslClient.isComplete() == true) {
+                        if (zooKeeperSaslClient.isComplete() == true) {
                             // It should never be possible for the client to be in SASL_INITIAL state
                             // with a saslClient being in Complete state.
                             state = States.AUTH_FAILED;
                             LOG.warn("Unexpectedly, SASL negotiation object is in completed state, while client's state is in SASL_INITIAL state. Going to AUTH_FAILED without attempting SASL negotiation with Zookeeper Quorum member.");
                         }
                         else {
-                            if (saslClient.hasInitialResponse() == true) {
+                            if (zooKeeperSaslClient.hasInitialResponse() == true) {
                                 LOG.debug("saslClient.hasInitialResponse()==true");
-                                LOG.debug("hasInitialResponse() == true; (1) SASL token length = " + saslToken.length);
-                                saslToken = createSaslToken(saslToken,saslClient);
-                                LOG.debug("hasInitialResponse() == true; (2) SASL token length = " + saslToken.length);
-                                if (saslToken == null) {
+                                LOG.debug("hasInitialResponse() == true; (1) SASL token length = " + zooKeeperSaslClient.saslToken.length);
+                                zooKeeperSaslClient.saslToken = zooKeeperSaslClient.createSaslToken(zooKeeperSaslClient.saslToken);
+                                LOG.debug("hasInitialResponse() == true; (2) SASL token length = " + zooKeeperSaslClient.saslToken.length);
+                                if (zooKeeperSaslClient.saslToken == null) {
                                     state = States.AUTH_FAILED;
                                     LOG.warn("SASL negotiation with Zookeeper Quorum member failed: client state is now AUTH_FAILED.");
                                 }
                                 else {
-                                    queueSaslPacket(saslToken);
+                                    zooKeeperSaslClient.queueSaslPacket(zooKeeperSaslClient.saslToken);
                                     state = States.SASL;
                                 }
                             }
@@ -1106,13 +1000,13 @@ public class ClientCnxn {
                                 // send a blank initial token which will hopefully prompt the ZK server to start the
                                 // real authentication process.
                                 byte[] emptyToken = new byte[0];
-                                queueSaslPacket(emptyToken);
+                                zooKeeperSaslClient.queueSaslPacket(emptyToken);
                                 state = States.SASL;
                             }
                         }
                     }
                     if (state == States.SASL) {
-                        if (saslClient.isComplete() == true) {
+                        if (zooKeeperSaslClient.isComplete() == true) {
                             // TODO : determine whether authentication failed or
                             // not. ZK server knows, but client (running this code here)
                             // does not.
@@ -1442,63 +1336,6 @@ public class ClientCnxn {
 
     States getState() {
         return state;
-    }
-
-    private static SaslClient createSaslClient(final String servicePrincipal, LoginThread loginThread) {
-
-        int indexOf = servicePrincipal.indexOf("/");
-
-        final String serviceName = servicePrincipal.substring(0, indexOf);
-        final String serviceHostname = servicePrincipal.substring(indexOf+1,servicePrincipal.length());
-
-        try {
-            if (loginThread.isAlive() == false) {
-              loginThread.start();
-            }
-            synchronized(loginThread) {
-                Subject subject = loginThread.getLogin().getSubject();
-                SaslClient saslClient = null;
-                // Use subject.getPrincipals().isEmpty() as an indication of which SASL mechanism to use: if empty, use DIGEST-MD5; otherwise, use GSSAPI.
-                if (subject.getPrincipals().isEmpty() == true) {
-                    // no principals: must not be GSSAPI: use DIGEST-MD5 mechanism instead.
-                    LOG.info("Client will use DIGEST-MD5 as SASL mechanism.");
-                    String[] mechs = {"DIGEST-MD5"};
-                    String username = (String)(subject.getPublicCredentials().toArray()[0]);
-                    String password = (String)(subject.getPrivateCredentials().toArray()[0]);
-                    // "zk-sasl-md5" is a hard-wired 'domain' parameter used also by server.
-                    saslClient = Sasl.createSaslClient(mechs, username, serviceName, "zk-sasl-md5", null, new ZooKeeper.ClientCallbackHandler(password));
-                    return saslClient;
-                }
-                else { // GSSAPI.
-                    final Object[] principals = subject.getPrincipals().toArray();
-                    // determine client principal from subject.
-                    final Principal clientPrincipal = (Principal)principals[0];
-                    final String clientPrincipalName = clientPrincipal.getName();
-
-                    try {
-                        saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
-                                public SaslClient run() throws SaslException {
-                                    LOG.info("Client will use GSSAPI as SASL mechanism.");
-                                    String[] mechs = {"GSSAPI"};
-                                    LOG.debug("creating sasl client: client="+clientPrincipalName+";service="+serviceName+";serviceHostname="+serviceHostname);
-                                    SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,serviceName,serviceHostname,null,new ZooKeeper.ClientCallbackHandler(null));
-                                    return saslClient;
-                                }
-                            });
-                        return saslClient;
-                    }
-                    catch (Exception e) {
-                        LOG.error("Error creating SASL client:" + e);
-                        e.printStackTrace();
-                        return null;
-                    }
-                }
-            }
-        }
-        catch (Exception e) {
-            LOG.error("Exception while trying to create SASL client: " + e);
-            return null;
-        }
     }
 
 }
