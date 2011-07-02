@@ -972,45 +972,12 @@ public class ClientCnxn {
                         state = States.CONNECTED;
                     }
 
-                    if (state == States.SASL_INITIAL) {
-                        if (zooKeeperSaslClient.isComplete() == true) {
-                            // It should never be possible for the client to be in SASL_INITIAL state
-                            // with a saslClient being in Complete state.
-                            state = States.AUTH_FAILED;
-                            LOG.warn("Unexpectedly, SASL negotiation object is in completed state, while client's state is in SASL_INITIAL state. Going to AUTH_FAILED without attempting SASL negotiation with Zookeeper Quorum member.");
-                        }
-                        else {
-                            if (zooKeeperSaslClient.hasInitialResponse() == true) {
-                                LOG.debug("saslClient.hasInitialResponse()==true");
-                                LOG.debug("hasInitialResponse() == true; (1) SASL token length = " + zooKeeperSaslClient.saslToken.length);
-                                zooKeeperSaslClient.saslToken = zooKeeperSaslClient.createSaslToken(zooKeeperSaslClient.saslToken);
-                                LOG.debug("hasInitialResponse() == true; (2) SASL token length = " + zooKeeperSaslClient.saslToken.length);
-                                if (zooKeeperSaslClient.saslToken == null) {
-                                    state = States.AUTH_FAILED;
-                                    LOG.warn("SASL negotiation with Zookeeper Quorum member failed: client state is now AUTH_FAILED.");
-                                }
-                                else {
-                                    zooKeeperSaslClient.queueSaslPacket(zooKeeperSaslClient.saslToken);
-                                    state = States.SASL;
-                                }
-                            }
-                            else {
-                                LOG.debug("saslClient.hasInitialResponse()==false");
-                                LOG.debug("sending empty SASL token to server.");
-                                // send a blank initial token which will hopefully prompt the ZK server to start the
-                                // real authentication process.
-                                byte[] emptyToken = new byte[0];
-                                zooKeeperSaslClient.queueSaslPacket(emptyToken);
-                                state = States.SASL;
-                            }
-                        }
-                    }
-                    if (state == States.SASL) {
-                        if (zooKeeperSaslClient.isComplete() == true) {
+                    if ((state == States.SASL_INITIAL) || (state == States.SASL)) {
+                        state = zooKeeperSaslClient.stateTransition(state);
+                        if ((state == States.CONNECTED) && (zooKeeperSaslClient.isComplete() == true)) {
                             // TODO : determine whether authentication failed or
                             // not. ZK server knows, but client (running this code here)
                             // does not.
-                            state = States.CONNECTED;
                             eventThread.queueEvent(new WatchedEvent(
                               Event.EventType.None,
                               Event.KeeperState.SaslAuthenticated, null));

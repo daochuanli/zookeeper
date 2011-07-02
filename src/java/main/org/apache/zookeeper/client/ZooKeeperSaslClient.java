@@ -23,6 +23,7 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 
+import com.sun.org.apache.bcel.internal.generic.RETURN;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.ClientCnxn;
 import org.apache.zookeeper.LoginThread;
@@ -35,6 +36,7 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.ZooKeeper.States;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -231,6 +233,69 @@ public class ZooKeeperSaslClient {
 
     public boolean hasInitialResponse() {
         return saslClient.hasInitialResponse();
+    }
+
+    public States stateTransition(States state) {
+        States returnState = state;
+        switch(state) {
+            case SASL_INITIAL:
+                if (isComplete() == true) {
+                    // It should never be possible for the client to be in
+                    // SASL_INITIAL state with a saslClient being in Complete state.
+                    LOG.warn("Unexpectedly, SASL negotiation object is in " +
+                             "completed state, while client's state is in " +
+                             "SASL_INITIAL state. Going to AUTH_FAILED without " +
+                             "attempting SASL negotiation with Zookeeper Quorum " +
+                             "member.");
+                    returnState = States.AUTH_FAILED;
+                }
+                else {
+                    if (hasInitialResponse() == true) {
+                        LOG.debug("saslClient.hasInitialResponse()==true");
+                        LOG.debug("hasInitialResponse() == true; (1) SASL token length = " + saslToken.length);
+                        try {
+                            saslToken = createSaslToken(saslToken);
+                        }
+                        catch (SaslException e) {
+                            LOG.error("SASL authentication with Zookeeper server failed: " + e);
+                            returnState = States.AUTH_FAILED;
+                        }
+                        LOG.debug("hasInitialResponse() == true; (2) SASL token length = " + saslToken.length);
+                        if (saslToken == null) {
+                            LOG.warn("SASL negotiation with Zookeeper Quorum member failed: client state is now AUTH_FAILED.");
+                            returnState = States.AUTH_FAILED;
+                        }
+                        else {
+                            queueSaslPacket(saslToken);
+                            returnState = States.SASL;
+                        }
+                    }
+                    else {
+                        LOG.debug("saslClient.hasInitialResponse()==false");
+                        LOG.debug("sending empty SASL token to server.");
+                        // send a blank initial token which will hopefully prompt the ZK server to start the
+                        // real authentication process.
+                        byte[] emptyToken = new byte[0];
+                        queueSaslPacket(emptyToken);
+                        returnState = States.SASL;
+                    }
+                }
+                break;
+            case SASL:
+                if (isComplete() == true) {
+                    // TODO : determine whether authentication failed or
+                    // not. ZK server knows, but client (running this code here)
+                    // does not.
+                    returnState = States.CONNECTED;
+                }
+                else {
+                  // nothing needed here: ServerSaslResponseCallback (above) will handle
+                  // continued SASL negotiation until isComplete() is true.
+                }
+                break;
+            default:
+        } // switch(state)
+        return returnState;
     }
 
 }
