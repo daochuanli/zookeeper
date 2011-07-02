@@ -485,7 +485,7 @@ public class ClientCnxn {
     }
     /**
      * tests use this to set the auto reset
-     * @param b the vaued to set disable watches to
+     * @param b the value to set disable watches to
      */
     public static void setDisableAutoResetWatch(boolean b) {
         disableAutoWatchReset = b;
