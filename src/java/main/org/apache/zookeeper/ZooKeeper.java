@@ -1896,20 +1896,4 @@ public class ZooKeeper {
         }
     }
 
-    // This is only used by JAAS-based authentication.
-    // currently no Callback types are supported (all attempts to
-    // garner login information (user,realm,password) will return UnsupportedCallbackException).
-    private static class LoginCallbackHandler implements CallbackHandler {
-        public LoginCallbackHandler() {
-            super();
-        }
-
-        public void handle(Callback[] callbacks)
-            throws IOException, UnsupportedCallbackException {
-            for (int i = 0; i < callbacks.length; i++) {
-                Callback callback = callbacks[i];
-                throw new UnsupportedCallbackException(callbacks[i], "Unrecognized callback: " + callback);
-            }
-        }
-    }
 }

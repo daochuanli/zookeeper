@@ -326,8 +326,6 @@ public class ClientCnxn {
      * @param canBeReadOnly
      *                whether the connection is allowed to go to read-only
      *                mode in case of partitioning
-     * @param loginThread used to determine subject used for SASL authentication.
-
      * @throws IOException
      */
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
@@ -356,10 +354,8 @@ public class ClientCnxn {
      * @param canBeReadOnly
      *                whether the connection is allowed to go to read-only
      *                mode in case of partitioning
-     * @param loginThread used to determine subject used for SASL authentication.
      * @throws IOException
      */
-    // TODO: move loginThread to ZooKeeperSaslClient.
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
             ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket,
             long sessionId, byte[] sessionPasswd, boolean canBeReadOnly) {
@@ -709,7 +705,6 @@ public class ClientCnxn {
         private final ClientCnxnSocket clientCnxnSocket;
         private Random r = new Random(System.nanoTime());        
         private boolean isFirstConnect = true;
-        private LoginThread loginThread;
         private ClientCnxn cnxn;
 
         void readResponse(ByteBuffer incomingBuffer) throws IOException {
