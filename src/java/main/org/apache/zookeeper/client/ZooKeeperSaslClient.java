@@ -65,7 +65,7 @@ public class ZooKeeperSaslClient {
             this.loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
         }
 
-        this.saslClient = createSaslClient(serverPrincipal,loginThread);
+        this.saslClient = createSaslClient(serverPrincipal,this.loginThread);
     }
 
     private static SaslClient createSaslClient(final String servicePrincipal, LoginThread loginThread) {

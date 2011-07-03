@@ -333,7 +333,7 @@ public class ClientCnxn {
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
                       ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, boolean canBeReadOnly, LoginThread loginThread)
             throws IOException {
-      this(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher, clientCnxnSocket, 0, new byte[16], canBeReadOnly, loginThread);
+      this(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher, clientCnxnSocket, 0, new byte[16], canBeReadOnly, null);
     }
 
     /**
