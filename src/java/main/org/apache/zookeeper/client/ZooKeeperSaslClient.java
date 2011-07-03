@@ -23,7 +23,6 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 
-import com.sun.org.apache.bcel.internal.generic.RETURN;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.ClientCnxn;
 import org.apache.zookeeper.LoginThread;
@@ -32,6 +31,7 @@ import org.apache.zookeeper.proto.GetSASLRequest;
 import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.RequestHeader;
 import org.apache.zookeeper.proto.SetSASLResponse;
+import org.apache.zookeeper.ZooKeeper.ClientCallbackHandler;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooDefs;
@@ -53,15 +53,19 @@ public class ZooKeeperSaslClient {
     private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperSaslClient.class);
     private LoginThread loginThread;
     private SaslClient saslClient;
-    // TODO: will be private when more
-    // more SASL processing is moved out of ClientCnxn.run() to here.
-    public byte[] saslToken = new byte[0];
+
+    private byte[] saslToken = new byte[0];
     private ClientCnxn cnxn;
 
     public ZooKeeperSaslClient(ClientCnxn cnxn, String serverPrincipal, LoginThread loginThread) {
-      this.cnxn = cnxn;
-      this.loginThread = loginThread;
-      this.saslClient = createSaslClient(serverPrincipal,loginThread);
+        this.cnxn = cnxn;
+
+        if (System.getProperty("java.security.auth.login.config") != null) {
+            // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
+            this.loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
+        }
+
+        this.saslClient = createSaslClient(serverPrincipal,loginThread);
     }
 
     private static SaslClient createSaslClient(final String servicePrincipal, LoginThread loginThread) {
