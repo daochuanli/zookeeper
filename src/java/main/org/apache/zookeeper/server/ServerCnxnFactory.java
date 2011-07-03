@@ -73,7 +73,8 @@ public abstract class ServerCnxnFactory {
 
     private SaslServerCallbackHandler saslServerCallbackHandler = null;
 
-    // only used if SASL mechanism is DIGEST-MD5: if mech is GSSAPI, passwords are not stored in Zookeeper.
+    // addPrivateCredential() only used if SASL authorization mechanism is DIGEST-MD5:
+    // if SASL authorization mechanism is GSSAPI, passwords are not stored in Zookeeper.
     public void addPrivateCredential(String username, String password) {
         saslServerCallbackHandler.addPrivateCredential(username, password);
     }
@@ -360,8 +361,8 @@ public abstract class ServerCnxnFactory {
 				    String userName = authorizationID;
 				    int slashIndex = userName.indexOf('/');
 				    if (slashIndex != -1) {
-					LOG.debug("Removing hostname from authorizationID: " + authorizationID);
-					userName = userName.substring(0,slashIndex);
+					       LOG.debug("Removing hostname from authorizationID: " + authorizationID);
+					       userName = userName.substring(0,slashIndex);
 				    }
 				    LOG.info("Setting authorizedID to username: " + userName);
                                     ac.setAuthorizedID(userName);

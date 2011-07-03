@@ -69,7 +69,6 @@ import org.apache.zookeeper.proto.SetDataResponse;
 import org.apache.zookeeper.proto.SetSASLResponse;
 import org.apache.zookeeper.proto.SetWatches;
 import org.apache.zookeeper.proto.WatcherEvent;
-
 import org.apache.zookeeper.server.ByteBufferInputStream;
 import org.apache.zookeeper.server.ZooTrace;
 
@@ -329,9 +328,10 @@ public class ClientCnxn {
      * @throws IOException
      */
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
-                      ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, boolean canBeReadOnly)
+            ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, boolean canBeReadOnly)
             throws IOException {
-      this(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher, clientCnxnSocket, 0, new byte[16], canBeReadOnly);
+        this(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher,
+             clientCnxnSocket, 0, new byte[16], canBeReadOnly);
     }
 
     /**
@@ -366,6 +366,7 @@ public class ClientCnxn {
         this.sessionTimeout = sessionTimeout;
         this.hostProvider = hostProvider;
         this.chrootPath = chrootPath;
+
         connectTimeout = sessionTimeout / hostProvider.size();
         readTimeout = sessionTimeout * 2 / 3;
         readOnly = canBeReadOnly;
@@ -383,8 +384,6 @@ public class ClientCnxn {
             Record response, AsyncCallback cb) {
         queuePacket(h,r,request,response, cb, null, null, this, null);
     }
-
-
 
     /**
      * tests use this to check on reset of watches
@@ -612,7 +611,6 @@ public class ClientCnxn {
                       VoidCallback cb = (VoidCallback) p.cb;
                       cb.processResult(rc, clientPath, p.ctx);
                   }
-
               }
           } catch (Throwable t) {
               LOG.error("Caught unexpected throwable", t);
@@ -766,7 +764,6 @@ public class ClientCnxn {
                 return;
             }
             Packet packet;
-
             synchronized (pendingQueue) {
                 if (pendingQueue.size() == 0) {
                     throw new IOException("Nothing in the queue, but got "
@@ -774,7 +771,6 @@ public class ClientCnxn {
                 }
                 packet = pendingQueue.remove();
             }
-
             /*
              * Since requests are processed in order, we better get a response
              * to the first request!
@@ -1279,5 +1275,4 @@ public class ClientCnxn {
     States getState() {
         return state;
     }
-
 }
