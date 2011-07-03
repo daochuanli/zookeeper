@@ -441,15 +441,9 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        LoginThread loginThread = null;
-
-        if (System.getProperty("java.security.auth.login.config") != null) {
-            // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
-            loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
-        }
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
-                getClientCnxnSocket(), canBeReadOnly, loginThread);
+                getClientCnxnSocket(), canBeReadOnly);
         cnxn.start();
     }
 
@@ -639,16 +633,9 @@ public class ZooKeeper {
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
 
-        LoginThread loginThread = null;
-
-        if (System.getProperty("java.security.auth.login.config") != null) {
-            // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
-            loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
-        }
-
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
-                getClientCnxnSocket(), sessionId, sessionPasswd, canBeReadOnly, loginThread);
+                getClientCnxnSocket(), sessionId, sessionPasswd, canBeReadOnly);
         cnxn.seenRwServerBefore = true; // since user has provided sessionId
         cnxn.start();
     }

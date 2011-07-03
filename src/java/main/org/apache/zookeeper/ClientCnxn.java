@@ -331,9 +331,9 @@ public class ClientCnxn {
      * @throws IOException
      */
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
-                      ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, boolean canBeReadOnly, LoginThread loginThread)
+                      ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, boolean canBeReadOnly)
             throws IOException {
-      this(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher, clientCnxnSocket, 0, new byte[16], canBeReadOnly, null);
+      this(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher, clientCnxnSocket, 0, new byte[16], canBeReadOnly);
     }
 
     /**
@@ -362,7 +362,7 @@ public class ClientCnxn {
     // TODO: move loginThread to ZooKeeperSaslClient.
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
             ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket,
-            long sessionId, byte[] sessionPasswd, boolean canBeReadOnly, LoginThread loginThread) {
+            long sessionId, byte[] sessionPasswd, boolean canBeReadOnly) {
         this.zooKeeper = zooKeeper;
         this.watcher = watcher;
         this.sessionId = sessionId;
@@ -374,7 +374,7 @@ public class ClientCnxn {
         readTimeout = sessionTimeout * 2 / 3;
         readOnly = canBeReadOnly;
 
-        sendThread = new SendThread(clientCnxnSocket,loginThread, this);
+        sendThread = new SendThread(clientCnxnSocket, this);
         eventThread = new EventThread();
 
     }
@@ -816,11 +816,10 @@ public class ClientCnxn {
             }
         }
 
-        SendThread(ClientCnxnSocket clientCnxnSocket, LoginThread loginThread, ClientCnxn cnxn) {
+        SendThread(ClientCnxnSocket clientCnxnSocket, ClientCnxn cnxn) {
             super(makeThreadName("-SendThread()"));
             state = States.CONNECTING;
             this.clientCnxnSocket = clientCnxnSocket;
-            this.loginThread = loginThread;
             this.cnxn = cnxn;
             setUncaughtExceptionHandler(uncaughtExceptionHandler);
             setDaemon(true);
@@ -924,7 +923,7 @@ public class ClientCnxn {
                     "(" + addr.getHostName() + ":" + addr.getPort() + ")"));
 
             if (System.getProperty("java.security.auth.login.config") != null) {
-                zooKeeperSaslClient = new ZooKeeperSaslClient(cnxn, "zookeeper"+"/"+ addr.getHostName(),loginThread);
+                zooKeeperSaslClient = new ZooKeeperSaslClient(cnxn, "zookeeper"+"/"+ addr.getHostName());
             }
 
             clientCnxnSocket.connect(addr);

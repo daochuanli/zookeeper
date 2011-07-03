@@ -57,15 +57,13 @@ public class ZooKeeperSaslClient {
     private byte[] saslToken = new byte[0];
     private ClientCnxn cnxn;
 
-    public ZooKeeperSaslClient(ClientCnxn cnxn, String serverPrincipal, LoginThread loginThread) {
-        this.cnxn = cnxn;
-
+    public ZooKeeperSaslClient(ClientCnxn cnxn, String serverPrincipal) {
         if (System.getProperty("java.security.auth.login.config") != null) {
+            this.cnxn = cnxn;
             // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
             this.loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
+            this.saslClient = createSaslClient(serverPrincipal,this.loginThread);
         }
-
-        this.saslClient = createSaslClient(serverPrincipal,this.loginThread);
     }
 
     private static SaslClient createSaslClient(final String servicePrincipal, LoginThread loginThread) {
