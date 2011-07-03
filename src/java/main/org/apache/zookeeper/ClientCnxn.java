@@ -1065,16 +1065,6 @@ public class ClientCnxn {
                         Event.KeeperState.Disconnected, null));
             }
 
-            if ((loginThread != null) && (loginThread.isAlive())) {
-	              LOG.info("Client disconnecting: waiting for loginThread to exit.");
-                loginThread.interrupt();
-                try {
-                    loginThread.join();
-                } catch (InterruptedException e) {
-                    LOG.warn("Ignoring interrupted exception while waiting for loginThread to exit.", e);
-                }
-            }
-
             ZooTrace.logTraceMessage(LOG, ZooTrace.getTextTraceLevel(),
                                      "SendThread exitedloop.");
         }
