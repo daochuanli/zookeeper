@@ -93,6 +93,7 @@ public class ZooKeeper {
         Environment.logEnv("Client environment:", LOG);
     }
 
+
     private final ZKWatchManager watchManager = new ZKWatchManager();
 
     List<String> getDataWatches() {
@@ -358,12 +359,10 @@ public class ZooKeeper {
      *             if an invalid chroot path is specified
      */
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher)
-       throws IOException
+        throws IOException
     {
         this(connectString, sessionTimeout, watcher, false);
     }
-
-
 
     /**
      * To create a ZooKeeper client object, the application needs to pass a
@@ -427,7 +426,6 @@ public class ZooKeeper {
         ConnectStringParser connectStringParser = new ConnectStringParser(connectString);
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
-
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
                 getClientCnxnSocket(), canBeReadOnly);
