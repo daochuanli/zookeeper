@@ -312,7 +312,6 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         }
 
         this.maxClientCnxns = maxClientCnxns;
-
     }
 
     /** {@inheritDoc} */

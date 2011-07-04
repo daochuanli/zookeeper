@@ -373,7 +373,7 @@ public class ZooKeeper {
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher)
        throws IOException
     {
-      this(connectString, sessionTimeout, watcher, false);
+        this(connectString, sessionTimeout, watcher, false);
     }
 
 
@@ -550,7 +550,7 @@ public class ZooKeeper {
      * @throws IllegalArgumentException for an invalid list of ZooKeeper hosts
      */
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
-                     long sessionId, byte[] sessionPasswd)
+            long sessionId, byte[] sessionPasswd)
         throws IOException
     {
         this(connectString, sessionTimeout, watcher, sessionId, sessionPasswd, false);
@@ -632,7 +632,6 @@ public class ZooKeeper {
                 connectString);
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
-
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
                 getClientCnxnSocket(), sessionId, sessionPasswd, canBeReadOnly);
@@ -1895,5 +1894,4 @@ public class ZooKeeper {
             throw ioe;
         }
     }
-
 }

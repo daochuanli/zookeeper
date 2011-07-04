@@ -237,10 +237,9 @@ public abstract class ServerCnxnFactory {
     }
 
     static public ServerCnxnFactory createFactory(InetSocketAddress addr,
-            int maxClientCnxns) throws IOException
-    {
+            int maxClientCnxns) throws IOException {
         ServerCnxnFactory factory = createFactory();
-        factory.configure(addr, maxClientCnxns, null,0);
+        factory.configure(addr, maxClientCnxns);
         return factory;
     }
 
@@ -357,14 +356,14 @@ public abstract class ServerCnxnFactory {
                                 }
                                 if (ac.isAuthorized()) {
                                     LOG.debug("isAuthorized() since ac.isAuthorized() == true");
-				    // canonicalize authorization id: remove hostname (if any).
-				    String userName = authorizationID;
-				    int slashIndex = userName.indexOf('/');
-				    if (slashIndex != -1) {
-					       LOG.debug("Removing hostname from authorizationID: " + authorizationID);
-					       userName = userName.substring(0,slashIndex);
-				    }
-				    LOG.info("Setting authorizedID to username: " + userName);
+				                            // canonicalize authorization id: remove hostname (if any).
+                                    String userName = authorizationID;
+                                    int slashIndex = userName.indexOf('/');
+                                    if (slashIndex != -1) {
+                                        LOG.debug("Removing hostname from authorizationID: " + authorizationID);
+                                        userName = userName.substring(0,slashIndex);
+                                    }
+                                    LOG.info("Setting authorizedID to username: " + userName);
                                     ac.setAuthorizedID(userName);
                                 }
                             }
