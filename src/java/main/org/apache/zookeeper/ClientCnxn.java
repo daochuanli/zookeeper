@@ -371,7 +371,7 @@ public class ClientCnxn {
         readTimeout = sessionTimeout * 2 / 3;
         readOnly = canBeReadOnly;
 
-        sendThread = new SendThread(clientCnxnSocket, this);
+        sendThread = new SendThread(clientCnxnSocket);
         eventThread = new EventThread();
 
     }
@@ -807,11 +807,10 @@ public class ClientCnxn {
             }
         }
 
-        SendThread(ClientCnxnSocket clientCnxnSocket, ClientCnxn cnxn) {
+     SendThread(ClientCnxnSocket clientCnxnSocket) {
             super(makeThreadName("-SendThread()"));
             state = States.CONNECTING;
             this.clientCnxnSocket = clientCnxnSocket;
-            this.cnxn = cnxn;
             setUncaughtExceptionHandler(uncaughtExceptionHandler);
             setDaemon(true);
         }
@@ -914,7 +913,7 @@ public class ClientCnxn {
                     "(" + addr.getHostName() + ":" + addr.getPort() + ")"));
 
             if (System.getProperty("java.security.auth.login.config") != null) {
-                zooKeeperSaslClient = new ZooKeeperSaslClient(cnxn, "zookeeper"+"/"+ addr.getHostName());
+                zooKeeperSaslClient = new ZooKeeperSaslClient(ClientCnxn.this, "zookeeper"+"/"+ addr.getHostName());
             }
 
             clientCnxnSocket.connect(addr);
