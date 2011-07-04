@@ -362,7 +362,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
         quorumStats = new QuorumStats(this);
     }
     
-    
+   
     /**
      * For backward compatibility purposes, we instantiate QuorumMaj by default.
      */
