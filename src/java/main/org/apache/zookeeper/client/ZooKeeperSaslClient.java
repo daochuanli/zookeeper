@@ -64,9 +64,7 @@ public class ZooKeeperSaslClient {
 
     public ZooKeeperSaslClient(ClientCnxn cnxn, String serverPrincipal) {
         this.cnxn = cnxn;
-        // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
-        this.loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
-        this.saslClient = createSaslClient(serverPrincipal,this.loginThread);
+        this.saslClient = createSaslClient(serverPrincipal);
     }
 
     public static class ServerSaslResponseCallback implements AsyncCallback.DataCallback {
@@ -88,11 +86,13 @@ public class ZooKeeperSaslClient {
         }
     }
 
-    private static SaslClient createSaslClient(final String servicePrincipal, LoginThread loginThread) {
+    private SaslClient createSaslClient(final String servicePrincipal) {
         int indexOf = servicePrincipal.indexOf("/");
-
         final String serviceName = servicePrincipal.substring(0, indexOf);
         final String serviceHostname = servicePrincipal.substring(indexOf+1,servicePrincipal.length());
+
+        // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
+        loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
 
         try {
             if (loginThread.isAlive() == false) {
@@ -108,7 +108,8 @@ public class ZooKeeperSaslClient {
                     String[] mechs = {"DIGEST-MD5"};
                     String username = (String)(subject.getPublicCredentials().toArray()[0]);
                     String password = (String)(subject.getPrivateCredentials().toArray()[0]);
-                    // "zk-sasl-md5" is a hard-wired 'domain' parameter used also by server.
+                    // "zk-sasl-md5" is a hard-wired 'domain' parameter shared with zookeeper server code (see ServerCnxnFactory.java)
+                    // TODO: move server-side SASL-related code out of ServerCnxnFactory.java
                     saslClient = Sasl.createSaslClient(mechs, username, serviceName, "zk-sasl-md5", null, new ClientCallbackHandler(password));
                     return saslClient;
                 }
@@ -231,6 +232,19 @@ public class ZooKeeperSaslClient {
 
     public boolean isComplete() {
         return saslClient.isComplete();
+    }
+
+    public void close() {
+        LOG.debug("ZookeeperSaslClient object is shutting down.");
+        if (loginThread.isAlive()) {
+            try {
+               loginThread.interrupt();
+               loginThread.join();
+            }
+            catch (InterruptedException e) {
+                // catch e..
+            }
+        }
     }
 
     private boolean hasInitialResponse() {
