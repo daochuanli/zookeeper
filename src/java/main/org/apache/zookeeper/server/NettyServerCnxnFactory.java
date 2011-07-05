@@ -355,7 +355,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         if (zkServer != null) {
             zkServer.shutdown();
         }
-        if (zooKeeperSaslServer.loginThread != null) {
+        if ((zooKeeperSaslServer) != null && (zooKeeperSaslServer.loginThread != null)) {
             try {
                 zooKeeperSaslServer.loginThread.interrupt();
                 zooKeeperSaslServer.loginThread.join();

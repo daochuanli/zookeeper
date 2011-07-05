@@ -82,7 +82,12 @@ public abstract class ServerCnxnFactory {
     public abstract void configure(InetSocketAddress addr,
             int maxClientCnxns, String requireClientAuthScheme, int renewJaasLoginInterval) throws IOException;
 
-    public String getRequireClientAuthScheme() { return zooKeeperSaslServer.requireClientAuthScheme; }
+    public String getRequireClientAuthScheme() {
+        if (zooKeeperSaslServer != null) {
+            return zooKeeperSaslServer.requireClientAuthScheme;
+        }
+        return null;
+    }
 
     /** Maximum number of connections allowed from particular host (ip) */
     public abstract int getMaxClientCnxnsPerHost();
