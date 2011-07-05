@@ -30,6 +30,7 @@ import java.util.Map;
 
 import javax.management.JMException;
 
+import com.sun.corba.se.pept.transport.ResponseWaitingRoom;
 import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,18 +56,21 @@ public class ZooKeeperSaslServer {
 
     Logger LOG = LoggerFactory.getLogger(ZooKeeperSaslServer.class);
 
-    String requireClientAuthScheme = null;
+    // TODO: make private if possible.
+    public String requireClientAuthScheme = null;
 
     private SaslServerCallbackHandler saslServerCallbackHandler = null;
+    public SaslServer saslServer;
 
     ZooKeeperSaslServer() {
-        startL
+        loginThread = startLoginThread(30000);
+        saslServer = createSaslServer();
     }
 
 
     protected LoginThread startLoginThread(int renewJaasLoginInterval) {
         if (System.getProperty("java.security.auth.login.config") != null) {
-            this.saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
+            saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
             loginThread = new LoginThread("Server",this.saslServerCallbackHandler,renewJaasLoginInterval);
             loginThread.start();
             return loginThread;
@@ -261,8 +265,17 @@ public class ZooKeeperSaslServer {
         }
     }
 
+    public byte[] evaluateResponse(byte[] response) throws SaslException {
+        return saslServer.evaluateResponse(response);
+    }
 
+    public boolean isComplete() {
+        return saslServer.isComplete();
+    }
 
+    public String getAuthorizationID() {
+        return saslServer.getAuthorizationID();
+    }
 }
 
 

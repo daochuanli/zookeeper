@@ -79,10 +79,6 @@ public abstract class ServerCnxnFactory {
         this.configure(addr,maxClientCnxns,(String)null,0);
     }
 
-    public ZooKeeperSaslServer createSaslServer() {
-        return new ZooKeeperSaslServer();
-    }
-
     public abstract void configure(InetSocketAddress addr,
             int maxClientCnxns, String requireClientAuthScheme, int renewJaasLoginInterval) throws IOException;
 

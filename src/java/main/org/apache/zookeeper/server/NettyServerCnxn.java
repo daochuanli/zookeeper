@@ -81,6 +81,7 @@ public class NettyServerCnxn extends ServerCnxn {
         this.channel = channel;
         this.zkServer = zks;
         this.factory = factory;
+        this.zooKeeperSaslServer = factory.zooKeeperSaslServer;
     }
     
     @Override
