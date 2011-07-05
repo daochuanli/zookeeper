@@ -18,11 +18,6 @@
 
 package org.apache.zookeeper.client;
 
-import javax.security.auth.Subject;
-import javax.security.sasl.Sasl;
-import javax.security.sasl.SaslClient;
-import javax.security.sasl.SaslException;
-
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.ClientCnxn;
 import org.apache.zookeeper.LoginThread;
@@ -31,7 +26,6 @@ import org.apache.zookeeper.proto.GetSASLRequest;
 import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.RequestHeader;
 import org.apache.zookeeper.proto.SetSASLResponse;
-import org.apache.zookeeper.ZooKeeper.ClientCallbackHandler;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooDefs;
@@ -43,6 +37,17 @@ import org.slf4j.LoggerFactory;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import javax.security.auth.Subject;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.NameCallback;
+import javax.security.auth.callback.PasswordCallback;
+import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.sasl.AuthorizeCallback;
+import javax.security.sasl.RealmCallback;
+import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslClient;
+import javax.security.sasl.SaslException;
 
 /**
  * This class manages SASL authentication and, optionally, encryption for the client. It
@@ -104,7 +109,7 @@ public class ZooKeeperSaslClient {
                     String username = (String)(subject.getPublicCredentials().toArray()[0]);
                     String password = (String)(subject.getPrivateCredentials().toArray()[0]);
                     // "zk-sasl-md5" is a hard-wired 'domain' parameter used also by server.
-                    saslClient = Sasl.createSaslClient(mechs, username, serviceName, "zk-sasl-md5", null, new ZooKeeper.ClientCallbackHandler(password));
+                    saslClient = Sasl.createSaslClient(mechs, username, serviceName, "zk-sasl-md5", null, new ClientCallbackHandler(password));
                     return saslClient;
                 }
                 else { // GSSAPI.
@@ -119,7 +124,7 @@ public class ZooKeeperSaslClient {
                                     LOG.info("Client will use GSSAPI as SASL mechanism.");
                                     String[] mechs = {"GSSAPI"};
                                     LOG.debug("creating sasl client: client="+clientPrincipalName+";service="+serviceName+";serviceHostname="+serviceHostname);
-                                    SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,serviceName,serviceHostname,null,new ZooKeeper.ClientCallbackHandler(null));
+                                    SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,serviceName,serviceHostname,null,new ClientCallbackHandler(null));
                                     return saslClient;
                                 }
                             });
@@ -138,7 +143,6 @@ public class ZooKeeperSaslClient {
             return null;
         }
     }
-
 
     private void prepareSaslResponseToServer(byte[] serverToken) {
         saslToken = serverToken;
@@ -295,5 +299,56 @@ public class ZooKeeperSaslClient {
         } // switch(state)
         return returnState;
     }
+
+    // CallbackHandler here refers to javax.security.auth.callback.CallbackHandler.
+    // (not to be confused with packet callbacks like ServerSaslResponseCallback, defined above).
+    public static class ClientCallbackHandler implements CallbackHandler {
+        private String password = null;
+
+        public ClientCallbackHandler(String password) {
+            this.password = password;
+        }
+
+        public void handle(Callback[] callbacks) throws
+          UnsupportedCallbackException {
+            for (Callback callback : callbacks) {
+                if (callback instanceof NameCallback) {
+                    NameCallback nc = (NameCallback) callback;
+                    nc.setName(nc.getDefaultName());
+                }
+                else {
+                    if (callback instanceof PasswordCallback) {
+                        PasswordCallback pc = (PasswordCallback)callback;
+                        pc.setPassword(this.password.toCharArray());
+                    }
+                    else {
+                        if (callback instanceof RealmCallback) {
+                            RealmCallback rc = (RealmCallback) callback;
+                            rc.setText(rc.getDefaultText());
+                        }
+                        else {
+                            if (callback instanceof AuthorizeCallback) {
+                                AuthorizeCallback ac = (AuthorizeCallback) callback;
+                                String authid = ac.getAuthenticationID();
+                                String authzid = ac.getAuthorizationID();
+                                if (authid.equals(authzid)) {
+                                    ac.setAuthorized(true);
+                                } else {
+                                    ac.setAuthorized(false);
+                                }
+                                if (ac.isAuthorized()) {
+                                    ac.setAuthorizedID(authzid);
+                                }
+                            }
+                            else {
+                                throw new UnsupportedCallbackException(callback,"Unrecognized SASL ClientCallback");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 
 }

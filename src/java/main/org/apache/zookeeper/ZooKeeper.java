@@ -28,13 +28,6 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.*;
 import org.apache.zookeeper.server.DataTree;
-import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.callback.NameCallback;
-import javax.security.auth.callback.PasswordCallback;
-import javax.security.auth.callback.UnsupportedCallbackException;
-import javax.security.sasl.AuthorizeCallback;
-import javax.security.sasl.RealmCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -432,56 +425,6 @@ public class ZooKeeper {
                 hostProvider, sessionTimeout, this, watchManager,
                 getClientCnxnSocket(), canBeReadOnly);
         cnxn.start();
-    }
-
-    // CallbackHandler here refers to javax.security.auth.callback.CallbackHandler.
-    // (not to be confused with packet callbacks like ServerSaslResponseCallback, defined above).
-    public static class ClientCallbackHandler implements CallbackHandler {
-        private String password = null;
-
-        public ClientCallbackHandler(String password) {
-            this.password = password;
-        }
-
-        public void handle(Callback[] callbacks) throws
-                UnsupportedCallbackException {
-            for (Callback callback : callbacks) {
-                if (callback instanceof NameCallback) {
-                    NameCallback nc = (NameCallback) callback;
-                    nc.setName(nc.getDefaultName());
-                }
-                else {
-                    if (callback instanceof PasswordCallback) {
-                        PasswordCallback pc = (PasswordCallback)callback;
-                        pc.setPassword(this.password.toCharArray());
-                    }
-                    else {
-                        if (callback instanceof RealmCallback) {
-                            RealmCallback rc = (RealmCallback) callback;
-                            rc.setText(rc.getDefaultText());
-                        }
-                        else {
-                            if (callback instanceof AuthorizeCallback) {
-                                AuthorizeCallback ac = (AuthorizeCallback) callback;
-                                String authid = ac.getAuthenticationID();
-                                String authzid = ac.getAuthorizationID();
-                                if (authid.equals(authzid)) {
-                                    ac.setAuthorized(true);
-                                } else {
-                                    ac.setAuthorized(false);
-                                }
-                                if (ac.isAuthorized()) {
-                                    ac.setAuthorizedID(authzid);
-                                }
-                            }
-                            else {
-                                throw new UnsupportedCallbackException(callback,"Unrecognized SASL ClientCallback");
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     /**
