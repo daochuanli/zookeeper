@@ -417,7 +417,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                 byte[] responseToken = null;
 
                 try {
-                    SaslServer saslServer = cnxn.saslServer;
+                    ZooKeeperSaslServer saslServer = cnxn.zooKeeperSaslServer;
                     try {
                         // note that clientToken might be empty (clientToken.length == 0):
                         // in the case of the DIGEST-MD5 mechanism, clientToken will be empty at the beginning of the
@@ -425,8 +425,8 @@ public class FinalRequestProcessor implements RequestProcessor {
                         responseToken = saslServer.evaluateResponse(clientToken);
 
                         if (saslServer.isComplete() == true) {
-			    String authorizationID = saslServer.getAuthorizationID();
-			    LOG.info("adding SASL authorization for authorizationID: " + authorizationID);
+			                      String authorizationID = saslServer.getAuthorizationID();
+                  			    LOG.info("adding SASL authorization for authorizationID: " + authorizationID);
                             cnxn.addAuthInfo(new Id("sasl",authorizationID));
                         }
                     }

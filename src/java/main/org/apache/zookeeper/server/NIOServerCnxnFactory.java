@@ -93,7 +93,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         // Use presence/absence of java.security.auth.login.config property
         // as a boolean flag to decide where to start the LoginThread.
         if (System.getProperty("java.security.auth.login.config") != null) {
-            this.loginThread = startLoginThread(renewJaasLoginInterval);
+            this.zooKeeperSaslServer.startLoginThread(renewJaasLoginInterval);
         }
 
         maxClientCnxns = maxcc;
@@ -263,9 +263,9 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
             closeAll();
             thread.interrupt();
             thread.join();
-            if (loginThread != null) {
-                loginThread.interrupt();
-                loginThread.join();
+            if (zooKeeperSaslServer.loginThread != null) {
+                zooKeeperSaslServer.loginThread.interrupt();
+                zooKeeperSaslServer.loginThread.join();
             }
         } catch (InterruptedException e) {
             LOG.warn("Ignoring interrupted exception during shutdown", e);

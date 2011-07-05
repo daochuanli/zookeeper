@@ -308,7 +308,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         // Use presence/absence of java.security.auth.login.config property
         // as a boolean flag to decide where to start the LoginThread.
         if (System.getProperty("java.security.auth.login.config") != null) {
-            startLoginThread(renewJaasLoginInterval);
+            zooKeeperSaslServer.startLoginThread(renewJaasLoginInterval);
         }
 
         this.maxClientCnxns = maxClientCnxns;
@@ -354,10 +354,10 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         if (zkServer != null) {
             zkServer.shutdown();
         }
-        if (loginThread != null) {
+        if (zooKeeperSaslServer.loginThread != null) {
             try {
-                loginThread.interrupt();
-                loginThread.join();
+                zooKeeperSaslServer.loginThread.interrupt();
+                zooKeeperSaslServer.loginThread.join();
             }
             catch (InterruptedException e) {
                 LOG.warn("Ignoring interrupted exception during shutdown", e);
