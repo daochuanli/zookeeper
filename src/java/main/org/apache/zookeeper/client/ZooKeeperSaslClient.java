@@ -64,8 +64,26 @@ public class ZooKeeperSaslClient {
         this.saslClient = createSaslClient(serverPrincipal,this.loginThread);
     }
 
-    private static SaslClient createSaslClient(final String servicePrincipal, LoginThread loginThread) {
+    public static class ServerSaslResponseCallback implements AsyncCallback.DataCallback {
+        public void processResult(int rc, String path, Object ctx, byte data[], Stat stat) {
+            // processResult() is used by ClientCnxn's sendThread to respond to
+            // data[] contains the Zookeeper Server's SASL token.
+            // ctx is the ZooKeeperSaslClient object. We use this object's prepareSaslResponseToServer() method
+            // to reply to the Zookeeper Server's SASL token
+            ZooKeeperSaslClient client = ((ClientCnxn)ctx).zooKeeperSaslClient;
+            byte[] usedata = data;
+            if (data != null) {
+                LOG.debug("ServerSaslResponseCallback(): saslToken server response: (length="+usedata.length+")");
+            }
+            else {
+                usedata = new byte[0];
+                LOG.debug("ServerSaslResponseCallback(): using empty data[] as server response (length="+usedata.length+")");
+            }
+            client.prepareSaslResponseToServer(usedata);
+        }
+    }
 
+    private static SaslClient createSaslClient(final String servicePrincipal, LoginThread loginThread) {
         int indexOf = servicePrincipal.indexOf("/");
 
         final String serviceName = servicePrincipal.substring(0, indexOf);
@@ -122,7 +140,7 @@ public class ZooKeeperSaslClient {
     }
 
 
-    public void prepareSaslResponseToServer(byte[] serverToken) {
+    private void prepareSaslResponseToServer(byte[] serverToken) {
         saslToken = serverToken;
 
         LOG.debug("saslToken (server) length: " + saslToken.length);
@@ -149,7 +167,7 @@ public class ZooKeeperSaslClient {
         }
     }
 
-    public byte[] createSaslToken(final byte[] saslToken) throws SaslException {
+    private byte[] createSaslToken(final byte[] saslToken) throws SaslException {
         if (saslToken == null) {
             // TODO: introspect about runtime environment (such as jaas.conf)
             throw new SaslException("Error in authenticating with a Zookeeper Quorum member: the quorum member's saslToken is null.");
@@ -192,27 +210,7 @@ public class ZooKeeperSaslClient {
         }
     }
 
-    public static class ServerSaslResponseCallback implements AsyncCallback.DataCallback {
-        public void processResult(int rc, String path, Object ctx, byte data[], Stat stat) {
-            // data[] contains the Zookeeper Server's SASL token.
-            // ctx is the ZooKeeperSaslClient object. We use this object's prepareSaslResponseToServer() method
-            // to reply to the Zookeeper Server's SASL token
-            ZooKeeperSaslClient client = ((ClientCnxn)ctx).zooKeeperSaslClient;
-            byte[] usedata = data;
-            if (data != null) {
-                LOG.debug("ServerSaslResponseCallback(): saslToken server response: (length="+usedata.length+")");
-            }
-            else {
-                usedata = new byte[0];
-                LOG.debug("ServerSaslResponseCallback(): using empty data[] as server response (length="+usedata.length+")");
-            }
-            client.prepareSaslResponseToServer(usedata);
-        }
-    }
-
-    // TODO: make private once more sasl code is extracted from
-    // ClientCnxn.run().
-    public void queueSaslPacket(byte[] saslToken) {
+    private void queueSaslPacket(byte[] saslToken) {
         LOG.info("cnxn: " + cnxn.toString());
         LOG.info("ClientCnxn:sendSaslPacket:length="+saslToken.length);
         RequestHeader h = new RequestHeader();
@@ -231,7 +229,7 @@ public class ZooKeeperSaslClient {
         return saslClient.isComplete();
     }
 
-    public boolean hasInitialResponse() {
+    private boolean hasInitialResponse() {
         return saslClient.hasInitialResponse();
     }
 
@@ -257,15 +255,15 @@ public class ZooKeeperSaslClient {
                             saslToken = createSaslToken(saslToken);
                         }
                         catch (SaslException e) {
-                            LOG.error("SASL authentication with Zookeeper server failed: " + e);
+                            LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);
                             returnState = States.AUTH_FAILED;
                         }
-                        LOG.debug("hasInitialResponse() == true; (2) SASL token length = " + saslToken.length);
                         if (saslToken == null) {
-                            LOG.warn("SASL negotiation with Zookeeper Quorum member failed: client state is now AUTH_FAILED.");
+                            LOG.warn("SASL negotiation with Zookeeper Quorum member failed: saslToken is null.");
                             returnState = States.AUTH_FAILED;
                         }
                         else {
+                            LOG.debug("hasInitialResponse() == true; (2) SASL token length = " + saslToken.length);
                             queueSaslPacket(saslToken);
                             returnState = States.SASL;
                         }
