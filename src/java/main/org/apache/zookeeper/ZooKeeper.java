@@ -423,7 +423,9 @@ public class ZooKeeper {
                 + " sessionTimeout=" + sessionTimeout + " watcher=" + watcher);
 
         watchManager.defaultWatcher = watcher;
-        ConnectStringParser connectStringParser = new ConnectStringParser(connectString);
+
+        ConnectStringParser connectStringParser = new ConnectStringParser(
+                connectString);
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
