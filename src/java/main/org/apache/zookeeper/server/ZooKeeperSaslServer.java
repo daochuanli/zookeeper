@@ -52,7 +52,7 @@ import org.apache.zookeeper.LoginThread;
 import org.apache.zookeeper.jmx.MBeanRegistry;
 
 public class ZooKeeperSaslServer {
-    public LoginThread loginThread;
+    private LoginThread loginThread;
 
     Logger LOG = LoggerFactory.getLogger(ZooKeeperSaslServer.class);
 
@@ -67,6 +67,16 @@ public class ZooKeeperSaslServer {
         saslServer = createSaslServer();
     }
 
+    public void shutdown() {
+        if (loginThread != null) {
+            loginThread.interrupt();
+            try {
+                loginThread.join();
+            } catch (InterruptedException e) {
+                LOG.warn("Ignoring interrupted exception during shutdown", e);
+            }
+        }
+    }
 
     protected LoginThread startLoginThread(int renewJaasLoginInterval) {
         if (System.getProperty("java.security.auth.login.config") != null) {
@@ -276,6 +286,7 @@ public class ZooKeeperSaslServer {
     public String getAuthorizationID() {
         return saslServer.getAuthorizationID();
     }
+
 }
 
 
