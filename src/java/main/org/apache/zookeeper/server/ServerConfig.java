@@ -44,11 +44,16 @@ public class ServerConfig {
     protected int minSessionTimeout = -1;
     /** defaults to -1 if not set explicitly */
     protected int maxSessionTimeout = -1;
-    // TODO: not currently used: add support.
-    protected String authMech;
 
+    /** Require clients to authenticate using a given authentication scheme, e.g. "sasl";
+     *  clients that fail to do so are disconnected. Currently only used with sasl.
+     */
     protected String requireClientAuthScheme;
+
+    /** Time in milliseconds of interval between renewal of credentials with a Kerberos server.
+     */
     protected int jaasLoginRenew;
+
     /**
      * Parse arguments for server configuration
      * @param args clientPort dataDir and optional tickTime
@@ -99,7 +104,6 @@ public class ServerConfig {
       maxClientCnxns = config.getMaxClientCnxns();
       minSessionTimeout = config.getMinSessionTimeout();
       maxSessionTimeout = config.getMaxSessionTimeout();
-      authMech = config.getAuthMech();
       requireClientAuthScheme = config.getRequireClientAuthScheme();
       jaasLoginRenew = config.getJaasLoginRenew();
 
@@ -116,11 +120,6 @@ public class ServerConfig {
     public int getMinSessionTimeout() { return minSessionTimeout; }
     /** maximum session timeout in milliseconds, -1 if unset */
     public int getMaxSessionTimeout() { return maxSessionTimeout; }
-    // SASL mechanism that server can use. Currently not consulted: instead
-    // server decides which mechanism based on lack/presence of login credentials for
-    // server in the server's JAAS configuration file.
-    // TODO: respect authMech start-time configuration setting, which would be stored in here in authMech.
-    public String getAuthMech() { return authMech; }
     public String getRequireClientAuthScheme() { return requireClientAuthScheme;}
     public int getJaasLoginRenew() { return jaasLoginRenew;}
 }
