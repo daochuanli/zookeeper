@@ -355,7 +355,6 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         if (zooKeeperSaslServer != null) {
             zooKeeperSaslServer.shutdown();
         }
-
         synchronized(this) {
             killed = true;
             notifyAll();

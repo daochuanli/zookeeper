@@ -35,6 +35,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
+
 import org.apache.jute.BinaryInputArchive;
 import org.apache.jute.BinaryOutputArchive;
 import org.apache.jute.Record;
@@ -98,7 +99,6 @@ public class NIOServerCnxn extends ServerCnxn {
         this.sk = sk;
         this.factory = factory;
         this.zooKeeperSaslServer = factory.zooKeeperSaslServer;
-
         if (zk != null) { 
             outstandingLimit = zk.getGlobalOutstandingLimit();
         }

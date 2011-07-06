@@ -29,7 +29,6 @@ import org.apache.zookeeper.proto.SetSASLResponse;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooDefs;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -216,16 +215,13 @@ public class ZooKeeperSaslClient {
     }
 
     private void queueSaslPacket(byte[] saslToken) {
-        LOG.info("cnxn: " + cnxn.toString());
         LOG.info("ClientCnxn:sendSaslPacket:length="+saslToken.length);
         RequestHeader h = new RequestHeader();
         h.setType(ZooDefs.OpCode.sasl);
         GetSASLRequest request = new GetSASLRequest();
         request.setToken(saslToken);
         SetSASLResponse response = new SetSASLResponse();
-
         ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
-
         ReplyHeader r = new ReplyHeader();
         cnxn.queuePacket(h,r,request,response,cb);
     }

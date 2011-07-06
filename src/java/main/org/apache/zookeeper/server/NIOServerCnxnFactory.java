@@ -104,7 +104,6 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         ss.register(selector, SelectionKey.OP_ACCEPT);
     }
 
-
     /** {@inheritDoc} */
     public int getMaxClientCnxnsPerHost() {
         return maxClientCnxns;
