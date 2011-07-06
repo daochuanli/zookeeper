@@ -71,8 +71,6 @@ public class QuorumPeerConfig {
     protected QuorumVerifier quorumVerifier;
 
     protected LearnerType peerType = LearnerType.PARTICIPANT;
-
-    protected String authMech;
     protected String requireClientAuthScheme;
     protected int jaasLoginRenew;
 
@@ -162,11 +160,6 @@ public class QuorumPeerConfig {
                 {
                     throw new ConfigException("Unrecognised peertype: " + value);
                 }
-            } else if (key.equals("authMech")) {
-                // Specify a particular SASL mechanism. If not specified,
-                // will use JAAS conf file to determine which SASL mechanism
-                // is being specified.
-                authMech = value;
             } else if (key.equals("requireClientAuthScheme")) {
                 requireClientAuthScheme = value;
             } else if (key.equals("jaasLoginRenew")) {
@@ -392,10 +385,6 @@ public class QuorumPeerConfig {
 
     public LearnerType getPeerType() {
         return peerType;
-    }
-
-    public String getAuthMech() {
-        return authMech;
     }
 
     public String getRequireClientAuthScheme() {
