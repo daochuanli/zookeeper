@@ -89,9 +89,8 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         thread = new Thread(this, "NIOServerCxn.Factory:" + addr);
         thread.setDaemon(true);
 
-        this.requireClientAuthScheme = requireClientAuthScheme;
         // Use presence/absence of java.security.auth.login.config property
-        // as a boolean flag to decide where to start the LoginThread.
+        // as a boolean flag to decide where to start the ZooKeeperSaslServer.
         if (System.getProperty("java.security.auth.login.config") != null) {
             this.zooKeeperSaslServer = new ZooKeeperSaslServer(renewJaasLoginInterval);
         }

@@ -21,31 +21,12 @@ package org.apache.zookeeper.server;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.security.Principal;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
 
 import javax.management.JMException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import javax.naming.ConfigurationException;
-import javax.security.auth.Subject;
-import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.callback.NameCallback;
-import javax.security.auth.callback.PasswordCallback;
-import javax.security.auth.callback.UnsupportedCallbackException;
-import javax.security.auth.login.AppConfigurationEntry;
-import javax.security.auth.login.Configuration;
-import javax.security.sasl.AuthorizeCallback;
-import javax.security.sasl.RealmCallback;
-import javax.security.sasl.Sasl;
-import javax.security.sasl.SaslException;
-import javax.security.sasl.SaslServer;
-import org.apache.zookeeper.LoginThread;
 import org.apache.zookeeper.jmx.MBeanRegistry;
 
 public abstract class ServerCnxnFactory {
@@ -57,6 +38,7 @@ public abstract class ServerCnxnFactory {
     public interface PacketProcessor {
         public void processPacket(ByteBuffer packet, ServerCnxn src);
     }
+    
     Logger LOG = LoggerFactory.getLogger(ServerCnxnFactory.class);
 
     /**
@@ -69,9 +51,6 @@ public abstract class ServerCnxnFactory {
     public abstract Iterable<ServerCnxn> getConnections();
 
     public abstract void closeSession(long sessionId);
-
-    // TODO: remove or move to ZooKeeperSaslServer.
-    public String requireClientAuthScheme;
 
     public void configure(InetSocketAddress addr,
             int maxClientCnxns) throws IOException {
@@ -114,15 +93,15 @@ public abstract class ServerCnxnFactory {
 
     public abstract void closeAll();
     
-    static public ServerCnxnFactory createFactory() throws IOException
-    {
+    static public ServerCnxnFactory createFactory() throws IOException {
         String serverCnxnFactoryName =
             System.getProperty(ZOOKEEPER_SERVER_CNXN_FACTORY);
         if (serverCnxnFactoryName == null) {
             serverCnxnFactoryName = NIOServerCnxnFactory.class.getName();
         }
         try {
-            return (ServerCnxnFactory)Class.forName(serverCnxnFactoryName).newInstance();
+            return (ServerCnxnFactory) Class.forName(serverCnxnFactoryName)
+                                                .newInstance();
         } catch (Exception e) {
             IOException ioe = new IOException("Couldn't instantiate "
                     + serverCnxnFactoryName);
@@ -130,7 +109,7 @@ public abstract class ServerCnxnFactory {
             throw ioe;
         }
     }
-
+    
     static public ServerCnxnFactory createFactory(int clientPort,
             int maxClientCnxns) throws IOException
     {
@@ -181,8 +160,4 @@ public abstract class ServerCnxnFactory {
 
     }
 
-
 }
-
-
-

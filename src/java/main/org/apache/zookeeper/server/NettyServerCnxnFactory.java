@@ -303,10 +303,8 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
             throws IOException
     {
         localAddress = addr;
-
-        this.requireClientAuthScheme = requireClientAuthScheme;
         // Use presence/absence of java.security.auth.login.config property
-        // as a boolean flag to decide where to start the LoginThread.
+        // as a boolean flag to decide whether to start the ZooKeeperSaslServer.
         if (System.getProperty("java.security.auth.login.config") != null) {
             zooKeeperSaslServer = new ZooKeeperSaslServer(renewJaasLoginInterval);
         }
