@@ -84,7 +84,7 @@ public abstract class ServerCnxnFactory {
 
     public String getRequireClientAuthScheme() {
         if (zooKeeperSaslServer != null) {
-            return zooKeeperSaslServer.requireClientAuthScheme;
+            return zooKeeperSaslServer.getRequireClientAuthScheme();
         }
         return null;
     }

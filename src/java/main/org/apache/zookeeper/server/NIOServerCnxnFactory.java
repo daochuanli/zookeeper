@@ -93,8 +93,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
         // Use presence/absence of java.security.auth.login.config property
         // as a boolean flag to decide where to start the LoginThread.
         if (System.getProperty("java.security.auth.login.config") != null) {
-            this.zooKeeperSaslServer = new ZooKeeperSaslServer();
-            this.zooKeeperSaslServer.startLoginThread(renewJaasLoginInterval);
+            this.zooKeeperSaslServer = new ZooKeeperSaslServer(renewJaasLoginInterval);
         }
 
         maxClientCnxns = maxcc;

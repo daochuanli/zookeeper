@@ -53,18 +53,18 @@ import org.apache.zookeeper.jmx.MBeanRegistry;
 
 public class ZooKeeperSaslServer {
     private LoginThread loginThread;
-
     Logger LOG = LoggerFactory.getLogger(ZooKeeperSaslServer.class);
-
-    // TODO: make private if possible.
-    public String requireClientAuthScheme = null;
-
+    private String requireClientAuthScheme = null;
     private SaslServerCallbackHandler saslServerCallbackHandler = null;
-    public SaslServer saslServer;
+    private SaslServer saslServer;
 
-    ZooKeeperSaslServer() {
-        loginThread = startLoginThread(30000);
+    ZooKeeperSaslServer(int renewJaasLoginInterval) {
+        loginThread = startLoginThread(renewJaasLoginInterval);
         saslServer = createSaslServer();
+    }
+
+    public String getRequireClientAuthScheme() {
+        return requireClientAuthScheme;
     }
 
     public void shutdown() {
@@ -78,7 +78,7 @@ public class ZooKeeperSaslServer {
         }
     }
 
-    protected LoginThread startLoginThread(int renewJaasLoginInterval) {
+    private LoginThread startLoginThread(int renewJaasLoginInterval) {
         if (System.getProperty("java.security.auth.login.config") != null) {
             saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
             loginThread = new LoginThread("Server",this.saslServerCallbackHandler,renewJaasLoginInterval);
@@ -88,13 +88,7 @@ public class ZooKeeperSaslServer {
         return null;
     }
 
-    // addPrivateCredential() only used if SASL authorization mechanism is DIGEST-MD5:
-    // if SASL authorization mechanism is GSSAPI, passwords are not stored in Zookeeper.
-    public void addPrivateCredential(String username, String password) {
-        saslServerCallbackHandler.addPrivateCredential(username, password);
-    }
-
-    public SaslServer createSaslServer() {
+    private SaslServer createSaslServer() {
         if (loginThread == null) {
             return null;
         }
@@ -195,10 +189,6 @@ public class ZooKeeperSaslServer {
                 }
             }
             return;
-        }
-
-        public void addPrivateCredential(String username, String password) {
-            this.credentials.put(username,password);
         }
 
         public void handle(Callback[] callbacks) throws
