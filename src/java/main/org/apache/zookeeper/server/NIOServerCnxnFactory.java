@@ -261,7 +261,9 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
             closeAll();
             thread.interrupt();
             thread.join();
-            zooKeeperSaslServer.shutdown();
+            if (zooKeeperSaslServer != null) {
+                zooKeeperSaslServer.shutdown();
+            }
         } catch (InterruptedException e) {
             LOG.warn("Ignoring interrupted exception during shutdown", e);
         } catch (Exception e) {
