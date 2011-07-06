@@ -106,7 +106,6 @@ public class ServerConfig {
       maxSessionTimeout = config.getMaxSessionTimeout();
       requireClientAuthScheme = config.getRequireClientAuthScheme();
       jaasLoginRenew = config.getJaasLoginRenew();
-
     }
 
     public InetSocketAddress getClientPortAddress() {
