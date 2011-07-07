@@ -108,7 +108,6 @@ public class ZooKeeperSaslClient {
                     String username = (String)(subject.getPublicCredentials().toArray()[0]);
                     String password = (String)(subject.getPrivateCredentials().toArray()[0]);
                     // "zk-sasl-md5" is a hard-wired 'domain' parameter shared with zookeeper server code (see ServerCnxnFactory.java)
-                    // TODO: move server-side SASL-related code out of ServerCnxnFactory.java
                     saslClient = Sasl.createSaslClient(mechs, username, serviceName, "zk-sasl-md5", null, new ClientCallbackHandler(password));
                     return saslClient;
                 }
