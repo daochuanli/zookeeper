@@ -21,8 +21,8 @@ package org.apache.zookeeper;
 /** 
  * This class is responsible for refreshing Kerberos credentials for
  * logins for both Zookeeper client and server.
- * See ServerCnxnFactory.java:startLoginThread() for server-side usage
- * and Zookeeper.java:startLoginThread() for client-side usage.
+ * See o.a.z.client.ZooKeeperSaslClient.java:startLoginThread() for client-side usage
+ * and o.a.z.server.ZookeeperSaslServer.java:startLoginThread() for server-side usage.
  */
 
 import javax.security.auth.login.LoginContext;
@@ -70,13 +70,12 @@ public class LoginThread extends Thread {
         while(true) {
             LOG.info("sleeping.");
             try {
-                // TODO: make this configurable: should run after 80% of time
-                // until last ticket expiry.
-                Thread.sleep(sleepInterval);
+                   Thread.sleep(sleepInterval);
             }
             catch (InterruptedException e) {
-                // A creator of a LoginThread object should call .interrupt() and .join() on its
-                // LoginThread object prior to the creator's shutting down.
+                // A creator object O of a LoginThread object should call .interrupt() and .join() on its
+                // LoginThread object prior to O's shutting down: see ZooKeeperSaslClient.close() and 
+                // ZooKeeperSaslServer.shutdown().
                 LOG.error("caught InterruptedException while sleeping. Breaking out of endless loop.");
                 break;
             }
@@ -95,7 +94,7 @@ public class LoginThread extends Thread {
                 LOG.info("successfully logged in.");
             }
             catch (LoginException e) {
-                LOG.error("Error while trying to do subject authentication using '"+this.loginContextName+"' section of " + System.getProperty("java.security.auth.login.config") + ":" + e);
+                LOG.error("Error while trying to do subject authentication using '"+this.loginContextName+"' section of java.security.auth.login.config file: " + System.getProperty("java.security.auth.login.config") + ":" + e);
             }
         }
     }
