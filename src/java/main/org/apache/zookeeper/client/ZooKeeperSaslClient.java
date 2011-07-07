@@ -85,18 +85,20 @@ public class ZooKeeperSaslClient {
         }
     }
 
+    private LoginThread startLoginThread() {
+        // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
+        loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
+        loginThread.start();
+        return loginThread;
+    }
+
     private SaslClient createSaslClient(final String servicePrincipal) {
         int indexOf = servicePrincipal.indexOf("/");
         final String serviceName = servicePrincipal.substring(0, indexOf);
         final String serviceHostname = servicePrincipal.substring(indexOf+1,servicePrincipal.length());
-
-        // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
-        loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
+        loginThread = startLoginThread();
 
         try {
-            if (loginThread.isAlive() == false) {
-              loginThread.start();
-            }
             synchronized(loginThread) {
                 Subject subject = loginThread.getLogin().getSubject();
                 SaslClient saslClient = null;
