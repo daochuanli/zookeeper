@@ -59,8 +59,7 @@ public class ZooKeeperSaslServer {
     private SaslServer saslServer;
 
     ZooKeeperSaslServer(int renewJaasLoginInterval) {
-        loginThread = startLoginThread(renewJaasLoginInterval);
-        saslServer = createSaslServer();
+        saslServer = createSaslServer(renewJaasLoginInterval);
     }
 
     public String getRequireClientAuthScheme() {
@@ -85,10 +84,8 @@ public class ZooKeeperSaslServer {
         return loginThread;
     }
 
-    private SaslServer createSaslServer() {
-        if (loginThread == null) {
-            return null;
-        }
+    private SaslServer createSaslServer(int renewJaasLoginInterval) {
+        loginThread = startLoginThread(renewJaasLoginInterval);
         synchronized (loginThread) {
             Subject subject = loginThread.getLogin().getSubject();
             if (subject != null) {

@@ -93,16 +93,15 @@ public class ZooKeeperSaslClient {
     }
 
     private SaslClient createSaslClient(final String servicePrincipal) {
-        int indexOf = servicePrincipal.indexOf("/");
-        final String serviceName = servicePrincipal.substring(0, indexOf);
-        final String serviceHostname = servicePrincipal.substring(indexOf+1,servicePrincipal.length());
         loginThread = startLoginThread();
-
         try {
             synchronized(loginThread) {
                 Subject subject = loginThread.getLogin().getSubject();
                 SaslClient saslClient = null;
                 // Use subject.getPrincipals().isEmpty() as an indication of which SASL mechanism to use: if empty, use DIGEST-MD5; otherwise, use GSSAPI.
+                int indexOf = servicePrincipal.indexOf("/");
+                final String serviceName = servicePrincipal.substring(0, indexOf);
+                final String serviceHostname = servicePrincipal.substring(indexOf+1,servicePrincipal.length());
                 if (subject.getPrincipals().isEmpty() == true) {
                     // no principals: must not be GSSAPI: use DIGEST-MD5 mechanism instead.
                     LOG.info("Client will use DIGEST-MD5 as SASL mechanism.");
