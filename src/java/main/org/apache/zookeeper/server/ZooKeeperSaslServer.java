@@ -77,15 +77,14 @@ public class ZooKeeperSaslServer {
         }
     }
 
-    private LoginThread startLoginThread(int renewJaasLoginInterval) {
+    private void startLoginThread(int renewJaasLoginInterval) {
         saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
         loginThread = new LoginThread("Server",this.saslServerCallbackHandler,renewJaasLoginInterval);
         loginThread.start();
-        return loginThread;
     }
 
     private SaslServer createSaslServer(int renewJaasLoginInterval) {
-        loginThread = startLoginThread(renewJaasLoginInterval);
+        startLoginThread(renewJaasLoginInterval);
         synchronized (loginThread) {
             Subject subject = loginThread.getLogin().getSubject();
             if (subject != null) {
@@ -152,6 +151,7 @@ public class ZooKeeperSaslServer {
                 }
             }
         }
+        LOG.error("failed to create saslServer object.");
         return null;
     }
 
