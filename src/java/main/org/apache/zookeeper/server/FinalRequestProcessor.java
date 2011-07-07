@@ -423,8 +423,8 @@ public class FinalRequestProcessor implements RequestProcessor {
                         responseToken = saslServer.evaluateResponse(clientToken);
 
                         if (saslServer.isComplete() == true) {
-			                      String authorizationID = saslServer.getAuthorizationID();
-                  			    LOG.info("adding SASL authorization for authorizationID: " + authorizationID);
+                            String authorizationID = saslServer.getAuthorizationID();
+                            LOG.info("adding SASL authorization for authorizationID: " + authorizationID);
                             cnxn.addAuthInfo(new Id("sasl",authorizationID));
                         }
                     }
@@ -447,6 +447,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                 if (responseToken != null) {
                     LOG.debug("Size of server SASL response: " + responseToken.length);
                 }
+                // wrap SASL response token to client inside a Response object.
                 rsp = new SetSASLResponse(responseToken);
                 break;
             }
