@@ -79,13 +79,10 @@ public class ZooKeeperSaslServer {
     }
 
     private LoginThread startLoginThread(int renewJaasLoginInterval) {
-        if (System.getProperty("java.security.auth.login.config") != null) {
-            saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
-            loginThread = new LoginThread("Server",this.saslServerCallbackHandler,renewJaasLoginInterval);
-            loginThread.start();
-            return loginThread;
-        }
-        return null;
+        saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
+        loginThread = new LoginThread("Server",this.saslServerCallbackHandler,renewJaasLoginInterval);
+        loginThread.start();
+        return loginThread;
     }
 
     private SaslServer createSaslServer() {
