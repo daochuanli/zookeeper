@@ -85,15 +85,9 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
 
     Thread thread;
     @Override
-    public void configure(InetSocketAddress addr, int maxcc, String requireClientAuthScheme, int renewJaasLoginInterval) throws IOException {
+    public void configure(InetSocketAddress addr, int maxcc) throws IOException {
         thread = new Thread(this, "NIOServerCxn.Factory:" + addr);
         thread.setDaemon(true);
-
-        // Use presence/absence of java.security.auth.login.config property
-        // as a boolean flag to decide where to start the ZooKeeperSaslServer.
-        if (System.getProperty("java.security.auth.login.config") != null) {
-            this.zooKeeperSaslServer = new ZooKeeperSaslServer(renewJaasLoginInterval);
-        }
 
         maxClientCnxns = maxcc;
         this.ss = ServerSocketChannel.open();
@@ -261,9 +255,6 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
             closeAll();
             thread.interrupt();
             thread.join();
-            if (zooKeeperSaslServer != null) {
-                zooKeeperSaslServer.shutdown();
-            }
         } catch (InterruptedException e) {
             LOG.warn("Ignoring interrupted exception during shutdown", e);
         } catch (Exception e) {

@@ -299,16 +299,10 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
     }
 
     @Override
-    public void configure(InetSocketAddress addr, int maxClientCnxns, String requireClientAuthScheme, int renewJaasLoginInterval)
+    public void configure(InetSocketAddress addr, int maxClientCnxns)
             throws IOException
     {
         localAddress = addr;
-        // Use presence/absence of java.security.auth.login.config property
-        // as a boolean flag to decide whether to start the ZooKeeperSaslServer.
-        if (System.getProperty("java.security.auth.login.config") != null) {
-            zooKeeperSaslServer = new ZooKeeperSaslServer(renewJaasLoginInterval);
-        }
-
         this.maxClientCnxns = maxClientCnxns;
     }
 
@@ -351,9 +345,6 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
 
         if (zkServer != null) {
             zkServer.shutdown();
-        }
-        if (zooKeeperSaslServer != null) {
-            zooKeeperSaslServer.shutdown();
         }
         synchronized(this) {
             killed = true;

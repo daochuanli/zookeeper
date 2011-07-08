@@ -174,7 +174,7 @@ public class FinalRequestProcessor implements RequestProcessor {
 
             // Disconnect non-SASL-authenticated sessions by checking request type: all non-createSession-request
             // types should cause an immediate session termination if authentication is not present.
-            String authScheme = zks.getServerCnxnFactory().getRequireClientAuthScheme();
+            String authScheme = zks.getServerCnxnFactory().requireClientAuthScheme;
 
             if (authScheme != null) {
                 boolean authenticated= false;

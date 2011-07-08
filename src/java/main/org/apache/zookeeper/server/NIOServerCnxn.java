@@ -98,7 +98,14 @@ public class NIOServerCnxn extends ServerCnxn {
         this.sock = sock;
         this.sk = sk;
         this.factory = factory;
-        this.zooKeeperSaslServer = factory.zooKeeperSaslServer;
+        if (this.factory.loginThread != null) {
+            LOG.info("SASL SERVER IS INITIALIZED.");
+            this.zooKeeperSaslServer = new ZooKeeperSaslServer(factory.loginThread);
+        }
+        else {
+            LOG.info("SASL SERVER IS NOT INITIALIZED.");
+        }
+
         if (zk != null) { 
             outstandingLimit = zk.getGlobalOutstandingLimit();
         }

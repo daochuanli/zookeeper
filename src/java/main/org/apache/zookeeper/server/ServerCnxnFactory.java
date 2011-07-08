@@ -24,14 +24,14 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 
 import javax.management.JMException;
+import javax.security.auth.login.Configuration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.jmx.MBeanRegistry;
+import org.apache.zookeeper.LoginThread;
 
 public abstract class ServerCnxnFactory {
-
-    ZooKeeperSaslServer zooKeeperSaslServer;
 
     public static final String ZOOKEEPER_SERVER_CNXN_FACTORY = "zookeeper.serverCnxnFactory";
 
@@ -52,20 +52,28 @@ public abstract class ServerCnxnFactory {
 
     public abstract void closeSession(long sessionId);
 
-    public void configure(InetSocketAddress addr,
-            int maxClientCnxns) throws IOException {
-        // requireClientAuthScheme is null: no client authentication scheme is required.
-        this.configure(addr,maxClientCnxns,(String)null,0);
+    public abstract void configure(InetSocketAddress addr,
+                                   int maxClientCnxns) throws IOException;
+
+    public String requireClientAuthScheme = null;
+
+    private SaslServerCallbackHandler saslServerCallbackHandler;
+    public LoginThread loginThread;
+
+    private void startLoginThread(int renewJaasLoginInterval) {
+        saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
+        loginThread = new LoginThread("Server",saslServerCallbackHandler,renewJaasLoginInterval);
+        loginThread.start();
     }
 
-    public abstract void configure(InetSocketAddress addr,
-            int maxClientCnxns, String requireClientAuthScheme, int renewJaasLoginInterval) throws IOException;
-
-    public String getRequireClientAuthScheme() {
-        if (zooKeeperSaslServer != null) {
-            return zooKeeperSaslServer.getRequireClientAuthScheme();
+    public void configure(InetSocketAddress addr, int maxClientCnxns, String requireClientAuthScheme, int renewJaasLoginInterval) throws IOException {
+        this.requireClientAuthScheme = requireClientAuthScheme;
+        // Use presence/absence of java.security.auth.login.config property
+        // as a boolean flag to decide where to start the LoginThread
+        if (System.getProperty("java.security.auth.login.config") != null) {
+            startLoginThread(renewJaasLoginInterval);
         }
-        return null;
+        configure(addr,maxClientCnxns);  
     }
 
     /** Maximum number of connections allowed from particular host (ip) */
@@ -113,7 +121,7 @@ public abstract class ServerCnxnFactory {
     static public ServerCnxnFactory createFactory(int clientPort,
             int maxClientCnxns) throws IOException
     {
-        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns, null, 0);
+        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns,null,0);
     }
 
     static public ServerCnxnFactory createFactory(int clientPort,

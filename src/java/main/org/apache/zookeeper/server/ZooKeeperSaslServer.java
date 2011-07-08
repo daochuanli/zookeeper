@@ -51,39 +51,14 @@ import org.apache.zookeeper.LoginThread;
 import org.apache.zookeeper.jmx.MBeanRegistry;
 
 public class ZooKeeperSaslServer {
-    private LoginThread loginThread;
     Logger LOG = LoggerFactory.getLogger(ZooKeeperSaslServer.class);
-    private String requireClientAuthScheme = null;
-    private SaslServerCallbackHandler saslServerCallbackHandler = null;
     private SaslServer saslServer;
 
-    ZooKeeperSaslServer(int renewJaasLoginInterval) {
-        saslServer = createSaslServer(renewJaasLoginInterval);
+    ZooKeeperSaslServer(final LoginThread loginThread) {
+        saslServer = createSaslServer(loginThread);
     }
 
-    public String getRequireClientAuthScheme() {
-        return requireClientAuthScheme;
-    }
-
-    public void shutdown() {
-        if (loginThread != null) {
-            loginThread.interrupt();
-            try {
-                loginThread.join();
-            } catch (InterruptedException e) {
-                LOG.warn("Ignoring interrupted exception during shutdown", e);
-            }
-        }
-    }
-
-    private void startLoginThread(int renewJaasLoginInterval) {
-        saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
-        loginThread = new LoginThread("Server",this.saslServerCallbackHandler,renewJaasLoginInterval);
-        loginThread.start();
-    }
-
-    private SaslServer createSaslServer(int renewJaasLoginInterval) {
-        startLoginThread(renewJaasLoginInterval);
+    private SaslServer createSaslServer(final LoginThread loginThread) {
         synchronized (loginThread) {
             Subject subject = loginThread.getLogin().getSubject();
             if (subject != null) {
@@ -115,11 +90,11 @@ public class ZooKeeperSaslServer {
                                 public SaslServer run() {
                                     try {
                                         SaslServer saslServer;
-                                        saslServer = Sasl.createSaslServer(mech, servicePrincipalName, serviceHostname, null, saslServerCallbackHandler);
+                                        saslServer = Sasl.createSaslServer(mech, servicePrincipalName, serviceHostname, null, loginThread.callbackHandler);
                                         return saslServer;
                                     }
                                     catch (SaslException e) {
-                                        LOG.error("Zookeeper Quorum Member failed to create a SaslServer to interact with a client during session initiation: " + e);
+                                        LOG.error("Zookeeper Server failed to create a SaslServer to interact with a client during session initiation: " + e);
                                         e.printStackTrace();
                                         return null;
                                     }
@@ -141,7 +116,7 @@ public class ZooKeeperSaslServer {
                     // JAAS non-GSSAPI authentication: assuming and supporting only DIGEST-MD5 mechanism for now.
                     // TODO: use 'authMech=' value in zoo.cfg.
                     try {
-                        SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","zk-sasl-md5",null, saslServerCallbackHandler);
+                        SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","zk-sasl-md5",null, loginThread.callbackHandler);
                         return saslServer;
                     }
                     catch (SaslException e) {
@@ -152,110 +127,6 @@ public class ZooKeeperSaslServer {
         }
         LOG.error("failed to create saslServer object.");
         return null;
-    }
-
-    private class SaslServerCallbackHandler implements CallbackHandler {
-        private String userName = null;
-        private Map<String,String> credentials = new HashMap<String,String>();
-
-        public SaslServerCallbackHandler(Configuration configuration) {
-            AppConfigurationEntry configurationEntries[] = configuration.getAppConfigurationEntry("Server");
-
-            if (configurationEntries == null) {
-                String errorMessage = "could not find a 'Server' entry in this configuration: server cannot start.";
-                LOG.error(errorMessage);
-                throw(new NullPointerException(errorMessage));
-            }
-            credentials.clear();
-            for(AppConfigurationEntry entry: configurationEntries) {
-                Map<String,?> options = entry.getOptions();
-                // Populate DIGEST-MD5 user -> password map with JAAS configuration entries from the "Server" section.
-                // Usernames are distinguished from other options by prefixing the username with a "user_" prefix.
-                Iterator it = options.entrySet().iterator();
-                while (it.hasNext()) {
-                    Map.Entry pair = (Map.Entry)it.next();
-                    String key = (String)pair.getKey();
-                    if (key.substring(0,5).equals("user_")) {
-                        String userName = key.substring(5);
-                        credentials.put(userName,(String)pair.getValue());
-                    }
-                }
-            }
-            return;
-        }
-
-        public void handle(Callback[] callbacks) throws
-                UnsupportedCallbackException {
-            for (Callback callback : callbacks) {
-                if (callback instanceof NameCallback) {
-                    NameCallback nc = (NameCallback) callback;
-                    // check to see if this user is in the user password database.
-                    if (credentials.get(nc.getDefaultName()) != null) {
-                        nc.setName(nc.getDefaultName());
-                        this.userName = nc.getDefaultName();
-                    }
-                    else { // no such user.
-                        LOG.warn("User '" + nc.getDefaultName() + "' not found in list of DIGEST-MD5 authenticateable users.");
-                    }
-                }
-                else {
-                    if (callback instanceof PasswordCallback) {
-                        PasswordCallback pc = (PasswordCallback) callback;
-
-                        if ((this.userName.equals("super")
-                              &&
-                              (System.getProperty("zookeeper.SASLAuthenticationProvider.superPassword") != null))) {
-                            // superuser: use Java system property for password, if available.
-                            pc.setPassword(System.getProperty("zookeeper.SASLAuthenticationProvider.superPassword").toCharArray());
-                        }
-                        else {
-                            if (this.credentials.get(this.userName) != null) {
-                                pc.setPassword(this.credentials.get(this.userName).toCharArray());
-                            }
-                            else {
-                                LOG.warn("No password found for user: " + this.userName);
-                            }
-                        }
-                    }
-                    else {
-                        if (callback instanceof RealmCallback) {
-                            RealmCallback rc = (RealmCallback) callback;
-                            LOG.debug("client supplied realm: " + rc.getDefaultText());
-                            rc.setText(rc.getDefaultText());
-                        }
-                        else {
-                            if (callback instanceof AuthorizeCallback) {
-                                AuthorizeCallback ac = (AuthorizeCallback) callback;
-
-                                String authenticationID = ac.getAuthenticationID();
-                                String authorizationID = ac.getAuthorizationID();
-
-                                LOG.info("Successfully authenticated client: authenticationID=" + authenticationID + ";  authorizationID=" + authorizationID + ".");
-                                if (authenticationID.equals(authorizationID)) {
-                                    LOG.debug("setAuthorized(true) since " + authenticationID + "==" + authorizationID);
-                                    ac.setAuthorized(true);
-                                } else {
-                                    LOG.debug("setAuthorized(true), even though " + authenticationID + "!=" + authorizationID + ".");
-                                    ac.setAuthorized(true);
-                                }
-                                if (ac.isAuthorized()) {
-                                    LOG.debug("isAuthorized() since ac.isAuthorized() == true");
-                                    // canonicalize authorization id: remove hostname (if any).
-                                    String userName = authorizationID;
-                                    int slashIndex = userName.indexOf('/');
-                                    if (slashIndex != -1) {
-                                        LOG.debug("Removing hostname from authorizationID: " + authorizationID);
-                                        userName = userName.substring(0,slashIndex);
-                                    }
-                                    LOG.info("Setting authorizedID to username: " + userName);
-                                    ac.setAuthorizedID(userName);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     public byte[] evaluateResponse(byte[] response) throws SaslException {

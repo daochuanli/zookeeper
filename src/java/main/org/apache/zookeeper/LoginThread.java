@@ -36,7 +36,7 @@ public class LoginThread extends Thread {
 
     private LoginContext loginContext;
     private String loginContextName;
-    private CallbackHandler callbackHandler;
+    public CallbackHandler callbackHandler;
     private int sleepInterval;
 
     /**
