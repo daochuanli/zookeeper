@@ -99,11 +99,7 @@ public class NIOServerCnxn extends ServerCnxn {
         this.sk = sk;
         this.factory = factory;
         if (this.factory.loginThread != null) {
-            LOG.info("SASL SERVER IS INITIALIZED.");
             this.zooKeeperSaslServer = new ZooKeeperSaslServer(factory.loginThread);
-        }
-        else {
-            LOG.info("SASL SERVER IS NOT INITIALIZED.");
         }
 
         if (zk != null) { 
