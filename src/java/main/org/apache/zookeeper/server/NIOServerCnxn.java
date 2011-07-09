@@ -101,7 +101,6 @@ public class NIOServerCnxn extends ServerCnxn {
         if (this.factory.loginThread != null) {
             this.zooKeeperSaslServer = new ZooKeeperSaslServer(factory.loginThread);
         }
-
         if (zk != null) { 
             outstandingLimit = zk.getGlobalOutstandingLimit();
         }
