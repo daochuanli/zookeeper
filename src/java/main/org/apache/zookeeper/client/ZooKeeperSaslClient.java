@@ -148,7 +148,7 @@ public class ZooKeeperSaslClient {
 
         LOG.debug("saslToken (server) length: " + saslToken.length);
 
-        if (!(saslClient.isComplete() == true)) {
+        if (!(saslClient.isComplete())) {
             try {
                 saslToken = createSaslToken(saslToken);
                 if (saslToken != null) {
@@ -156,7 +156,7 @@ public class ZooKeeperSaslClient {
                     queueSaslPacket(saslToken);
                 }
 
-                if (saslClient.isComplete() == true) {
+                if (saslClient.isComplete()) {
                     LOG.info("SASL authentication with Zookeeper server is successful.");
                     cnxn.queueEvent(new WatchedEvent(
                       Watcher.Event.EventType.None,
@@ -250,7 +250,7 @@ public class ZooKeeperSaslClient {
         States returnState = state;
         switch(state) {
             case SASL_INITIAL:
-                if (isComplete() == true) {
+                if (isComplete()) {
                     // It should never be possible for the client to be in
                     // SASL_INITIAL state with a saslClient being in Complete state.
                     LOG.warn("Unexpectedly, SASL negotiation object is in " +
@@ -261,7 +261,7 @@ public class ZooKeeperSaslClient {
                     returnState = States.AUTH_FAILED;
                 }
                 else {
-                    if (hasInitialResponse() == true) {
+                    if (hasInitialResponse()) {
                         LOG.debug("saslClient.hasInitialResponse()==true");
                         LOG.debug("hasInitialResponse() == true; (1) SASL token length = " + saslToken.length);
                         try {
@@ -293,7 +293,7 @@ public class ZooKeeperSaslClient {
                 }
                 break;
             case SASL:
-                if (isComplete() == true) {
+                if (isComplete()) {
                     // TODO : determine whether authentication failed or
                     // not. ZK server knows, but client (running this code here)
                     // does not.
@@ -358,6 +358,4 @@ public class ZooKeeperSaslClient {
             }
         }
     }
-
-
 }
