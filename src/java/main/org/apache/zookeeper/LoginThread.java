@@ -91,7 +91,7 @@ public class LoginThread extends Thread {
                 }
                 this.loginContext = new LoginContext(loginContextName,callbackHandler);
                 this.loginContext.login();
-                LOG.info("successfully logged in.");
+                LOG.info("successfully logged in using login context '"+loginContextName+"'.");
             }
             catch (LoginException e) {
                 LOG.error("Error while trying to do subject authentication using '"+this.loginContextName+"' section of java.security.auth.login.config file: " + System.getProperty("java.security.auth.login.config") + ":" + e);
