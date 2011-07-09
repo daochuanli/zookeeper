@@ -376,10 +376,12 @@ public class ClientCnxn {
 
     }
 
+    // used by ZooKeeperSaslClient.prepareSaslResponseToServer().
     public void queueEvent(WatchedEvent event) {
         eventThread.queueEvent(event);
     }
 
+    // used by ZooKeeperSaslClient.queueSaslPacket().
     public void queuePacket(RequestHeader h, ReplyHeader r, Record request,
             Record response, AsyncCallback cb) {
         queuePacket(h,r,request,response, cb, null, null, this, null);
