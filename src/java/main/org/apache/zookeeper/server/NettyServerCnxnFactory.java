@@ -334,7 +334,15 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
     @Override
     public void shutdown() {
         LOG.info("shutdown called " + localAddress);
-        
+        if ((loginThread != null) && loginThread.isAlive()) {
+            try {
+                loginThread.interrupt();
+                loginThread.join();
+            }
+            catch (InterruptedException e) {
+                // catch e..
+            }
+        }
         // null if factory never started
         if (parentChannel != null) {
             parentChannel.close().awaitUninterruptibly();
