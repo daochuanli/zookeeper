@@ -76,7 +76,7 @@ public class LoginThread extends Thread {
                 // A creator object O of a LoginThread object should call .interrupt() and .join() on its
                 // LoginThread object prior to O's shutting down: see ZooKeeperSaslClient.close() and 
                 // ZooKeeperSaslServer.shutdown().
-                LOG.error("caught InterruptedException while sleeping. Breaking out of endless loop.");
+                LOG.debug("caught InterruptedException while sleeping. Breaking out of endless loop.");
                 break;
             }
             login();
