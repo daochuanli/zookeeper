@@ -88,7 +88,6 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
     public void configure(InetSocketAddress addr, int maxcc) throws IOException {
         thread = new Thread(this, "NIOServerCxn.Factory:" + addr);
         thread.setDaemon(true);
-
         maxClientCnxns = maxcc;
         this.ss = ServerSocketChannel.open();
         ss.socket().setReuseAddress(true);
