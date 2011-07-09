@@ -85,8 +85,9 @@ public class ZooKeeperSaslServer {
 
                         final String mech = "GSSAPI";   // TODO: should depend on zoo.cfg specified mechs, but if subject is non-null, it can be assumed to be GSSAPI.
 
-                        LOG.info("serviceHostname="+serviceHostname);
-                        LOG.info("servicePrincipalName="+servicePrincipalName);
+                        LOG.debug("serviceHostname is '"+ serviceHostname + "'");
+                        LOG.debug("servicePrincipalName is "+ servicePrincipalName + "'");
+                        LOG.debug("SASL mechanism(mech) is "+ mech +"'");
 
                         try {
                             return Subject.doAs(subject,new PrivilegedExceptionAction<SaslServer>() {
