@@ -1,15 +1,16 @@
 #!/bin/sh
 # TODO: fold into ant (current) or maven (future).
-# example usage:
+# example usage (run in top-level zookeeper directory) :
 #
-#    repeat.sh QuorumPeerMainTest
-test=$1
+#    src/repeat.sh ZooKeeperTest
+test_output=yes
+testcase=$1
 
 i=0
-ant clean test-init
+ant test-init
 while [ "$?" -eq "0" ] ; do
-  i=$((i+1))
-   ant junit.run -Dtestcase=$test
+  i=`expr $i + 1`
+  ant -Dtest.output=$test_output -Dtestcase=$testcase junit.run
 done
 
 echo "test:' $test ' failed on iteration $i."
