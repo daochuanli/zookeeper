@@ -25,10 +25,13 @@ package org.apache.zookeeper;
  * and Zookeeper.java:startLoginThread() for client-side usage.
  */
 
+import javax.security.auth.kerberos.KerberosKey;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.callback.CallbackHandler;
 import org.apache.log4j.Logger;
+import javax.security.auth.kerberos.KerberosTicket;
+import javax.security.auth.Subject;
 
 public class LoginThread extends Thread {
 
@@ -40,6 +43,12 @@ public class LoginThread extends Thread {
     private int sleepInterval;
 
     public boolean validCredentials = false;
+
+    private static final float TICKET_RENEW_WINDOW = 0.80f;
+
+    private Subject subject = null;
+    private boolean isKeytab = false;
+    private boolean isKrbTkt = false;
 
     /**
      * LoginThread constructor. The constructor starts the thread used
@@ -62,12 +71,17 @@ public class LoginThread extends Thread {
         try {
             this.login();
             validCredentials = true;
+            // determine Kerberos-related info, if any.
+            this.subject = loginContext.getSubject();
+            this.isKeytab = !subject.getPrivateCredentials(KerberosKey.class).isEmpty();
+            this.isKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
         }
         catch (LoginException e) {
             LOG.error("Error while trying to do subject authentication using '"
                     + this.loginContextName+"' section of "
                     + System.getProperty("java.security.auth.login.config")
                     + ":" + e + ". Interrupting loginThread now; will exit.");
+	    LOG.error("Zookeeper client will connect without SASL authentication, if permitted by Zookeeper server.");
             validCredentials = false;
             this.interrupt();
         }
@@ -124,6 +138,16 @@ public class LoginThread extends Thread {
             return this.loginContext;
         }
     }
+
+    // c.f. o.a.hadoop.security.UserGroupInformation.
+    private long getRefreshTime(KerberosTicket tgt) {
+        long start = tgt.getStartTime().getTime();
+        long end = tgt.getEndTime().getTime();
+        return start + (long) ((end - start) * TICKET_RENEW_WINDOW);
+    }
+
+
+
     
 }
 
