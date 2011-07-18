@@ -328,7 +328,10 @@ public class ZooKeeperSaslClient {
                 else {
                     if (callback instanceof PasswordCallback) {
                         PasswordCallback pc = (PasswordCallback)callback;
-                        pc.setPassword(this.password.toCharArray());
+			if (password != null) 
+			    pc.setPassword(this.password.toCharArray());
+			else 
+			    LOG.warn("could not login: no password found.");
                     }
                     else {
                         if (callback instanceof RealmCallback) {
