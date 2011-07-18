@@ -31,15 +31,10 @@ import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.callback.CallbackHandler;
 
-import com.sun.org.apache.bcel.internal.generic.NEW;
 import org.apache.log4j.Logger;
-import sun.awt.shell.ShellFolder;
-import sun.security.krb5.internal.crypto.NullEType;
-
 import javax.security.auth.kerberos.KerberosTicket;
 import javax.security.auth.Subject;
 import java.io.IOException;
-import java.nio.channels.NonWritableChannelException;
 import java.util.Set;
 
 public class LoginThread {
@@ -54,7 +49,9 @@ public class LoginThread {
     public boolean validCredentials = false;
 
     private static final float TICKET_RENEW_WINDOW = 0.80f;
+    private static final long MIN_TIME_BEFORE_RELOGIN = 10 * 60 * 1000L;
 
+    private long lastLogin;
     private Subject subject = null;
     private boolean isKeytab = false;
     private boolean isKrbTkt = false;
@@ -128,43 +125,7 @@ public class LoginThread {
                     + this.loginContextName+"' section of "
                     + System.getProperty("java.security.auth.login.config")
                     + ":" + e + ". Interrupting loginThread now; will exit.");
-	    LOG.error("Zookeeper client will connect without SASL authentication, if permitted by Zookeeper server.");
             validCredentials = false;
-            this.interrupt();
-        }
-    }
-
-    public void run() {
-        if (this.sleepInterval < 1000) {
-            LOG.warn("Sleep interval: " + this.sleepInterval + " is too small: not sleeping; simply exiting run().");
-            return;
-        }
-        LOG.info("Login Refresh thread started. Will refresh login every " + this.sleepInterval + " milliseconds.");
-
-        while(true) {
-            LOG.info("sleeping.");
-            try {
-                // TODO: make this configurable: should run after 80% of time
-                // until last ticket expiry.
-                Thread.sleep(sleepInterval);
-            }
-            catch (InterruptedException e) {
-                // A creator of a LoginThread object should call .interrupt() and .join() on its
-                // LoginThread object prior to the creator's shutting down.
-                LOG.error("caught InterruptedException while sleeping. Breaking out of endless loop.");
-                break;
-            }
-            try {
-                login();
-            }
-            catch (LoginException e) {
-                LOG.error("Error while trying to do subject authentication using '"
-                        + this.loginContextName+"' section of "
-                        + System.getProperty("java.security.auth.login.config")
-                        + ":" + e + ". Interrupting loginThread now; will exit.");
-                validCredentials = false;
-                break;
-            }
         }
     }
 
@@ -177,6 +138,7 @@ public class LoginThread {
             this.loginContext.login();
             LOG.info("successfully logged in.");
             validCredentials = true;
+            setLastLogin(System.currentTimeMillis());
         }
     }
     
@@ -198,14 +160,64 @@ public class LoginThread {
         for(KerberosTicket ticket: tickets) {
             KerberosPrincipal server = ticket.getServer();
             if (server.getName().equals("krbtgt/" + server.getRealm() + "@" + server.getRealm())) {
-                LOG.debug("Found tgt " + ticket ".");
+                LOG.debug("Found tgt " + ticket + ".");
                 return ticket;
             }
         }
         return null;
     }
 
+    public synchronized void reloginFromTicketCache()
+        throws IOException {
+        if (!isKrbTkt) {
+            return;
+        }
+        LoginContext login = getLogin();
+        if (login == null) {
+            throw new IOException("login must be done first");
+        }
+        if (!hasSufficentTimeElapsed()) {
+            return;
+        }
+        try {
+            LOG.info("Initiating logout for " + getUserName());
+            //clear up the Kerberos state. But the tokens are not cleared! As per
+            //the Java kerberos login module code, only the kerberos credentials
+            //are cleared.
+            login.logout();
+            //login and also update the subject field of this instance to
+            //have the new credentials (pass it to the LoginContext constructor)
+            login =
+              new LoginContext(loginContextName,subject);
+            LOG.info("Initiating re-login for " + getUserName());
+            login.login();
+        } catch (LoginException le) {
+            throw new IOException("Login failure for " + getUserName(),le);
+        }
+    }
 
-    
+    private String getUserName() {
+        return "zookeeper";
+    }
+
+    private boolean hasSufficentTimeElapsed() {
+        long now = System.currentTimeMillis();
+        if (now - getLastLogin() < MIN_TIME_BEFORE_RELOGIN) {
+            LOG.warn("Not attempting to re-login since the last re-login was " +
+              "attempted less than " + (MIN_TIME_BEFORE_RELOGIN/1000) + " seconds"+ "before.");
+            return false;
+        }
+        setLastLogin(now);
+        return true;
+    }
+
+    private void setLastLogin(long loginTime) {
+        lastLogin = loginTime;
+    }
+
+    private long getLastLogin() {
+        return lastLogin;
+    }
+
 }
 
