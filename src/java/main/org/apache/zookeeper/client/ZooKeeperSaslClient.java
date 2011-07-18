@@ -73,6 +73,10 @@ public class ZooKeeperSaslClient {
             // ctx is the ZooKeeperSaslClient object. We use this object's prepareSaslResponseToServer() method
             // to reply to the Zookeeper Server's SASL token
             ZooKeeperSaslClient client = ((ClientCnxn)ctx).zooKeeperSaslClient;
+	    if (client == null) {
+		LOG.warn("sasl client was unexpectedly null: cannot respond to Zookeeper server.");
+		return;
+	    }
             byte[] usedata = data;
             if (data != null) {
                 LOG.debug("ServerSaslResponseCallback(): saslToken server response: (length="+usedata.length+")");
@@ -87,6 +91,13 @@ public class ZooKeeperSaslClient {
 
     private void startLoginThread() {
         // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
+	if (loginThread != null) {
+	    LOG.warn("stopping existing login thread.");
+	    if (this.saslClient == null) {
+		LOG.warn("(this loginThread failed to create a sasl client).");
+	    }
+	    this.close();
+	}
         loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",120 * 1000));
         loginThread.start();
     }
@@ -226,7 +237,11 @@ public class ZooKeeperSaslClient {
     }
 
     public boolean isComplete() {
-        return saslClient.isComplete();
+        if (saslClient != null) {
+	    return saslClient.isComplete();
+        }
+        LOG.warn("saslClient is null: client could not authenticate properly.");
+        return false;
     }
 
     public void close() {
@@ -243,7 +258,13 @@ public class ZooKeeperSaslClient {
     }
 
     private boolean hasInitialResponse() {
-        return saslClient.hasInitialResponse();
+	if (saslClient != null) {
+            return saslClient.hasInitialResponse();
+	}
+	else {
+	    LOG.warn("saslClient is null: client could not authenticate properly.");
+	}
+	return false;
     }
 
     public States stateTransition(States state) {
