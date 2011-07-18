@@ -245,15 +245,7 @@ public class ZooKeeperSaslClient {
 
     public void close() {
         LOG.debug("ZookeeperSaslClient object is shutting down.");
-        if (loginThread.isAlive()) {
-            try {
-               loginThread.interrupt();
-               loginThread.join();
-            }
-            catch (InterruptedException e) {
-                // catch e..
-            }
-        }
+        loginThread.shutdown();
     }
 
     private boolean hasInitialResponse() {

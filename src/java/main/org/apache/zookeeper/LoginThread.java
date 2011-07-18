@@ -34,8 +34,15 @@ import javax.security.auth.callback.CallbackHandler;
 import org.apache.log4j.Logger;
 import javax.security.auth.kerberos.KerberosTicket;
 import javax.security.auth.Subject;
+import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Map;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class LoginThread {
 
@@ -55,7 +62,7 @@ public class LoginThread {
     private Subject subject = null;
     private boolean isKeytab = false;
     private boolean isKrbTkt = false;
-
+    private Thread t = null;
     /**
      * LoginThread constructor. The constructor starts the thread used
      * to periodically re-login to the Kerberos Ticket Granting Server.
@@ -82,7 +89,7 @@ public class LoginThread {
             this.isKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
 
             if (isKrbTkt) {
-                Thread t = new Thread(new Runnable() {
+                t = new Thread(new Runnable() {
                     public void run() {
                         String cmd = "/usr/bin/kinit";
                         KerberosTicket tgt = getTGT();
@@ -217,6 +224,18 @@ public class LoginThread {
 
     private long getLastLogin() {
         return lastLogin;
+    }
+
+    public void shutdown() {
+        if ((t != null) && (t.isAlive())) {
+            t.interrupt();
+            try {
+                t.join();
+            }
+            catch (InterruptedException e) {
+                LOG.error("error while waiting for loginThread to shutdown: " + e);
+            }
+        }
     }
 
 }
