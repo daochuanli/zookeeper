@@ -88,7 +88,7 @@ public class LoginThread {
             this.isKeytab = !subject.getPrivateCredentials(KerberosKey.class).isEmpty();
             this.isKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
 
-            if (isKrbTkt) {
+            if (this.isKrbTkt == true) {
                 t = new Thread(new Runnable() {
                     public void run() {
                         String cmd = "/usr/bin/kinit";
@@ -125,6 +125,7 @@ public class LoginThread {
                         }
                     }
                 });
+                t.start();
             }
         }
         catch (LoginException e) {
