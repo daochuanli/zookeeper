@@ -63,7 +63,6 @@ public abstract class ServerCnxnFactory {
     private void startLoginThread(int renewJaasLoginInterval) {
         saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
         loginThread = new LoginThread("Server",saslServerCallbackHandler,renewJaasLoginInterval);
-        loginThread.start();
     }
 
     public void configure(InetSocketAddress addr, int maxClientCnxns, String requireClientAuthScheme, int renewJaasLoginInterval) throws IOException {
