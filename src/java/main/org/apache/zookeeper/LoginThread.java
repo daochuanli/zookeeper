@@ -26,14 +26,23 @@ package org.apache.zookeeper;
  */
 
 import javax.security.auth.kerberos.KerberosKey;
+import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.callback.CallbackHandler;
+
+import com.sun.org.apache.bcel.internal.generic.NEW;
 import org.apache.log4j.Logger;
+import sun.awt.shell.ShellFolder;
+import sun.security.krb5.internal.crypto.NullEType;
+
 import javax.security.auth.kerberos.KerberosTicket;
 import javax.security.auth.Subject;
+import java.io.IOException;
+import java.nio.channels.NonWritableChannelException;
+import java.util.Set;
 
-public class LoginThread extends Thread {
+public class LoginThread {
 
     Logger LOG = Logger.getLogger(LoginThread.class);
 
@@ -66,7 +75,6 @@ public class LoginThread extends Thread {
         this.loginContextName = loginContextName;
         this.callbackHandler = callbackHandler;
         this.sleepInterval = sleepInterval;
-        this.setDaemon(true);
 
         try {
             this.login();
@@ -75,6 +83,45 @@ public class LoginThread extends Thread {
             this.subject = loginContext.getSubject();
             this.isKeytab = !subject.getPrivateCredentials(KerberosKey.class).isEmpty();
             this.isKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
+
+            if (isKrbTkt) {
+                Thread t = new Thread(new Runnable() {
+                    public void run() {
+                        String cmd = "/usr/bin/kinit";
+                        KerberosTicket tgt = getTGT();
+                        if (tgt == null) {
+                            return;
+                        }
+                        long nextRefresh = getRefreshTime(tgt);
+                        while (true) {
+                            try {
+                                long now = System.currentTimeMillis();
+                                LOG.debug("Current time is " + now);
+                                LOG.debug("Next refresh is " + nextRefresh);
+                                if (now < nextRefresh) {
+                                    Thread.sleep(nextRefresh - now);
+                                }
+                                Shell.execCommand(cmd,"-R");
+                                LOG.debug("renewed ticket");
+                                reloginFromTicketCache();
+                                tgt = getTGT();
+                                if (tgt == null) {
+                                    LOG.warn("No TGT after renewal. Aborting renew thread for " + getUserName());
+                                }
+                                nextRefresh = Math.max(getRefreshTime(tgt), now + MIN_TIME_BEFORE_RELOGIN);
+                            }
+                            catch (InterruptedException ie) {
+                                LOG.warn("Terminating renewal thread");
+                            }
+                            catch (IOException ie) {
+                                LOG.warn("Exception encountered while running the" +
+                                  " renewal command. Aborting renew thread", ie);
+                                return;
+                            }
+                        }
+                    }
+                });
+            }
         }
         catch (LoginException e) {
             LOG.error("Error while trying to do subject authentication using '"
@@ -146,6 +193,17 @@ public class LoginThread extends Thread {
         return start + (long) ((end - start) * TICKET_RENEW_WINDOW);
     }
 
+    private synchronized KerberosTicket getTGT() {
+        Set<KerberosTicket> tickets = subject.getPrivateCredentials(KerberosTicket.class);
+        for(KerberosTicket ticket: tickets) {
+            KerberosPrincipal server = ticket.getServer();
+            if (server.getName().equals("krbtgt/" + server.getRealm() + "@" + server.getRealm())) {
+                LOG.debug("Found tgt " + ticket ".");
+                return ticket;
+            }
+        }
+        return null;
+    }
 
 
     
