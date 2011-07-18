@@ -21,8 +21,8 @@ package org.apache.zookeeper;
 /** 
  * This class is responsible for refreshing Kerberos credentials for
  * logins for both Zookeeper client and server.
- * See o.a.z.client.ZooKeeperSaslClient.java:startLoginThread() for client-side usage
- * and o.a.z.server.ZookeeperSaslServer.java:startLoginThread() for server-side usage.
+ * See ServerCnxnFactory.java:startLoginThread() for server-side usage
+ * and Zookeeper.java:startLoginThread() for client-side usage.
  */
 
 import javax.security.auth.login.LoginContext;
@@ -38,6 +38,8 @@ public class LoginThread extends Thread {
     private String loginContextName;
     public CallbackHandler callbackHandler;
     private int sleepInterval;
+
+    public boolean validCredentials = false;
 
     /**
      * LoginThread constructor. The constructor starts the thread used
@@ -57,7 +59,18 @@ public class LoginThread extends Thread {
         this.sleepInterval = sleepInterval;
         this.setDaemon(true);
 
-        this.login();
+        try {
+            this.login();
+            validCredentials = true;
+        }
+        catch (LoginException e) {
+            LOG.error("Error while trying to do subject authentication using '"
+                    + this.loginContextName+"' section of "
+                    + System.getProperty("java.security.auth.login.config")
+                    + ":" + e + ". Interrupting loginThread now; will exit.");
+            validCredentials = false;
+            this.interrupt();
+        }
     }
 
     public void run() {
@@ -70,32 +83,39 @@ public class LoginThread extends Thread {
         while(true) {
             LOG.info("sleeping.");
             try {
-                   Thread.sleep(sleepInterval);
+                // TODO: make this configurable: should run after 80% of time
+                // until last ticket expiry.
+                Thread.sleep(sleepInterval);
             }
             catch (InterruptedException e) {
-                // A creator object O of a LoginThread object should call .interrupt() and .join() on its
-                // LoginThread object prior to O's shutting down: see ZooKeeperSaslClient.close(),
-                // NIOServerCnxnFactory.shutdown(), and NettyServerCnxnFactory.shutdown().
-                LOG.debug("caught InterruptedException while sleeping. Breaking out of endless loop.");
+                // A creator of a LoginThread object should call .interrupt() and .join() on its
+                // LoginThread object prior to the creator's shutting down.
+                LOG.error("caught InterruptedException while sleeping. Breaking out of endless loop.");
                 break;
             }
-            login();
+            try {
+                login();
+            }
+            catch (LoginException e) {
+                LOG.error("Error while trying to do subject authentication using '"
+                        + this.loginContextName+"' section of "
+                        + System.getProperty("java.security.auth.login.config")
+                        + ":" + e + ". Interrupting loginThread now; will exit.");
+                validCredentials = false;
+                break;
+            }
         }
     }
 
-    public void login() {
+    public void login() throws LoginException {
         synchronized(this) {
-            try {
-                if (this.loginContext != null) {
-                    this.loginContext.logout();
-                }
-                this.loginContext = new LoginContext(loginContextName,callbackHandler);
-                this.loginContext.login();
-                LOG.info("successfully logged in using login context '"+loginContextName+"' in file: '" + System.getProperty("java.security.auth.login.config") + "'.");
+            if (this.loginContext != null) {
+                this.loginContext.logout();
             }
-            catch (LoginException e) {
-                LOG.error("Error while trying to do subject authentication using '"+this.loginContextName+"' section of java.security.auth.login.config file: " + System.getProperty("java.security.auth.login.config") + ":" + e);
-            }
+            this.loginContext = new LoginContext(loginContextName,callbackHandler);
+            this.loginContext.login();
+            LOG.info("successfully logged in.");
+            validCredentials = true;
         }
     }
     
