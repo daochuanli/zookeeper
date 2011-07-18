@@ -87,7 +87,7 @@ public class ZooKeeperSaslClient {
 
     private void startLoginThread() {
         // zookeeper.client.ticket.renewal defaults to 19 hours (about 80% of 24 hours, which is a typical ticket expiry interval).
-        loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",19*60*60*1000));
+        loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",120 * 1000));
         loginThread.start();
     }
 
