@@ -98,7 +98,7 @@ public class ZooKeeperSaslClient {
 	    }
 	    this.close();
 	}
-        loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",120 * 1000));
+        loginThread = new LoginThread("Client",new ClientCallbackHandler(null),Integer.getInteger("zookeeper.client.ticket.renewal",60 * 1000));
         loginThread.start();
     }
 
