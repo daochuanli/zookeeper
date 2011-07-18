@@ -34,15 +34,9 @@ import javax.security.auth.callback.CallbackHandler;
 import org.apache.log4j.Logger;
 import javax.security.auth.kerberos.KerberosTicket;
 import javax.security.auth.Subject;
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Map;
+import java.util.Date;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class LoginThread {
 
@@ -51,7 +45,6 @@ public class LoginThread {
     private LoginContext loginContext;
     private String loginContextName;
     public CallbackHandler callbackHandler;
-    private int sleepInterval;
 
     public boolean validCredentials = false;
 
@@ -60,7 +53,6 @@ public class LoginThread {
 
     private long lastLogin;
     private Subject subject = null;
-    private boolean isKeytab = false;
     private boolean isKrbTkt = false;
     private Thread t = null;
     /**
@@ -78,14 +70,12 @@ public class LoginThread {
     public LoginThread(String loginContextName, CallbackHandler callbackHandler, Integer sleepInterval) {
         this.loginContextName = loginContextName;
         this.callbackHandler = callbackHandler;
-        this.sleepInterval = sleepInterval;
 
         try {
             this.login();
             validCredentials = true;
             // determine Kerberos-related info, if any.
             this.subject = loginContext.getSubject();
-            this.isKeytab = !subject.getPrivateCredentials(KerberosKey.class).isEmpty();
             this.isKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
 
             if (this.isKrbTkt == true) {
@@ -103,6 +93,8 @@ public class LoginThread {
                                 LOG.debug("Current time is " + now);
                                 LOG.debug("Next refresh is " + nextRefresh);
                                 if (now < nextRefresh) {
+                                    Date until = new Date(nextRefresh);
+                                    LOG.info("TGT refresh thread sleeping until : " + until.toString());
                                     Thread.sleep(nextRefresh - now);
                                 }
                                 Shell.execCommand(cmd,"-R");
