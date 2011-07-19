@@ -197,7 +197,7 @@ public class LoginThread {
 
     private String getPrincipalName() {
         try {
-            return getLogin().getSubject().toString();
+            return (getLogin().getSubject().getPrincipals(KerberosPrincipal.class).toArray())[0].toString();
         }
         catch (NullPointerException e) {
             LOG.warn("could not display principal name because login or login's subject was null: returning '(no principal found)'.");
