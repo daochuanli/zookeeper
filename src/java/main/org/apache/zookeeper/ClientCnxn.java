@@ -942,7 +942,8 @@ public class ClientCnxn {
                     }
 
 
-                    if (state == States.CONNECTED) {
+                    if ((state == States.CONNECTED) && (zooKeeperSaslClient != null)
+                        && (zooKeeperSaslClient.isComplete() != true)) {
                         // do SASL processing, if any. afterwards state will be either CONNECTED or AUTH_FAILED.
                         state = zooKeeperSaslClient.stateTransition(state);
                         if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {

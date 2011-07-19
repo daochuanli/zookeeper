@@ -72,6 +72,10 @@ public class ZooKeeperSaslClient {
         this.saslClient = createSaslClient(serverPrincipal);
     }
 
+    public boolean isComplete() {
+        return (saslState == SaslState.COMPLETE);
+    }
+
     public static class ServerSaslResponseCallback implements AsyncCallback.DataCallback {
         public void processResult(int rc, String path, Object ctx, byte data[], Stat stat) {
             // processResult() is used by ClientCnxn's sendThread to respond to
