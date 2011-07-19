@@ -60,17 +60,17 @@ public abstract class ServerCnxnFactory {
     private SaslServerCallbackHandler saslServerCallbackHandler;
     public LoginThread loginThread;
 
-    private void startLoginThread(int renewJaasLoginInterval) {
+    private void startLoginThread() {
         saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
-        loginThread = new LoginThread("Server",saslServerCallbackHandler,renewJaasLoginInterval);
+        loginThread = new LoginThread("Server",saslServerCallbackHandler);
     }
 
-    public void configure(InetSocketAddress addr, int maxClientCnxns, String requireClientAuthScheme, int renewJaasLoginInterval) throws IOException {
+    public void configure(InetSocketAddress addr, int maxClientCnxns, String requireClientAuthScheme) throws IOException {
         this.requireClientAuthScheme = requireClientAuthScheme;
         // Use presence/absence of java.security.auth.login.config property
         // as a boolean flag to decide where to start the LoginThread
         if (System.getProperty("java.security.auth.login.config") != null) {
-            startLoginThread(renewJaasLoginInterval);
+            startLoginThread();
         }
         configure(addr,maxClientCnxns);  
     }
@@ -120,20 +120,20 @@ public abstract class ServerCnxnFactory {
     static public ServerCnxnFactory createFactory(int clientPort,
             int maxClientCnxns) throws IOException
     {
-        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns,null,0);
+        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns,null);
     }
 
     static public ServerCnxnFactory createFactory(int clientPort,
-            int maxClientCnxns, String requireClientAuthScheme, int renewJaasLoginInterval) throws IOException
+            int maxClientCnxns, String requireClientAuthScheme) throws IOException
     {
-        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns, requireClientAuthScheme, renewJaasLoginInterval);
+        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns, requireClientAuthScheme);
     }
 
     static public ServerCnxnFactory createFactory(InetSocketAddress addr,
-            int maxClientCnxns, String requireClientAuthScheme, int renewJaasLoginInterval) throws IOException
+            int maxClientCnxns, String requireClientAuthScheme) throws IOException
     {
         ServerCnxnFactory factory = createFactory();
-        factory.configure(addr, maxClientCnxns, requireClientAuthScheme, renewJaasLoginInterval);
+        factory.configure(addr, maxClientCnxns, requireClientAuthScheme);
         return factory;
     }
 

@@ -109,7 +109,7 @@ public class ZooKeeperServerMain {
             cnxnFactory = ServerCnxnFactory.createFactory();
             cnxnFactory.configure(config.getClientPortAddress(),
                     config.getMaxClientCnxns(),
-                    config.getRequireClientAuthScheme(), config.getJaasLoginRenew());
+                    config.getRequireClientAuthScheme());
             cnxnFactory.startup(zkServer);
             cnxnFactory.join();
             if (zkServer.isRunning()) {

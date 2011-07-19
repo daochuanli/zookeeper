@@ -50,10 +50,6 @@ public class ServerConfig {
      */
     protected String requireClientAuthScheme;
 
-    /** Time in milliseconds of interval between renewal of credentials with a Kerberos server.
-     */
-    protected int jaasLoginRenew;
-
     /**
      * Parse arguments for server configuration
      * @param args clientPort dataDir and optional tickTime
@@ -105,7 +101,6 @@ public class ServerConfig {
       minSessionTimeout = config.getMinSessionTimeout();
       maxSessionTimeout = config.getMaxSessionTimeout();
       requireClientAuthScheme = config.getRequireClientAuthScheme();
-      jaasLoginRenew = config.getJaasLoginRenew();
     }
 
     public InetSocketAddress getClientPortAddress() {
@@ -120,5 +115,4 @@ public class ServerConfig {
     /** maximum session timeout in milliseconds, -1 if unset */
     public int getMaxSessionTimeout() { return maxSessionTimeout; }
     public String getRequireClientAuthScheme() { return requireClientAuthScheme;}
-    public int getJaasLoginRenew() { return jaasLoginRenew;}
 }

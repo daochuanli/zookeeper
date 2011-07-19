@@ -25,7 +25,6 @@ package org.apache.zookeeper;
  * and Zookeeper.java:startLoginThread() for client-side usage.
  */
 
-import javax.security.auth.kerberos.KerberosKey;
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
@@ -67,7 +66,7 @@ public class LoginThread {
      * @param sleepInterval
      *               How long to sleep between each LoginContext renewal.
      */
-    public LoginThread(String loginContextName, CallbackHandler callbackHandler, Integer sleepInterval) {
+    public LoginThread(final String loginContextName, CallbackHandler callbackHandler) {
         this.loginContextName = loginContextName;
         this.callbackHandler = callbackHandler;
 
@@ -94,7 +93,7 @@ public class LoginThread {
                                 LOG.debug("Next refresh is " + nextRefresh);
                                 if (now < nextRefresh) {
                                     Date until = new Date(nextRefresh);
-                                    LOG.info("TGT refresh thread sleeping until : " + until.toString());
+                                    LOG.info("TGT refresh thread for Zookeeper " + loginContextName   +  " sleeping until : " + until.toString());
                                     Thread.sleep(nextRefresh - now);
                                 }
                                 Shell.execCommand(cmd,"-R");
