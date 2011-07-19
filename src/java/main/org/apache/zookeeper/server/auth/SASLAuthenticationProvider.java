@@ -18,12 +18,10 @@
 
 package org.apache.zookeeper.server.auth;
 
-
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.server.ServerCnxn;
-
-import java.util.Map;
 
 public class SASLAuthenticationProvider implements AuthenticationProvider {
 
@@ -51,15 +49,16 @@ public class SASLAuthenticationProvider implements AuthenticationProvider {
 
     public boolean isValid(String id) {
         // Since the SASL authenticator can be used with Kerberos authentication, it should allow
-        // for Kerberos-style principals, which can look like the following examples:
+        // for Kerberos-style principals, which can look like any of the following examples:
         //
-        // 1. client
-        // 2. client@KERBEROS_REALM
-        // 3. server/hostname
-        // 4. server/hostname@KERBEROS_REALM.
+        // 1. cLiEnT
+        // 2. cLiEnT@rEaLm
+        // 3. sErVeR/hOsTnAmE
+        // 4. sErVeR/hOsTnAmE@rEaLm
         //
-        // use a regexp to validate these 4 possible forms.
-        return true;
+        final Pattern cpValuePattern = Pattern.compile("^\\w+(/[\\w\\-])?(@[\\w\\-]+)?$");
+        Matcher matcher = cpValuePattern.matcher(id);
+        return matcher.matches();
    }
 
 
