@@ -96,7 +96,12 @@ public class LoginThread {
                                     LOG.info("TGT refresh thread for " + getPrincipalName() +  " sleeping until : " + until.toString());
                                     Thread.sleep(nextRefresh - now);
                                 }
-                                Shell.execCommand(cmd,"-R");
+                                try {
+                                    Shell.execCommand(cmd,"-R");
+                                }
+                                catch (Shell.ExitCodeException e) {
+                                    LOG.error("Could not renew ticket due to problem running shell command: " + e);
+                                }
                                 LOG.debug("renewed ticket");
                                 reloginFromTicketCache();
                                 tgt = getTGT();
