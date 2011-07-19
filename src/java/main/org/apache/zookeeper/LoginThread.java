@@ -93,7 +93,7 @@ public class LoginThread {
                                 LOG.debug("Next refresh is " + nextRefresh);
                                 if (now < nextRefresh) {
                                     Date until = new Date(nextRefresh);
-                                    LOG.info("TGT refresh thread for Zookeeper " + loginContextName   +  " sleeping until : " + until.toString());
+                                    LOG.info("TGT refresh thread for " + getPrincipalName() +  " sleeping until : " + until.toString());
                                     Thread.sleep(nextRefresh - now);
                                 }
                                 Shell.execCommand(cmd,"-R");
@@ -101,7 +101,7 @@ public class LoginThread {
                                 reloginFromTicketCache();
                                 tgt = getTGT();
                                 if (tgt == null) {
-                                    LOG.warn("No TGT after renewal. Aborting renew thread for " + getUserName());
+                                    LOG.warn("No TGT after renewal. Aborting renew thread for " + getPrincipalName());
                                 }
                                 nextRefresh = Math.max(getRefreshTime(tgt), now + MIN_TIME_BEFORE_RELOGIN);
                             }
@@ -179,7 +179,7 @@ public class LoginThread {
             return;
         }
         try {
-            LOG.info("Initiating logout for " + getUserName());
+            LOG.info("Initiating logout for " + getPrincipalName());
             //clear up the Kerberos state. But the tokens are not cleared! As per
             //the Java kerberos login module code, only the kerberos credentials
             //are cleared.
@@ -188,15 +188,21 @@ public class LoginThread {
             //have the new credentials (pass it to the LoginContext constructor)
             login =
               new LoginContext(loginContextName,subject);
-            LOG.info("Initiating re-login for " + getUserName());
+            LOG.info("Initiating re-login for " + this.getPrincipalName());
             login.login();
         } catch (LoginException le) {
-            throw new IOException("Login failure for " + getUserName(),le);
+            throw new IOException("Login failure for " + getPrincipalName());
         }
     }
 
-    private String getUserName() {
-        return "zookeeper";
+    private String getPrincipalName() {
+        try {
+            return getLogin().getSubject().toString();
+        }
+        catch (NullPointerException e) {
+            LOG.warn("could not display principal name because login or login's subject was null: returning '(no principal found)'.");
+        }
+        return "(no principal found)";
     }
 
     private boolean hasSufficentTimeElapsed() {
