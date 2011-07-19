@@ -942,18 +942,6 @@ public class ClientCnxn {
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
 
-                    // If saslClient is null at this point, either client is not configured to use SASL, or saslClient was not initialized properly in startConnect().
-                    // Print a log message appropriate to either situation.
-                    if ((state == States.SASL_INITIAL) && (zooKeeperSaslClient == null)) {
-                        if (System.getProperty("java.security.auth.login.config") != null) {
-                            LOG.warn("Client could not SASL authenticate using supplied configuration:" + System.getProperty("java.security.auth.login.config"));
-                        }
-                        else {
-                            LOG.info("Client not configured for SASL authentication; proceeding to CONNECTED state.");
-                        state = States.CONNECTED;
-                        }
-                    }
-
                     if ((state == States.SASL_INITIAL) || (state == States.SASL)) {
                         state = zooKeeperSaslClient.stateTransition(state);
                         if ((state == States.CONNECTED) && (zooKeeperSaslClient.isComplete() == true)) {
