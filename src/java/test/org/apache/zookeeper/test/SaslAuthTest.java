@@ -21,14 +21,20 @@ package org.apache.zookeeper.test;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.TestableZooKeeper;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Id;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class SaslAuthTest extends ClientBase {
@@ -115,4 +121,54 @@ public class SaslAuthTest extends ClientBase {
             zk.close();
         }
     }
+
+    @Test
+    public void testValidSaslIds() throws Exception {
+        ZooKeeper zk = createClient();
+        Thread.sleep(1000);
+
+        List<String> validIds = new ArrayList<String>();
+        validIds.add("user");
+        validIds.add("service/host.name.com");
+        validIds.add("user@KERB.REALM");
+        validIds.add("service/host.name.com@KERB.REALM");
+
+        int i = 0;
+        for(String validId: validIds) {
+            List<ACL> aclList = new ArrayList<ACL>();
+            ACL acl = new ACL(0,new Id("sasl",validId));
+            aclList.add(acl);
+            zk.create("/valid"+i,null,aclList,CreateMode.PERSISTENT);
+            i++;
+        }
+    }
+
+    @Test
+    public void testInvalidSaslIds() throws Exception {
+        ZooKeeper zk = createClient();
+        Thread.sleep(1000);
+
+        List<String> invalidIds = new ArrayList<String>();
+        invalidIds.add("@user");
+        invalidIds.add("/host.name.com");
+        invalidIds.add("user@KERB.REALM/server.com");
+
+        int i = 0;
+        for(String invalidId: invalidIds) {
+            List<ACL> aclList = new ArrayList<ACL>();
+            try {
+                ACL acl = new ACL(0,new Id("sasl",invalidId));
+                aclList.add(acl);
+                zk.create("/invalid"+i,null,aclList,CreateMode.PERSISTENT);
+                Assert.fail("SASLAuthenticationProvider.isValid() failed to catch invalid Id.");
+            }
+            catch (KeeperException.InvalidACLException e) {
+                // ok.
+            }
+            finally {
+                i++;
+            }
+        }
+    }
+
 }
