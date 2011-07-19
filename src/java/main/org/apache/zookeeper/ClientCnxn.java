@@ -647,7 +647,6 @@ public class ClientCnxn {
         case CLOSED:
             p.replyHeader.setErr(KeeperException.Code.SESSIONEXPIRED.intValue());
             break;
-        // TODO: handle state.SASL_* states (if necessary)
         default:
             p.replyHeader.setErr(KeeperException.Code.CONNECTIONLOSS.intValue());
         }
@@ -946,13 +945,13 @@ public class ClientCnxn {
                     if (state == States.CONNECTED) {
                         // do SASL processing, if any. afterwards state will be either CONNECTED or AUTH_FAILED.
                         state = zooKeeperSaslClient.stateTransition(state);
-                        if (zooKeeperSaslClient.isComplete() == true) {
+                        if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
                             // TODO : determine whether authentication failed or
                             // not. ZK server knows, but client (running this code here)
                             // does not. (use something like zookeeperSaslClient.isSuccessful())
-                            eventThread.queueEvent(new WatchedEvent(
-                              Event.EventType.None,
-                              Event.KeeperState.SaslAuthenticated, null));
+                            queueEvent(new WatchedEvent(
+                              Watcher.Event.EventType.None,
+                              Watcher.Event.KeeperState.SaslAuthenticated, null));
                         }
                     }
 

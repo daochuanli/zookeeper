@@ -61,6 +61,12 @@ public class ZooKeeperSaslClient {
     private byte[] saslToken = new byte[0];
     private ClientCnxn cnxn;
 
+    private enum SaslState {
+        INITIAL,INTERMEDIATE,COMPLETE
+    }
+
+    private SaslState saslState = SaslState.INITIAL;
+
     public ZooKeeperSaslClient(ClientCnxn cnxn, String serverPrincipal) {
         this.cnxn = cnxn;
         this.saslClient = createSaslClient(serverPrincipal);
@@ -73,10 +79,10 @@ public class ZooKeeperSaslClient {
             // ctx is the ZooKeeperSaslClient object. We use this object's prepareSaslResponseToServer() method
             // to reply to the Zookeeper Server's SASL token
             ZooKeeperSaslClient client = ((ClientCnxn)ctx).zooKeeperSaslClient;
-	    if (client == null) {
-		LOG.warn("sasl client was unexpectedly null: cannot respond to Zookeeper server.");
-		return;
-	    }
+            if (client == null) {
+                LOG.warn("sasl client was unexpectedly null: cannot respond to Zookeeper server.");
+                return;
+            }
             byte[] usedata = data;
             if (data != null) {
                 LOG.debug("ServerSaslResponseCallback(): saslToken server response: (length="+usedata.length+")");
@@ -231,11 +237,18 @@ public class ZooKeeperSaslClient {
         cnxn.queuePacket(h,r,request,response,cb);
     }
 
-    public boolean isComplete() {
+    public boolean readyToSendSaslAuthEvent() {
         if (saslClient != null) {
-	    return saslClient.isComplete();
+            if (saslClient.isComplete() == true) {
+                if (saslState == SaslState.INTERMEDIATE) {
+                    saslState = SaslState.COMPLETE;
+                    return true;
+                }
+            }
         }
-        LOG.warn("saslClient is null: client could not authenticate properly.");
+        else {
+            LOG.warn("saslClient is null: client could not authenticate properly.");
+        }
         return false;
     }
 
@@ -245,13 +258,13 @@ public class ZooKeeperSaslClient {
     }
 
     private boolean hasInitialResponse() {
-	if (saslClient != null) {
+        if (saslClient != null) {
             return saslClient.hasInitialResponse();
-	}
-	else {
-	    LOG.warn("saslClient is null: client could not authenticate properly.");
-	}
-	return false;
+        }
+        else {
+            LOG.warn("saslClient is null: client could not authenticate properly.");
+        }
+        return false;
     }
 
     public States stateTransition(States state) {
@@ -262,18 +275,10 @@ public class ZooKeeperSaslClient {
 
         States returnState = state;
         switch(state) {
-            case SASL_INITIAL:
-                if (isComplete()) {
-                    // It should never be possible for the client to be in
-                    // SASL_INITIAL state with a saslClient being in Complete state.
-                    LOG.warn("Unexpectedly, SASL negotiation object is in " +
-                             "completed state, while client's state is in " +
-                             "SASL_INITIAL state. Going to AUTH_FAILED without " +
-                             "attempting SASL negotiation with Zookeeper Quorum " +
-                             "member.");
-                    returnState = States.AUTH_FAILED;
-                }
-                else {
+            case CONNECTED:
+                // need additional internal state support here.
+                // if (this.saslState == SASL_INITIAL) { ...
+                if (saslState == SaslState.INITIAL)
                     if (hasInitialResponse()) {
                         LOG.debug("saslClient.hasInitialResponse()==true");
                         LOG.debug("hasInitialResponse() == true; (1) SASL token length = " + saslToken.length);
@@ -291,7 +296,8 @@ public class ZooKeeperSaslClient {
                         else {
                             LOG.debug("hasInitialResponse() == true; (2) SASL token length = " + saslToken.length);
                             queueSaslPacket(saslToken);
-                            returnState = States.SASL;
+                            returnState = state;
+                            this.saslState = SaslState.INTERMEDIATE;
                         }
                     }
                     else {
@@ -301,21 +307,9 @@ public class ZooKeeperSaslClient {
                         // real authentication process.
                         byte[] emptyToken = new byte[0];
                         queueSaslPacket(emptyToken);
-                        returnState = States.SASL;
+                        this.saslState = SaslState.INTERMEDIATE;
+                        returnState = state;
                     }
-                }
-                break;
-            case SASL:
-                if (isComplete()) {
-                    // TODO : determine whether authentication failed or
-                    // not. ZK server knows, but client (running this code here)
-                    // does not.
-                    returnState = States.CONNECTED;
-                }
-                else {
-                  // nothing needed here: ServerSaslResponseCallback (above) will handle
-                  // continued SASL negotiation until isComplete() is true.
-                }
                 break;
             default:
         } // switch(state)
