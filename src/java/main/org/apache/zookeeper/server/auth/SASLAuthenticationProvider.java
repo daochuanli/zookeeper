@@ -56,7 +56,7 @@ public class SASLAuthenticationProvider implements AuthenticationProvider {
         // 3. sErVeR/hOsTnAmE
         // 4. sErVeR/hOsTnAmE@rEaLm
         //
-        final Pattern cpValuePattern = Pattern.compile("^\\w+(/[\\w\\-])?(@[\\w\\-]+)?$");
+        final Pattern cpValuePattern = Pattern.compile("^\\w+(/[\\w\\-\\.]+)?(@[\\w\\-\\.]+)?$");
         Matcher matcher = cpValuePattern.matcher(id);
         return matcher.matches();
    }
