@@ -161,6 +161,7 @@ public class ZooKeeperSaslClient {
                 // TODO: consolidate this queueEvent() with the
                 // same call with same args in ClientCnxn.java.
                 // (should move from there to here).
+                // while watching with debugger, this code is never reached (i.e. it's dead).
                 if (saslClient.isComplete()) {
                     LOG.info("SASL authentication with Zookeeper server is successful.");
                     cnxn.queueEvent(new WatchedEvent(
@@ -254,6 +255,11 @@ public class ZooKeeperSaslClient {
     }
 
     public States stateTransition(States state) {
+        // TODO: should use isComplete() as a state machine:
+        // (move SASL state processing to here).
+        // currently CONNECTING -> SASL_INITIAL -> SASL -> CONNECTED.
+        // should be (as before SASL) CONNECTING -> CONNECTED.
+
         States returnState = state;
         switch(state) {
             case SASL_INITIAL:
