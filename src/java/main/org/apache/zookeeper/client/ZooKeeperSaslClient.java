@@ -272,16 +272,9 @@ public class ZooKeeperSaslClient {
     }
 
     public States stateTransition(States state) {
-        // TODO: should use isComplete() as a state machine:
-        // (move SASL state processing to here).
-        // currently CONNECTING -> SASL_INITIAL -> SASL -> CONNECTED.
-        // should be (as before SASL) CONNECTING -> CONNECTED.
-
         States returnState = state;
         switch(state) {
             case CONNECTED:
-                // need additional internal state support here.
-                // if (this.saslState == SASL_INITIAL) { ...
                 if (saslState == SaslState.INITIAL)
                     if (hasInitialResponse()) {
                         LOG.debug("saslClient.hasInitialResponse()==true");
