@@ -942,12 +942,14 @@ public class ClientCnxn {
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
 
-                    if ((state == States.SASL_INITIAL) || (state == States.SASL)) {
+
+                    if (state == States.CONNECTED) {
+                        // do SASL processing, if any. afterwards state will be either CONNECTED or AUTH_FAILED.
                         state = zooKeeperSaslClient.stateTransition(state);
-                        if ((state == States.CONNECTED) && (zooKeeperSaslClient.isComplete() == true)) {
+                        if (zooKeeperSaslClient.isComplete() == true) {
                             // TODO : determine whether authentication failed or
                             // not. ZK server knows, but client (running this code here)
-                            // does not.
+                            // does not. (use something like zookeeperSaslClient.isSuccessful())
                             eventThread.queueEvent(new WatchedEvent(
                               Event.EventType.None,
                               Event.KeeperState.SaslAuthenticated, null));
