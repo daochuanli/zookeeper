@@ -13,5 +13,5 @@ while [ "$?" -eq "0" ] ; do
   ant -Dtest.output=$test_output -Dtestcase=$testcase junit.run
 done
 
-echo "test:' $test ' failed on iteration $i."
+echo "test:'$testcase' failed on iteration $i."
 
