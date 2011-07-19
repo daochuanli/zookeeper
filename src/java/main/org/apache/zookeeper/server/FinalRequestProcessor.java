@@ -45,11 +45,9 @@ import org.apache.zookeeper.proto.GetChildrenRequest;
 import org.apache.zookeeper.proto.GetChildrenResponse;
 import org.apache.zookeeper.proto.GetDataRequest;
 import org.apache.zookeeper.proto.GetDataResponse;
-import org.apache.zookeeper.proto.GetSASLRequest;
 import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.SetACLResponse;
 import org.apache.zookeeper.proto.SetDataResponse;
-import org.apache.zookeeper.proto.SetSASLResponse;
 import org.apache.zookeeper.proto.SetWatches;
 import org.apache.zookeeper.proto.SyncRequest;
 import org.apache.zookeeper.proto.SyncResponse;
@@ -401,55 +399,6 @@ public class FinalRequestProcessor implements RequestProcessor {
                         getChildren2Request.getPath(), stat, getChildren2Request
                                 .getWatch() ? cnxn : null);
                 rsp = new GetChildren2Response(children, stat);
-                break;
-            }
-            case OpCode.sasl: {
-                // client sent a SASL token: respond with our own SASL token in response.
-                LOG.debug("FinalRequestProcessor:ProcessRequest():Responding to client SASL token.");
-                lastOp = "SASL";
-
-                GetSASLRequest clientTokenRecord = new GetSASLRequest();
-                ZooKeeperServer.byteBuffer2Record(request.request,clientTokenRecord);
-
-                byte[] clientToken = clientTokenRecord.getToken();
-                LOG.debug("Size of client SASL token: " + clientToken.length);
-                byte[] responseToken = null;
-
-                try {
-                    ZooKeeperSaslServer saslServer = cnxn.zooKeeperSaslServer;
-                    try {
-                        // note that clientToken might be empty (clientToken.length == 0):
-                        // in the case of the DIGEST-MD5 mechanism, clientToken will be empty at the beginning of the
-                        // SASL negotiation process.
-                        responseToken = saslServer.evaluateResponse(clientToken);
-
-                        if (saslServer.isComplete() == true) {
-                            String authorizationID = saslServer.getAuthorizationID();
-                            LOG.info("adding SASL authorization for authorizationID: " + authorizationID);
-                            cnxn.addAuthInfo(new Id("sasl",authorizationID));
-                        }
-                    }
-                    catch (SaslException e) {
-                        LOG.warn("Client failed to SASL authenticate: " + e);
-                        if ((System.getProperty("zookeeper.maintain_connection_despite_sasl_failure") != null)
-                                &&
-                            (System.getProperty("zookeeper.maintain_connection_despite_sasl_failure").equals("yes"))) {
-                            LOG.warn("Maintaining client connection despite SASL authentication failure.");
-                        } else {
-                            LOG.warn("Closing client connection due to SASL authentication failure.");
-                            cnxn.close();
-                        }
-                    }
-
-                }
-                catch (NullPointerException e) {
-                    LOG.error("cnxn.saslServer is null: cnxn object did not initialize its saslServer properly.");
-                }
-                if (responseToken != null) {
-                    LOG.debug("Size of server SASL response: " + responseToken.length);
-                }
-                // wrap SASL response token to client inside a Response object.
-                rsp = new SetSASLResponse(responseToken);
                 break;
             }
             }
