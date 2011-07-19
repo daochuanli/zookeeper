@@ -158,6 +158,9 @@ public class ZooKeeperSaslClient {
                     queueSaslPacket(saslToken);
                 }
 
+                // TODO: consolidate this queueEvent() with the
+                // same call with same args in ClientCnxn.java.
+                // (should move from there to here).
                 if (saslClient.isComplete()) {
                     LOG.info("SASL authentication with Zookeeper server is successful.");
                     cnxn.queueEvent(new WatchedEvent(
