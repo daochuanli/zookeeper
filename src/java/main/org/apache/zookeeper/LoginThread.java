@@ -96,19 +96,22 @@ public class LoginThread {
                                     LOG.info("TGT refresh thread for " + getPrincipalName() +  " sleeping until : " + until.toString());
                                     Thread.sleep(nextRefresh - now);
                                 }
+                                nextRefresh = Math.max(getRefreshTime(tgt), now + MIN_TIME_BEFORE_RELOGIN);
+                                Date nextRefreshDate = new Date(nextRefresh);
                                 try {
                                     Shell.execCommand(cmd,"-R");
+                                    LOG.debug("renewed ticket");
+                                    reloginFromTicketCache();
+                                    tgt = getTGT();
                                 }
                                 catch (Shell.ExitCodeException e) {
-                                    LOG.error("Could not renew ticket due to problem running shell command: " + e);
+                                    LOG.error("Could not renew ticket due to problem running shell command: '" + cmd + " -R'" + "; exception was:" + e + ". Will try shell command again at: " + nextRefreshDate);
                                 }
-                                LOG.debug("renewed ticket");
-                                reloginFromTicketCache();
-                                tgt = getTGT();
+
                                 if (tgt == null) {
                                     LOG.warn("No TGT after renewal. Aborting renew thread for " + getPrincipalName());
                                 }
-                                nextRefresh = Math.max(getRefreshTime(tgt), now + MIN_TIME_BEFORE_RELOGIN);
+
                             }
                             catch (InterruptedException ie) {
                                 LOG.warn("Terminating renewal thread");
