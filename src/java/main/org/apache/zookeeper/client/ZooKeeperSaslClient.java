@@ -230,7 +230,7 @@ public class ZooKeeperSaslClient {
     }
 
     private void queueSaslPacket(byte[] saslToken) {
-        LOG.info("ClientCnxn:sendSaslPacket:length="+saslToken.length);
+        LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
         RequestHeader h = new RequestHeader();
         h.setType(ZooDefs.OpCode.sasl);
         GetSASLRequest request = new GetSASLRequest();
