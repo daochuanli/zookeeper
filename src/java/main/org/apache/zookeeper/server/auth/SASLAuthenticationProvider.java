@@ -50,6 +50,15 @@ public class SASLAuthenticationProvider implements AuthenticationProvider {
     }
 
     public boolean isValid(String id) {
+        // Since the SASL authenticator can be used with Kerberos authentication, it should allow
+        // for Kerberos-style principals, which can look like the following examples:
+        //
+        // 1. client
+        // 2. client@KERBEROS_REALM
+        // 3. server/hostname
+        // 4. server/hostname@KERBEROS_REALM.
+        //
+        // use a regexp to validate these 4 possible forms.
         return true;
    }
 
