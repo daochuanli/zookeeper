@@ -1135,8 +1135,9 @@ public class ClientCnxn {
             hostProvider.onConnected();
             sessionId = _sessionId;
             sessionPasswd = _sessionPasswd;
+            // TODO: use (as before) States.CONNECTED here (no SASL_INITIAL) state.
             state = (isRO) ?
-                    States.CONNECTEDREADONLY : States.SASL_INITIAL;
+                    States.CONNECTEDREADONLY : States.CONNECTED;
             seenRwServerBefore |= !isRO;
             LOG.info("Session establishment complete on server "
                     + clientCnxnSocket.getRemoteSocketAddress()
