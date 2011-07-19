@@ -914,7 +914,8 @@ public class ClientCnxn {
                     "(" + addr.getHostName() + ":" + addr.getPort() + ")"));
 
             if (System.getProperty("java.security.auth.login.config") != null) {
-                zooKeeperSaslClient = new ZooKeeperSaslClient(ClientCnxn.this, "zookeeper"+"/"+ addr.getHostName());
+//                zooKeeperSaslClient = new ZooKeeperSaslClient(ClientCnxn.this, "zookeeper"+"/"+ addr.getHostName());
+                zooKeeperSaslClient = new ZooKeeperSaslClient(ClientCnxn.this, "zookeeper"+"/"+ "mac.foofers.org");
             }
 
             clientCnxnSocket.connect(addr);
@@ -949,8 +950,8 @@ public class ClientCnxn {
                         }
                         else {
                             LOG.info("Client not configured for SASL authentication; proceeding to CONNECTED state.");
-                        }
                         state = States.CONNECTED;
+                        }
                     }
 
                     if ((state == States.SASL_INITIAL) || (state == States.SASL)) {
