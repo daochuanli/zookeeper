@@ -274,6 +274,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             }
         }
 
+        // TODO: Remove the SASL_INITIAL and SASL disjuncts from this if().
         if ((sendThread.getZkState().isConnected())
             ||
             (sendThread.getZkState() == States.SASL_INITIAL)
