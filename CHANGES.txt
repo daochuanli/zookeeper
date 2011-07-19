@@ -247,6 +247,10 @@ BUGFIXES:
 
   ZOOKEEPER-782. Incorrect C API documentation for Watches. (mahadev via breed)
 
+  ZOOKEEPER-1063. Dubious synchronization in Zookeeper and ClientCnxnSocketNIO classes (Yanick Dufresne via breed)
+
+  ZOOKEEPER-1124. Multiop submitted to non-leader always fails due to timeout (Marshall McMullen via breed)
+
 IMPROVEMENTS:
   ZOOKEEPER-724. Improve junit test integration - log harness information 
   (phunt via mahadev)
@@ -365,6 +369,8 @@ NEW FEATURES:
   ZOOKEEPER-1038. Move bookkeeper and hedwig code in subversion (breed)
 
   ZOOKEEPER-784. Server-side functionality for read-only mode (Sergey Doroshenko via henryr)
+
+  ZOOKEEPER-992. MT Native Version of Windows C Client (Dheeraj Agrawal via michim)
 
 Release 3.3.0 - 2010-03-24
 
