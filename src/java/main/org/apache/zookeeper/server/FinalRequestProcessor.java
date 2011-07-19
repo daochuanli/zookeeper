@@ -58,7 +58,6 @@ import org.apache.zookeeper.txn.ErrorTxn;
 
 import org.apache.zookeeper.MultiTransactionRecord;
 import org.apache.zookeeper.Op;
-import javax.security.sasl.SaslException;
 import org.apache.zookeeper.OpResult;
 import org.apache.zookeeper.OpResult.CheckResult;
 import org.apache.zookeeper.OpResult.CreateResult;
@@ -171,8 +170,9 @@ public class FinalRequestProcessor implements RequestProcessor {
                 LOG.debug("{}",request);
             }
 
-            // Disconnect non-SASL-authenticated sessions by checking request type: all non-createSession-request
-            // types should cause an immediate session termination if authentication is not present.
+            // Disconnect sessions that are not authenticated according to requireClientAuth's specified value, if any.
+            // Check request type: all requests except for members of the set {createSession,ping,sasl,closeSession}
+            // should cause an immediate session termination if authentication of the specified scheme is not present.
             String authScheme = zks.getServerCnxnFactory().requireClientAuthScheme;
 
             if (authScheme != null) {
