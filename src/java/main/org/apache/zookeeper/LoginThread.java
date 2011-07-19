@@ -80,6 +80,8 @@ public class LoginThread {
             if (this.isKrbTkt == true) {
                 t = new Thread(new Runnable() {
                     public void run() {
+                        // TODO : make this a configurable option or search
+                        // a set of likely paths {/usr/bin/, /usr/krb5/bin, ...}
                         String cmd = "/usr/bin/kinit";
                         KerberosTicket tgt = getTGT();
                         if (tgt == null) {
