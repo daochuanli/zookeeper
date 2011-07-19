@@ -185,7 +185,7 @@ public class LoginThread {
         if (login == null) {
             throw new IOException("login must be done first");
         }
-        if (!hasSufficentTimeElapsed()) {
+        if (!hasSufficientTimeElapsed()) {
             return;
         }
         try {
@@ -215,11 +215,14 @@ public class LoginThread {
         return "(no principal found)";
     }
 
-    private boolean hasSufficentTimeElapsed() {
+    private boolean hasSufficientTimeElapsed() {
         long now = System.currentTimeMillis();
         if (now - getLastLogin() < MIN_TIME_BEFORE_RELOGIN) {
-            LOG.warn("Not attempting to re-login since the last re-login was " +
-              "attempted less than " + (MIN_TIME_BEFORE_RELOGIN/1000) + " seconds"+ "before.");
+            // in Hadoop code this was LOG.warn(), which causes a lot of false alarms in production.
+            // Figure out how to better diagnose why we get here and reduce
+            // unnecessary calls to hasSufficientTimeElapsed().
+            LOG.info("Not attempting to re-login since the last re-login was " +
+              "attempted less than " + (MIN_TIME_BEFORE_RELOGIN/1000) + " seconds "+ "before.");
             return false;
         }
         setLastLogin(now);
