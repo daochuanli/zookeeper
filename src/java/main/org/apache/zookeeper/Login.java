@@ -95,11 +95,10 @@ public class Login {
                         if (tgt == null) {
                             return;
                         }
-                        long nextRefresh = getRefreshTime(tgt);
                         while (true) {
                             try {
                                 long now = System.currentTimeMillis();
-
+                                long nextRefresh = getRefreshTime(tgt);
                                 if (nextRefresh < (now + MIN_TIME_BEFORE_RELOGIN)) {
                                     Date until = new Date(nextRefresh);
                                     Date newuntil = new Date(now + MIN_TIME_BEFORE_RELOGIN);
