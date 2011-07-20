@@ -264,7 +264,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 doIO(pendingQueue, outgoingQueue);
             }
         }
-
         if (sendThread.getZkState().isConnected()) {
             synchronized(outgoingQueue) {
                 if (!outgoingQueue.isEmpty()) {
