@@ -237,6 +237,7 @@ public class ZooKeeperSaslClient {
         cnxn.queuePacket(h,r,request,response,cb);
     }
 
+    // used by ClientCnxn to know when to emit SaslAuthenticated event.
     public boolean readyToSendSaslAuthEvent() {
         if (saslClient != null) {
             if (saslClient.isComplete() == true) {
