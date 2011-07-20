@@ -168,9 +168,8 @@ public class ZooKeeperSaslClient {
                 // TODO: consolidate this queueEvent() with the
                 // same call with same args in ClientCnxn.java.
                 // (should move from there to here).
-                // while watching with debugger, this code is never reached (i.e. it's dead).
                 if (saslClient.isComplete()) {
-                    LOG.info("SASL authentication with Zookeeper server is successful.");
+                    LOG.info("SASL authentication with Zookeeper server succeeded.");
                     cnxn.queueEvent(new WatchedEvent(
                       Watcher.Event.EventType.None,
                       Watcher.Event.KeeperState.SaslAuthenticated, null));

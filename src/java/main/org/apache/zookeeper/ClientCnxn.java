@@ -950,6 +950,8 @@ public class ClientCnxn {
                             // TODO : determine whether authentication failed or
                             // not. ZK server knows, but client (running this code here)
                             // does not. (use something like zookeeperSaslClient.isSuccessful())
+                            // TODO: also queuing same event in ZooKeeperSaslClient.java: should
+                            // only have it once.
                             queueEvent(new WatchedEvent(
                               Watcher.Event.EventType.None,
                               Watcher.Event.KeeperState.SaslAuthenticated, null));
