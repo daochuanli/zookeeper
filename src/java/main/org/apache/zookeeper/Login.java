@@ -37,9 +37,9 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Set;
 
-public class LoginThread {
+public class Login {
 
-    Logger LOG = Logger.getLogger(LoginThread.class);
+    Logger LOG = Logger.getLogger(Login.class);
 
     private LoginContext loginContext;
     private String loginContextName;
@@ -63,10 +63,8 @@ public class LoginThread {
      *
      * @param callbackHandler
      *               Passed as second param to javax.security.auth.login.LoginContext().
-     * @param sleepInterval
-     *               How long to sleep between each LoginContext renewal.
      */
-    public LoginThread(final String loginContextName, CallbackHandler callbackHandler) {
+    public Login(final String loginContextName, CallbackHandler callbackHandler) {
         this.loginContextName = loginContextName;
         this.callbackHandler = callbackHandler;
 
@@ -133,7 +131,7 @@ public class LoginThread {
             LOG.error("Error while trying to do subject authentication using '"
                     + this.loginContextName+"' section of "
                     + System.getProperty("java.security.auth.login.config")
-                    + ":" + e + ". Interrupting loginThread now; will exit.");
+                    + ":" + e + ".");
             validCredentials = false;
         }
     }
@@ -157,7 +155,7 @@ public class LoginThread {
         }
     }
 
-    // c.f. o.a.hadoop.security.UserGroupInformation.
+    // c.f. org.apache.hadoop.security.UserGroupInformation.
     private long getRefreshTime(KerberosTicket tgt) {
         long start = tgt.getStartTime().getTime();
         long end = tgt.getEndTime().getTime();
@@ -244,7 +242,7 @@ public class LoginThread {
                 t.join();
             }
             catch (InterruptedException e) {
-                LOG.error("error while waiting for loginThread to shutdown: " + e);
+                LOG.error("error while waiting for Login thread to shutdown: " + e);
             }
         }
     }

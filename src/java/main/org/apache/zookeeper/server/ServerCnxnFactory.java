@@ -29,7 +29,7 @@ import javax.security.auth.login.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.jmx.MBeanRegistry;
-import org.apache.zookeeper.LoginThread;
+import org.apache.zookeeper.Login;
 
 public abstract class ServerCnxnFactory {
 
@@ -58,19 +58,15 @@ public abstract class ServerCnxnFactory {
     public String requireClientAuthScheme = null;
 
     private SaslServerCallbackHandler saslServerCallbackHandler;
-    public LoginThread loginThread;
-
-    private void startLoginThread() {
-        saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
-        loginThread = new LoginThread("Server",saslServerCallbackHandler);
-    }
+    public Login login;
 
     public void configure(InetSocketAddress addr, int maxClientCnxns, String requireClientAuthScheme) throws IOException {
         this.requireClientAuthScheme = requireClientAuthScheme;
         // Use presence/absence of java.security.auth.login.config property
-        // as a boolean flag to decide where to start the LoginThread
+        // as a boolean flag to decide where to obtain login credentials.
         if (System.getProperty("java.security.auth.login.config") != null) {
-            startLoginThread();
+            saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
+            login = new Login("Server",saslServerCallbackHandler);
         }
         configure(addr,maxClientCnxns);  
     }

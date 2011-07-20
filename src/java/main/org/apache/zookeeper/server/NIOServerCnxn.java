@@ -98,8 +98,8 @@ public class NIOServerCnxn extends ServerCnxn {
         this.sock = sock;
         this.sk = sk;
         this.factory = factory;
-        if (this.factory.loginThread != null) {
-            this.zooKeeperSaslServer = new ZooKeeperSaslServer(factory.loginThread);
+        if (this.factory.login != null) {
+            this.zooKeeperSaslServer = new ZooKeeperSaslServer(factory.login);
         }
         if (zk != null) { 
             outstandingLimit = zk.getGlobalOutstandingLimit();

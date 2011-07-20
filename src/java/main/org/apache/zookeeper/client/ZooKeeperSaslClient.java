@@ -20,7 +20,7 @@ package org.apache.zookeeper.client;
 
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.ClientCnxn;
-import org.apache.zookeeper.LoginThread;
+import org.apache.zookeeper.Login;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.GetSASLRequest;
 import org.apache.zookeeper.proto.ReplyHeader;
@@ -55,7 +55,7 @@ import javax.security.sasl.SaslException;
  */
 public class ZooKeeperSaslClient {
     private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperSaslClient.class);
-    private LoginThread loginThread;
+    private Login login;
     private SaslClient saslClient;
 
     private byte[] saslToken = new byte[0];
@@ -99,15 +99,11 @@ public class ZooKeeperSaslClient {
         }
     }
 
-    private void startLoginThread() {
-        loginThread = new LoginThread("Client",new ClientCallbackHandler(null));
-    }
-
     private SaslClient createSaslClient(final String servicePrincipal) {
-        startLoginThread();
+        login = new Login("Client",new ClientCallbackHandler(null));
         try {
-            synchronized(loginThread) {
-                Subject subject = loginThread.getLogin().getSubject();
+            synchronized(login) {
+                Subject subject = login.getLogin().getSubject();
                 SaslClient saslClient = null;
                 // Use subject.getPrincipals().isEmpty() as an indication of which SASL mechanism to use: if empty, use DIGEST-MD5; otherwise, use GSSAPI.
                 int indexOf = servicePrincipal.indexOf("/");
@@ -192,9 +188,9 @@ public class ZooKeeperSaslClient {
             throw new SaslException("Error in authenticating with a Zookeeper Quorum member: the quorum member's saslToken is null.");
         }
 
-        Subject subject = this.loginThread.getLogin().getSubject();
+        Subject subject = this.login.getLogin().getSubject();
         if (subject != null) {
-            synchronized(this.loginThread) {
+            synchronized(this.login) {
                 try {
                     final byte[] retval =
                         Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
@@ -258,7 +254,7 @@ public class ZooKeeperSaslClient {
 
     public void close() {
         LOG.debug("ZookeeperSaslClient object is shutting down.");
-        loginThread.shutdown();
+        login.shutdown();
     }
 
     private boolean hasInitialResponse() {

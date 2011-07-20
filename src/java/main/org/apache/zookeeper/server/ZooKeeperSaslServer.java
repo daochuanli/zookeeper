@@ -47,20 +47,20 @@ import javax.security.sasl.RealmCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
-import org.apache.zookeeper.LoginThread;
+import org.apache.zookeeper.Login;
 import org.apache.zookeeper.jmx.MBeanRegistry;
 
 public class ZooKeeperSaslServer {
     Logger LOG = LoggerFactory.getLogger(ZooKeeperSaslServer.class);
     private SaslServer saslServer;
 
-    ZooKeeperSaslServer(final LoginThread loginThread) {
-        saslServer = createSaslServer(loginThread);
+    ZooKeeperSaslServer(final Login login) {
+        saslServer = createSaslServer(login);
     }
 
-    private SaslServer createSaslServer(final LoginThread loginThread) {
-        synchronized (loginThread) {
-            Subject subject = loginThread.getLogin().getSubject();
+    private SaslServer createSaslServer(final Login login) {
+        synchronized (login) {
+            Subject subject = login.getLogin().getSubject();
             if (subject != null) {
                 // server is using a JAAS-authenticated subject: determine service principal name and hostname from zk server's subject.
                 if (subject.getPrincipals().size() > 0) {
@@ -94,7 +94,7 @@ public class ZooKeeperSaslServer {
                                 public SaslServer run() {
                                     try {
                                         SaslServer saslServer;
-                                        saslServer = Sasl.createSaslServer(mech, servicePrincipalName, serviceHostname, null, loginThread.callbackHandler);
+                                        saslServer = Sasl.createSaslServer(mech, servicePrincipalName, serviceHostname, null, login.callbackHandler);
                                         return saslServer;
                                     }
                                     catch (SaslException e) {
@@ -120,7 +120,7 @@ public class ZooKeeperSaslServer {
                     // JAAS non-GSSAPI authentication: assuming and supporting only DIGEST-MD5 mechanism for now.
                     // TODO: use 'authMech=' value in zoo.cfg.
                     try {
-                        SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","zk-sasl-md5",null, loginThread.callbackHandler);
+                        SaslServer saslServer = Sasl.createSaslServer("DIGEST-MD5","zookeeper","zk-sasl-md5",null, login.callbackHandler);
                         return saslServer;
                     }
                     catch (SaslException e) {

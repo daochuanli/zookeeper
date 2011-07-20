@@ -81,8 +81,8 @@ public class NettyServerCnxn extends ServerCnxn {
         this.channel = channel;
         this.zkServer = zks;
         this.factory = factory;
-        if (this.factory.loginThread != null) {
-            this.zooKeeperSaslServer = new ZooKeeperSaslServer(factory.loginThread);
+        if (this.factory.login != null) {
+            this.zooKeeperSaslServer = new ZooKeeperSaslServer(factory.login);
         }
     }
     
