@@ -72,7 +72,6 @@ public class QuorumPeerConfig {
 
     protected LearnerType peerType = LearnerType.PARTICIPANT;
     protected String requireClientAuthScheme;
-    protected int jaasLoginRenew;
 
     @SuppressWarnings("serial")
     public static class ConfigException extends Exception {
@@ -162,8 +161,6 @@ public class QuorumPeerConfig {
                 }
             } else if (key.equals("requireClientAuthScheme")) {
                 requireClientAuthScheme = value;
-            } else if (key.equals("jaasLoginRenew")) {
-                jaasLoginRenew = Integer.parseInt(value);
             }
             else if (key.startsWith("server.")) {
                 int dot = key.indexOf('.');
@@ -389,9 +386,5 @@ public class QuorumPeerConfig {
 
     public String getRequireClientAuthScheme() {
         return requireClientAuthScheme;
-    }
-
-    public int getJaasLoginRenew() {
-        return jaasLoginRenew;
     }
 }
