@@ -142,7 +142,7 @@ public class Login {
                         // TODO : make this a configurable option or search
                         // a set of likely paths {/usr/bin/, /usr/krb5/bin, ...}
                         String cmd = "/usr/bin/kinit";
-                        String kinitArgs = " -R";
+                        String kinitArgs = "-R";
                         try {
                             Shell.execCommand(cmd,kinitArgs);
                         }
