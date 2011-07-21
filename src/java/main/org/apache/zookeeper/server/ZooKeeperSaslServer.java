@@ -60,7 +60,7 @@ public class ZooKeeperSaslServer {
 
     private SaslServer createSaslServer(final Login login) {
         synchronized (login) {
-            Subject subject = login.getLogin().getSubject();
+            Subject subject = login.getSubject();
             if (subject != null) {
                 // server is using a JAAS-authenticated subject: determine service principal name and hostname from zk server's subject.
                 if (subject.getPrincipals().size() > 0) {

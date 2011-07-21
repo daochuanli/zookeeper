@@ -103,7 +103,7 @@ public class ZooKeeperSaslClient {
     synchronized private SaslClient createSaslClient(final String servicePrincipal) throws LoginException {
         try {
             login = new Login("Client",new ClientCallbackHandler(null));
-            Subject subject = login.getLogin().getSubject();
+            Subject subject = login.getSubject();
             SaslClient saslClient = null;
             int indexOf = servicePrincipal.indexOf("/");
             final String serviceName = servicePrincipal.substring(0, indexOf);
@@ -194,7 +194,7 @@ public class ZooKeeperSaslClient {
             throw new SaslException("Error in authenticating with a Zookeeper Quorum member: the quorum member's saslToken is null.");
         }
 
-        Subject subject = this.login.getLogin().getSubject();
+        Subject subject = this.login.getSubject();
         if (subject != null) {
             synchronized(this.login) {
                 try {
