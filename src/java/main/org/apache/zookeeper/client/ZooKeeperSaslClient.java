@@ -341,9 +341,10 @@ public class ZooKeeperSaslClient {
                           " client is configured to use a ticket cache" +
                           " (using the JAAS configuration useTicketCache=true), but the TGT in the ticket cache has" +
                           " expired. The Zookeeper client code does not currently support a client obtaining a password" +
-                          " from its environment (for example, creating a password prompt on the console). If you are" +
-                          " trying to use a ticket cache, you must manually refresh the TGT by doing 'kinit <princ>'" +
-                          " (where <princ> is the name of the Kerberos principal of this zookeeper client), which will"+
+                          " from its environment (as some applications would do, for example, with a password prompt on" +
+                          " the console). If you are trying to use a ticket cache, manually refresh the TGT by" +
+                          " doing (in a Unix shell) 'kinit <princ>' (where <princ> is the name of the Kerberos principal" +
+                          " of this zookeeper client), which will"+
                           " refresh the ticket cache. Then, restart this client.");
                     }
                     else {
