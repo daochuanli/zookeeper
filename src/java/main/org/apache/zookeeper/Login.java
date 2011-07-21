@@ -86,13 +86,16 @@ public class Login {
                         long nextRefresh = getRefreshTime(tgt);
                         long expiry = tgt.getEndTime().getTime();
                         Date nextRefreshDate;
-                        if (nextRefresh > expiry) {
+                        if ((nextRefresh > expiry) ||
+                            ((now + MIN_TIME_BEFORE_RELOGIN) > expiry)) {
+                            // expiry is before next scheduled refresh).
                             LOG.info("refreshing now because expiry is before next scheduled refresh time.");
                             nextRefresh = now;
                             nextRefreshDate = new Date(nextRefresh);
                         }
                         else {
                             if (nextRefresh < (now + MIN_TIME_BEFORE_RELOGIN)) {
+                                // next scheduled refresh is sooner than (now + MIN_TIME_BEFORE_LOGIN)".
                                 Date until = new Date(nextRefresh);
                                 Date newuntil = new Date(now + MIN_TIME_BEFORE_RELOGIN);
                                 LOG.warn("TGT refresh thread time adjusted from : " + until + " to : " + newuntil + " since "
