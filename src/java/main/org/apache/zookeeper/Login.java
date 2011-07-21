@@ -26,6 +26,8 @@ package org.apache.zookeeper;
  */
 
 import javax.security.auth.kerberos.KerberosPrincipal;
+import javax.security.auth.login.AppConfigurationEntry;
+import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.callback.CallbackHandler;
@@ -53,8 +55,9 @@ public class Login {
     private static final long MIN_TIME_BEFORE_RELOGIN = 1 * 60 * 1000L;
 
     private Subject subject = null;
-    private boolean isKrbTkt = false;
     private Thread t = null;
+    private boolean isKrbTicket = false;
+    private boolean isUsingTicketCache = false;
     /**
      * LoginThread constructor. The constructor starts the thread used
      * to periodically re-login to the Kerberos Ticket Granting Server.
@@ -69,13 +72,20 @@ public class Login {
       throws LoginException {
         this.callbackHandler = callbackHandler;
         final LoginContext loginContext = login(loginContextName);
-        this.subject = loginContext.getSubject();
-        this.isKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
-
-        if (this.isKrbTkt) {
-            // We are using the ticket cache, that must be refreshed periodically, to store the
-            // Ticket Granting Ticket (TGT). For testing and development, you can decrease the interval of expiration
-            // of tickets (for example, to 3 minutes) by running "modprinc -maxlife 3mins <principal>" in kadmin.
+        subject = loginContext.getSubject();
+        isKrbTicket = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
+        AppConfigurationEntry entries[] = Configuration.getConfiguration().getAppConfigurationEntry(loginContextName);
+        for (AppConfigurationEntry entry: entries) {
+            if (entry.getOptions().get("useTicketCache") != null) {
+                isUsingTicketCache = true;
+                break;
+            }
+        }
+        if (isKrbTicket && isUsingTicketCache) {
+            // Refresh the Ticket Granting Ticket (TGT) cache periodically. How often to refresh is determined by the
+            // TGT's existing expiry date and the configured MIN_TIME_BEFORE_RELOGIN. For testing and development,
+            // you can decrease the interval of expiration of tickets (for example, to 3 minutes) by running :
+            //  "modprinc -maxlife 3mins <principal>" in kadmin.
             t = new Thread(new Runnable() {
                 public void run() {
                     LOG.info("TGT refresh thread started.");
@@ -111,7 +121,6 @@ public class Login {
                                 }
                                 nextRefresh = Math.max(nextRefresh, now + MIN_TIME_BEFORE_RELOGIN);
                                 nextRefreshDate = new Date(nextRefresh);
-
                             }
                         }
 
@@ -133,17 +142,18 @@ public class Login {
                         // TODO : make this a configurable option or search
                         // a set of likely paths {/usr/bin/, /usr/krb5/bin, ...}
                         String cmd = "/usr/bin/kinit";
+                        String kinitArgs = "-R";
                         try {
-                            Shell.execCommand(cmd,"-R");
+                            Shell.execCommand(cmd,kinitArgs);
                         }
                         catch (Shell.ExitCodeException e) {
                             LOG.error("Could not renew TGT due to problem running shell command: '" + cmd
-                              + " -R'" + "; exception was:" + e + ". Will try shell command again at: "
+                              + kinitArgs + "'" + "; exception was:" + e + ". Will try shell command again at: "
                               + nextRefreshDate);
                         }
                         catch (IOException e) {
                             LOG.error("Could not renew TGT due to problem running shell command: '" + cmd
-                              + " -R'" + "; exception was:" + e + ". Will try shell command again at: "
+                              + kinitArgs + "'; exception was:" + e + ". Will try shell command again at: "
                               + nextRefreshDate);
                         }
                         try {
@@ -211,7 +221,7 @@ public class Login {
     // TODO : refactor this with login() to maximize code-sharing.
     public synchronized void reloginFromTicketCache(final String loginContextName, LoginContext loginContext)
         throws LoginException {
-        if (!isKrbTkt) {
+        if (!(isKrbTicket && isUsingTicketCache)) {
             return;
         }
         if (loginContext == null) {
