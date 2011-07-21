@@ -44,7 +44,6 @@ public class Login {
     Logger LOG = Logger.getLogger(Login.class);
 
     private LoginContext loginContext;
-    private String loginContextName;
     public CallbackHandler callbackHandler;
 
     // LoginThread will sleep until 80% of time from last refresh to
@@ -73,10 +72,9 @@ public class Login {
      */
     public Login(final String loginContextName, CallbackHandler callbackHandler)
       throws LoginException {
-        this.loginContextName = loginContextName;
         this.callbackHandler = callbackHandler;
         try {
-            this.login();
+            this.login(loginContextName);
             // determine Kerberos-related info, if any.
             this.subject = loginContext.getSubject();
             this.isKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
@@ -100,8 +98,8 @@ public class Login {
                                 Date until = new Date(nextRefresh);
                                 Date newuntil = new Date(now + MIN_TIME_BEFORE_RELOGIN);
                                 LOG.warn("TGT refresh thread time adjusted from : " + until + " to : " + newuntil + " since "
-                                  + until + " is less than "
-                                  + MIN_TIME_BEFORE_RELOGIN / 1000 + " seconds from now.");
+                                  + "the former is sooner than the minimum refresh interval ("
+                                  + MIN_TIME_BEFORE_RELOGIN / 1000 + " seconds) from now.");
                             }
                             nextRefresh = Math.max(nextRefresh, now + MIN_TIME_BEFORE_RELOGIN);
                             if (now < nextRefresh) {
@@ -129,10 +127,10 @@ public class Login {
                                   + " -R'" + "; exception was:" + e + ". Will try shell command again at: "
                                   + nextRefreshDate);
                             }
-                            LOG.debug("renewed ticket");
                             try {
-                                reloginFromTicketCache();
+                                reloginFromTicketCache(loginContextName);
                                 tgt = getTGT();
+                                LOG.debug("renewed TGT successfully.");
                             }
                             catch (LoginException e) {
                                 LOG.error("Could not renew TGT due to problem renewing TGT from ticket cache. "
@@ -150,14 +148,14 @@ public class Login {
         }
         catch (LoginException e) {
             LOG.error("Error while trying to do subject authentication using '"
-                    + this.loginContextName+"' section of "
+                    + loginContextName+"' section of "
                     + System.getProperty("java.security.auth.login.config")
                     + ":" + e + ".");
             throw e;
         }
     }
 
-    public synchronized void login() throws LoginException {
+    public synchronized void login(final String loginContextName) throws LoginException {
         if (loginContextName == null) {
             throw new LoginException("loginContext name (JAAS file section header) was null. " +
               "Please check your java.security.login.auth.config setting.");
@@ -200,7 +198,7 @@ public class Login {
     }
 
     // TODO : refactor this with login() to maximize code-sharing.
-    public synchronized void reloginFromTicketCache()
+    public synchronized void reloginFromTicketCache(final String loginContextName)
         throws LoginException {
         if (!isKrbTkt) {
             return;
