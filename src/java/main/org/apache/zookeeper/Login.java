@@ -75,7 +75,7 @@ public class Login {
         if (this.isKrbTkt) {
             // We are using the ticket cache, that must be refreshed periodically, to store the
             // Ticket Granting Ticket (TGT). For testing and development, you can decrease the interval of expiration
-            // of tickets by running "modprinc -maxlife 3mins <principal>" in kadmin.
+            // of tickets (for example, to 3 minutes) by running "modprinc -maxlife 3mins <principal>" in kadmin.
             t = new Thread(new Runnable() {
                 public void run() {
                     LOG.info("TGT refresh thread started.");
