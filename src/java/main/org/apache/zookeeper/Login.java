@@ -85,29 +85,36 @@ public class Login {
                         long now = System.currentTimeMillis();
                         long nextRefresh = getRefreshTime(tgt);
                         long expiry = tgt.getEndTime().getTime();
-                        if ((nextRefresh < (now + MIN_TIME_BEFORE_RELOGIN)) &&
-                          ((now + MIN_TIME_BEFORE_RELOGIN) < expiry)) {
-                            Date until = new Date(nextRefresh);
-                            Date newuntil = new Date(now + MIN_TIME_BEFORE_RELOGIN);
-                            LOG.warn("TGT refresh thread time adjusted from : " + until + " to : " + newuntil + " since "
-                              + "the former is sooner than the minimum refresh interval ("
-                              + MIN_TIME_BEFORE_RELOGIN / 1000 + " seconds) from now.");
-                        }
-                        nextRefresh = Math.min(Math.max(nextRefresh, now + MIN_TIME_BEFORE_RELOGIN),expiry);
-                        Date nextRefreshDate = new Date(nextRefresh);
-                        if (now < nextRefresh) {
-                            Date until = new Date(nextRefresh);
-                            LOG.info("TGT refresh thread sleeping until: " + until.toString());
-                            try {
-                                Thread.sleep(nextRefresh - now);
-                            }
-                            catch (InterruptedException ie) {
-                                LOG.warn("TGT renewal thread has been interrupted and will exit.");
-                                break;
-                            }
+                        Date nextRefreshDate;
+                        if (nextRefresh > expiry) {
+                            LOG.info("refreshing now because expiry is before next scheduled refresh time.");
+                            nextRefresh = now;
+                            nextRefreshDate = new Date(nextRefresh);
                         }
                         else {
-                            LOG.warn("nextRefresh:" + nextRefreshDate + " is in the past.");
+                            if (nextRefresh < (now + MIN_TIME_BEFORE_RELOGIN)) {
+                                Date until = new Date(nextRefresh);
+                                Date newuntil = new Date(now + MIN_TIME_BEFORE_RELOGIN);
+                                LOG.warn("TGT refresh thread time adjusted from : " + until + " to : " + newuntil + " since "
+                                  + "the former is sooner than the minimum refresh interval ("
+                                  + MIN_TIME_BEFORE_RELOGIN / 1000 + " seconds) from now.");
+                            }
+                            nextRefresh = Math.max(nextRefresh, now + MIN_TIME_BEFORE_RELOGIN);
+                            nextRefreshDate = new Date(nextRefresh);
+                            if (now < nextRefresh) {
+                                Date until = new Date(nextRefresh);
+                                LOG.info("TGT refresh thread sleeping until: " + until.toString());
+                                try {
+                                    Thread.sleep(nextRefresh - now);
+                                }
+                                catch (InterruptedException ie) {
+                                    LOG.warn("TGT renewal thread has been interrupted and will exit.");
+                                    break;
+                                }
+                            }
+                            else {
+                                LOG.warn("nextRefresh:" + nextRefreshDate + " is in the past.");
+                            }
                         }
                         // TODO : make this a configurable option or search
                         // a set of likely paths {/usr/bin/, /usr/krb5/bin, ...}
