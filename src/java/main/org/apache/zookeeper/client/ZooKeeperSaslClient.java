@@ -338,14 +338,15 @@ public class ZooKeeperSaslClient {
                             pc.setPassword(this.password.toCharArray());
                         }
                         LOG.warn("Could not login: the client is being asked for a password. This may be because the" +
-                          " client is configured to use a ticket cache" +
-                          " (using the JAAS configuration useTicketCache=true), but the TGT in the ticket cache has" +
-                          " expired. The Zookeeper client code does not currently support a client obtaining a password" +
+                          " client is configured to use a ticket cache (using the JAAS configuration" +
+                          " useTicketCache=true), but the TGT in the ticket cache has expired." +
+                          " The Zookeeper client code does not currently support a client obtaining a password" +
                           " from its environment (as some applications would do, for example, with a password prompt on" +
                           " the console). If you are trying to use a ticket cache, manually refresh the TGT by" +
                           " doing (in a Unix shell) 'kinit <princ>' (where <princ> is the name of the Kerberos principal" +
-                          " of this zookeeper client), which will"+
-                          " refresh the ticket cache. Then, restart this client.");
+                          " of this zookeeper client), which will refresh the ticket cache. Then, restart this client." +
+                          " If you continue to see this message, also ensure that your KDC host's clock is in sync " +
+                          " with this host's clock.");
                     }
                     else {
                         if (callback instanceof RealmCallback) {
