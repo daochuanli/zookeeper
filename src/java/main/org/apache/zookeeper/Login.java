@@ -109,7 +109,7 @@ public class Login {
                                 nextRefresh = Math.max(nextRefresh, now + MIN_TIME_BEFORE_RELOGIN);
                                 if (now < nextRefresh) {
                                     Date until = new Date(nextRefresh);
-                                    LOG.info("TGT refresh thread sleeping until : " + until.toString());
+                                    LOG.info("TGT refresh thread sleeping until: " + until.toString());
                                     Thread.sleep(nextRefresh - now);
                                 }
 
@@ -130,7 +130,7 @@ public class Login {
 
                             }
                             catch (InterruptedException ie) {
-                                LOG.warn("Terminating renewal thread");
+                                LOG.warn("TGT renewal thread has been interrupted and will exit.");
                                 break;
                             }
                             catch (IOException ie) {
@@ -196,6 +196,7 @@ public class Login {
         return null;
     }
 
+    // TODO : refactor this with login() to maximize code-sharing.
     public synchronized void reloginFromTicketCache()
         throws IOException {
         if (!isKrbTkt) {
@@ -224,8 +225,7 @@ public class Login {
             if (subject == null) {
                 throw new LoginException("login subject was null.");
             }
-            login =
-              new LoginContext(loginContextName,subject);
+            login =new LoginContext(loginContextName,subject);
             LOG.info("Initiating re-login for " + principalName);
             login.login();
         } catch (LoginException le) {
