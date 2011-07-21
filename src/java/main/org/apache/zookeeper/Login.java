@@ -21,8 +21,8 @@ package org.apache.zookeeper;
 /** 
  * This class is responsible for refreshing Kerberos credentials for
  * logins for both Zookeeper client and server.
- * See ServerCnxnFactory.java:startLoginThread() for server-side usage
- * and Zookeeper.java:startLoginThread() for client-side usage.
+ * See ZooKeeperSaslServer for server-side usage.
+ * See ZooKeeperSaslClient for client-side usage.
  */
 
 import javax.security.auth.kerberos.KerberosPrincipal;
@@ -39,10 +39,7 @@ import java.util.Date;
 import java.util.Set;
 
 public class Login {
-
     Logger LOG = Logger.getLogger(Login.class);
-
-    private LoginContext loginContext;
     public CallbackHandler callbackHandler;
 
     // LoginThread will sleep until 80% of time from last refresh to
@@ -55,7 +52,6 @@ public class Login {
     // Change the '1' to e.g. 5, to change this to 5 minutes.
     private static final long MIN_TIME_BEFORE_RELOGIN = 1 * 60 * 1000L;
 
-    private long lastLogin;
     private Subject subject = null;
     private boolean isKrbTkt = false;
     private Thread t = null;
@@ -72,90 +68,83 @@ public class Login {
     public Login(final String loginContextName, CallbackHandler callbackHandler)
       throws LoginException {
         this.callbackHandler = callbackHandler;
-        try {
-            LoginContext loginContext = this.login(loginContextName);
-            // determine Kerberos-related info, if any.
-            this.subject = loginContext.getSubject();
-            this.isKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
+        final LoginContext loginContext = login(loginContextName);
+        this.subject = loginContext.getSubject();
+        this.isKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
 
-            if (this.isKrbTkt == true) {
-                t = new Thread(new Runnable() {
-                    public void run() {
-                        LOG.info("TGT refresh thread started.");
-                        // TODO : make this a configurable option or search
-                        // a set of likely paths {/usr/bin/, /usr/krb5/bin, ...}
-                        String cmd = "/usr/bin/kinit";
+        if (this.isKrbTkt == true) {
+            t = new Thread(new Runnable() {
+                public void run() {
+                    LOG.info("TGT refresh thread started.");
+                    while (true) {  // renewal thread's main loop. if it exits from here, thread will exit.
                         KerberosTicket tgt = getTGT();
                         if (tgt == null) {
                             LOG.warn("No tgt found: ticket cache refresh thread will exit.");
                             return;
                         }
-                        while (true) {  // renewal thread's main loop. if it exits from here, thread will exit.
-                            long now = System.currentTimeMillis();
-                            long nextRefresh = getRefreshTime(tgt);
-                            if (nextRefresh < (now + MIN_TIME_BEFORE_RELOGIN)) {
-                                Date until = new Date(nextRefresh);
-                                Date newuntil = new Date(now + MIN_TIME_BEFORE_RELOGIN);
-                                LOG.warn("TGT refresh thread time adjusted from : " + until + " to : " + newuntil + " since "
-                                  + "the former is sooner than the minimum refresh interval ("
-                                  + MIN_TIME_BEFORE_RELOGIN / 1000 + " seconds) from now.");
-                            }
-                            nextRefresh = Math.max(nextRefresh, now + MIN_TIME_BEFORE_RELOGIN);
-                            if (now < nextRefresh) {
-                                Date until = new Date(nextRefresh);
-                                LOG.info("TGT refresh thread sleeping until: " + until.toString());
-                                try {
-                                    Thread.sleep(nextRefresh - now);
-                                }
-                                catch (InterruptedException ie) {
-                                    LOG.warn("TGT renewal thread has been interrupted and will exit.");
-                                    break;
-                                }
-                            }
-                            Date nextRefreshDate = new Date(nextRefresh);
+                        long now = System.currentTimeMillis();
+                        long nextRefresh = getRefreshTime(tgt);
+                        long expiry = tgt.getEndTime().getTime();
+                        if ((nextRefresh < (now + MIN_TIME_BEFORE_RELOGIN)) &&
+                          ((now + MIN_TIME_BEFORE_RELOGIN) < expiry)) {
+                            Date until = new Date(nextRefresh);
+                            Date newuntil = new Date(now + MIN_TIME_BEFORE_RELOGIN);
+                            LOG.warn("TGT refresh thread time adjusted from : " + until + " to : " + newuntil + " since "
+                              + "the former is sooner than the minimum refresh interval ("
+                              + MIN_TIME_BEFORE_RELOGIN / 1000 + " seconds) from now.");
+                        }
+                        nextRefresh = Math.min(Math.max(nextRefresh, now + MIN_TIME_BEFORE_RELOGIN),expiry);
+                        Date nextRefreshDate = new Date(nextRefresh);
+                        if (now < nextRefresh) {
+                            Date until = new Date(nextRefresh);
+                            LOG.info("TGT refresh thread sleeping until: " + until.toString());
                             try {
-                                Shell.execCommand(cmd,"-R");
+                                Thread.sleep(nextRefresh - now);
                             }
-                            catch (Shell.ExitCodeException e) {
-                                LOG.error("Could not renew TGT due to problem running shell command: '" + cmd
-                                  + " -R'" + "; exception was:" + e + ". Will try shell command again at: "
-                                  + nextRefreshDate);
-                            }
-                             catch (IOException e) {
-                                LOG.error("Could not renew TGT due to problem running shell command: '" + cmd
-                                  + " -R'" + "; exception was:" + e + ". Will try shell command again at: "
-                                  + nextRefreshDate);
-                            }
-                            try {
-                                reloginFromTicketCache(loginContextName);
-                                tgt = getTGT();
-                                LOG.debug("renewed TGT successfully.");
-                            }
-                            catch (LoginException e) {
-                                LOG.error("Could not renew TGT due to problem renewing TGT from ticket cache. "
-                                  + "Will try again at: "
-                                  + nextRefreshDate);
+                            catch (InterruptedException ie) {
+                                LOG.warn("TGT renewal thread has been interrupted and will exit.");
+                                break;
                             }
                         }
+                        else {
+                            LOG.warn("nextRefresh:" + nextRefreshDate + " is in the past.");
+                        }
+                        // TODO : make this a configurable option or search
+                        // a set of likely paths {/usr/bin/, /usr/krb5/bin, ...}
+                        String cmd = "/usr/bin/kinit";
+                        try {
+                            Shell.execCommand(cmd,"-R");
+                        }
+                        catch (Shell.ExitCodeException e) {
+                            LOG.error("Could not renew TGT due to problem running shell command: '" + cmd
+                              + " -R'" + "; exception was:" + e + ". Will try shell command again at: "
+                              + nextRefreshDate);
+                        }
+                        catch (IOException e) {
+                            LOG.error("Could not renew TGT due to problem running shell command: '" + cmd
+                              + " -R'" + "; exception was:" + e + ". Will try shell command again at: "
+                              + nextRefreshDate);
+                        }
+                        try {
+                            reloginFromTicketCache(loginContextName, loginContext);
+                            LOG.debug("renewed TGT successfully.");
+                        }
+                        catch (LoginException e) {
+                            LOG.error("Could not renew TGT : " + e + "."
+                              + "Will try again at: "
+                              + nextRefreshDate);
+                        }
                     }
-                });
-                t.start();
-            }
-            else {
-                LOG.error("Authentication was not via Ticket Cache: will not start a TGT renewal thread.");
-            }
+                }
+            });
+            t.start();
         }
-        catch (LoginException e) {
-            LOG.error("Error while trying to do subject authentication using '"
-                    + loginContextName+"' section of "
-                    + System.getProperty("java.security.auth.login.config")
-                    + ":" + e + ".");
-            throw e;
+        else {
+            LOG.error("Authentication was not via Ticket Cache: will not start a TGT renewal thread.");
         }
     }
 
-    // todo: make private.
-    public synchronized LoginContext login(final String loginContextName) throws LoginException {
+    private synchronized LoginContext login(final String loginContextName) throws LoginException {
         if (loginContextName == null) {
             throw new LoginException("loginContext name (JAAS file section header) was null. " +
               "Please check your java.security.login.auth.config setting.");
@@ -170,19 +159,20 @@ public class Login {
         return subject;
     }
 
-    private LoginContext getLogin() {
-        synchronized(this) {
-            return this.loginContext;
-        }
-    }
-
     // c.f. org.apache.hadoop.security.UserGroupInformation.
     private long getRefreshTime(KerberosTicket tgt) {
         long start = tgt.getStartTime().getTime();
-        long end = tgt.getEndTime().getTime();
+        long expires = tgt.getEndTime().getTime();
         LOG.info("TGT valid starting at: " + tgt.getStartTime().toString());
         LOG.info("TGT expires: " + tgt.getEndTime().toString());
-        return start + (long) ((end - start) * TICKET_RENEW_WINDOW);
+        long proposedRefresh = start + (long) ((expires - start) * TICKET_RENEW_WINDOW);
+        if (proposedRefresh > expires) {
+            // proposedRefresh is too far in the future: it's after ticket expires: simply return now.
+            return System.currentTimeMillis();
+        }
+        else {
+            return proposedRefresh;
+        }
     }
 
     private synchronized KerberosTicket getTGT() {
@@ -198,13 +188,12 @@ public class Login {
     }
 
     // TODO : refactor this with login() to maximize code-sharing.
-    public synchronized void reloginFromTicketCache(final String loginContextName)
+    public synchronized void reloginFromTicketCache(final String loginContextName, LoginContext loginContext)
         throws LoginException {
         if (!isKrbTkt) {
             return;
         }
-        LoginContext login = getLogin();
-        if (login == null) {
+        if (loginContext == null) {
             throw new LoginException("login must be done first");
         }
         final String principalName = getPrincipalName();
@@ -213,7 +202,7 @@ public class Login {
             //clear up the Kerberos state. But the tokens are not cleared! As per
             //the Java kerberos login module code, only the kerberos credentials
             //are cleared.
-            login.logout();
+            loginContext.logout();
             //login and also update the subject field of this instance to
             //have the new credentials (pass it to the LoginContext constructor)
             if (loginContextName == null) {
@@ -223,11 +212,8 @@ public class Login {
             if (subject == null) {
                 throw new LoginException("login subject was null.");
             }
-            // note that this LoginContext() call uses a Subject as the 2nd arg.
-            // this is in contrast with Login::login(), which uses a CallbackHandler as the second argument.
-            login = new LoginContext(loginContextName,subject);
             LOG.info("Initiating re-login for " + principalName);
-            login.login();
+            loginContext.login();
         } catch (LoginException le) {
             throw new LoginException("Login failure for " + principalName);
         }
@@ -235,7 +221,7 @@ public class Login {
 
     private String getPrincipalName() {
         try {
-            return (getLogin().getSubject().getPrincipals(KerberosPrincipal.class).toArray())[0].toString();
+            return getSubject().getPrincipals(KerberosPrincipal.class).toArray()[0].toString();
         }
         catch (NullPointerException e) {
             LOG.warn("could not display principal name because login was null or login's subject was null: returning '(no principal found)'.");
@@ -244,14 +230,6 @@ public class Login {
             LOG.warn("could not display principal name because login's subject had no principals: returning '(no principal found)'.");
         }
         return "(no principal found)";
-    }
-
-    private void setLastLogin(long loginTime) {
-        lastLogin = loginTime;
-    }
-
-    private long getLastLogin() {
-        return lastLogin;
     }
 
     public void shutdown() {
