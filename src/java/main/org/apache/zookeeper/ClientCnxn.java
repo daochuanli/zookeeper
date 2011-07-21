@@ -1056,9 +1056,6 @@ public class ClientCnxn {
                 eventThread.queueEvent(new WatchedEvent(Event.EventType.None,
                         Event.KeeperState.Disconnected, null));
             }
-            if (zooKeeperSaslClient != null) {
-                zooKeeperSaslClient.close();
-            }
             ZooTrace.logTraceMessage(LOG, ZooTrace.getTextTraceLevel(),
                                      "SendThread exitedloop.");
         }

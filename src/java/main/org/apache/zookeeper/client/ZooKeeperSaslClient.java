@@ -56,7 +56,7 @@ import javax.security.sasl.SaslException;
  */
 public class ZooKeeperSaslClient {
     private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperSaslClient.class);
-    private Login login;
+    private static Login login = null;
     private SaslClient saslClient;
 
     private byte[] saslToken = new byte[0];
@@ -102,7 +102,11 @@ public class ZooKeeperSaslClient {
 
     synchronized private SaslClient createSaslClient(final String servicePrincipal) throws LoginException {
         try {
-            login = new Login("Client",new ClientCallbackHandler(null));
+            if (login == null) {
+                // note that the login object is static: it's shared amongst all zookeeper-related connections.
+                // createSaslClient() must be declared synchronized so that login is initialized only once.
+                login = new Login("Client",new ClientCallbackHandler(null));
+            }
             Subject subject = login.getSubject();
             SaslClient saslClient = null;
             int indexOf = servicePrincipal.indexOf("/");
@@ -257,11 +261,6 @@ public class ZooKeeperSaslClient {
             LOG.warn("saslClient is null: client could not authenticate properly.");
         }
         return false;
-    }
-
-    public void close() {
-        LOG.debug("ZookeeperSaslClient object is shutting down.");
-        login.shutdown();
     }
 
     private boolean hasInitialResponse() {
