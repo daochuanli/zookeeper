@@ -31,7 +31,6 @@ import javax.security.auth.login.LoginException;
 import javax.security.auth.callback.CallbackHandler;
 
 import org.apache.log4j.Logger;
-import sun.security.krb5.PrincipalName;
 
 import javax.security.auth.kerberos.KerberosTicket;
 import javax.security.auth.Subject;
@@ -74,7 +73,7 @@ public class Login {
       throws LoginException {
         this.callbackHandler = callbackHandler;
         try {
-            this.login(loginContextName);
+            LoginContext loginContext = this.login(loginContextName);
             // determine Kerberos-related info, if any.
             this.subject = loginContext.getSubject();
             this.isKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
@@ -155,22 +154,23 @@ public class Login {
         }
     }
 
-    public synchronized void login(final String loginContextName) throws LoginException {
+    // todo: make private.
+    public synchronized LoginContext login(final String loginContextName) throws LoginException {
         if (loginContextName == null) {
             throw new LoginException("loginContext name (JAAS file section header) was null. " +
               "Please check your java.security.login.auth.config setting.");
         }
-
-        if (this.loginContext != null) {
-            this.loginContext.logout();
-        }
-        this.loginContext = new LoginContext(loginContextName,callbackHandler);
-        this.loginContext.login();
+        LoginContext loginContext = new LoginContext(loginContextName,callbackHandler);
+        loginContext.login();
         LOG.info("successfully logged in.");
-        setLastLogin(System.currentTimeMillis());
+        return loginContext;
     }
-    
-    public LoginContext getLogin() {
+
+    public Subject getSubject() {
+        return subject;
+    }
+
+    private LoginContext getLogin() {
         synchronized(this) {
             return this.loginContext;
         }
