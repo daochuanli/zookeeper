@@ -25,6 +25,7 @@ import java.util.HashMap;
 
 import javax.management.JMException;
 import javax.security.auth.login.Configuration;
+import javax.security.auth.login.LoginException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,7 +67,13 @@ public abstract class ServerCnxnFactory {
         // as a boolean flag to decide where to obtain login credentials.
         if (System.getProperty("java.security.auth.login.config") != null) {
             saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
-            login = new Login("Server",saslServerCallbackHandler);
+            try {
+                login = new Login("Server",saslServerCallbackHandler);
+            }
+            catch (LoginException e) {
+                throw new IOException("Could not configure server because SASL configuration did not allow the "
+                  + " Zookeeper server to authenticate itself properly: " + e);
+            }
         }
         configure(addr,maxClientCnxns);  
     }

@@ -72,6 +72,8 @@ import org.apache.zookeeper.proto.WatcherEvent;
 import org.apache.zookeeper.server.ByteBufferInputStream;
 import org.apache.zookeeper.server.ZooTrace;
 
+import javax.security.auth.login.LoginException;
+
 /**
  * This class manages the socket i/o for the client. ClientCnxn maintains a list
  * of available servers to connect to and "transparently" switches servers it is
@@ -913,10 +915,17 @@ public class ClientCnxn {
                     "(" + addr.getHostName() + ":" + addr.getPort() + ")"));
 
             if (System.getProperty("java.security.auth.login.config") != null) {
+                try {
 //                zooKeeperSaslClient = new ZooKeeperSaslClient(ClientCnxn.this, "zookeeper"+"/"+ addr.getHostName());
-                zooKeeperSaslClient = new ZooKeeperSaslClient(ClientCnxn.this, "zookeeper"+"/"+ "mac.foofers.org");
+                    zooKeeperSaslClient = new ZooKeeperSaslClient(ClientCnxn.this, "zookeeper"+"/"+ "mac.foofers.org");
+                }
+                catch (LoginException e) {
+                    LOG.warn("Zookeeper client cannot authenticate using the supplied configuration: '"
+                      + System.getProperty("java.security.auth.login.config")
+                      + "'. SASL authentication will not work. Will continue connection to Zookeeper server "
+                      + "without SASL authentication.");
+                }
             }
-
             clientCnxnSocket.connect(addr);
         }
 

@@ -42,6 +42,7 @@ import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.auth.login.LoginException;
 import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.RealmCallback;
 import javax.security.sasl.Sasl;
@@ -67,7 +68,7 @@ public class ZooKeeperSaslClient {
 
     private SaslState saslState = SaslState.INITIAL;
 
-    public ZooKeeperSaslClient(ClientCnxn cnxn, String serverPrincipal) {
+    public ZooKeeperSaslClient(ClientCnxn cnxn, String serverPrincipal) throws LoginException {
         this.cnxn = cnxn;
         this.saslClient = createSaslClient(serverPrincipal);
     }
@@ -99,52 +100,53 @@ public class ZooKeeperSaslClient {
         }
     }
 
-    private SaslClient createSaslClient(final String servicePrincipal) {
-        login = new Login("Client",new ClientCallbackHandler(null));
+    synchronized private SaslClient createSaslClient(final String servicePrincipal) throws LoginException {
         try {
-            synchronized(login) {
-                Subject subject = login.getLogin().getSubject();
-                SaslClient saslClient = null;
-                int indexOf = servicePrincipal.indexOf("/");
-                final String serviceName = servicePrincipal.substring(0, indexOf);
-                final String serviceHostname = servicePrincipal.substring(indexOf+1,servicePrincipal.length());
-                // Use subject.getPrincipals().isEmpty() as an indication of which SASL mechanism to use:
-                // if empty, use DIGEST-MD5; otherwise, use GSSAPI.
-                if (subject.getPrincipals().isEmpty() == true) {
-                    // no principals: must not be GSSAPI: use DIGEST-MD5 mechanism instead.
-                    LOG.info("Client will use DIGEST-MD5 as SASL mechanism.");
-                    String[] mechs = {"DIGEST-MD5"};
-                    String username = (String)(subject.getPublicCredentials().toArray()[0]);
-                    String password = (String)(subject.getPrivateCredentials().toArray()[0]);
-                    // "zk-sasl-md5" is a hard-wired 'domain' parameter shared with zookeeper server code (see ServerCnxnFactory.java)
-                    saslClient = Sasl.createSaslClient(mechs, username, serviceName, "zk-sasl-md5", null, new ClientCallbackHandler(password));
+            login = new Login("Client",new ClientCallbackHandler(null));
+            Subject subject = login.getLogin().getSubject();
+            SaslClient saslClient = null;
+            int indexOf = servicePrincipal.indexOf("/");
+            final String serviceName = servicePrincipal.substring(0, indexOf);
+            final String serviceHostname = servicePrincipal.substring(indexOf+1,servicePrincipal.length());
+            // Use subject.getPrincipals().isEmpty() as an indication of which SASL mechanism to use:
+            // if empty, use DIGEST-MD5; otherwise, use GSSAPI.
+            if (subject.getPrincipals().isEmpty()) {
+                // no principals: must not be GSSAPI: use DIGEST-MD5 mechanism instead.
+                LOG.info("Client will use DIGEST-MD5 as SASL mechanism.");
+                String[] mechs = {"DIGEST-MD5"};
+                String username = (String)(subject.getPublicCredentials().toArray()[0]);
+                String password = (String)(subject.getPrivateCredentials().toArray()[0]);
+                // "zk-sasl-md5" is a hard-wired 'domain' parameter shared with zookeeper server code (see ServerCnxnFactory.java)
+                saslClient = Sasl.createSaslClient(mechs, username, serviceName, "zk-sasl-md5", null, new ClientCallbackHandler(password));
+                return saslClient;
+            }
+            else { // GSSAPI.
+                final Object[] principals = subject.getPrincipals().toArray();
+                // determine client principal from subject.
+                final Principal clientPrincipal = (Principal)principals[0];
+                final String clientPrincipalName = clientPrincipal.getName();
+
+                try {
+                    saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
+                        public SaslClient run() throws SaslException {
+                            LOG.info("Client will use GSSAPI as SASL mechanism.");
+                            String[] mechs = {"GSSAPI"};
+                            LOG.debug("creating sasl client: client="+clientPrincipalName+";service="+serviceName+";serviceHostname="+serviceHostname);
+                            SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,serviceName,serviceHostname,null,new ClientCallbackHandler(null));
+                            return saslClient;
+                        }
+                    });
                     return saslClient;
                 }
-                else { // GSSAPI.
-                    final Object[] principals = subject.getPrincipals().toArray();
-                    // determine client principal from subject.
-                    final Principal clientPrincipal = (Principal)principals[0];
-                    final String clientPrincipalName = clientPrincipal.getName();
-
-                    try {
-                        saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
-                                public SaslClient run() throws SaslException {
-                                    LOG.info("Client will use GSSAPI as SASL mechanism.");
-                                    String[] mechs = {"GSSAPI"};
-                                    LOG.debug("creating sasl client: client="+clientPrincipalName+";service="+serviceName+";serviceHostname="+serviceHostname);
-                                    SaslClient saslClient = Sasl.createSaslClient(mechs,clientPrincipalName,serviceName,serviceHostname,null,new ClientCallbackHandler(null));
-                                    return saslClient;
-                                }
-                            });
-                        return saslClient;
-                    }
-                    catch (Exception e) {
-                        LOG.error("Error creating SASL client:" + e);
-                        e.printStackTrace();
-                        return null;
-                    }
+                catch (Exception e) {
+                    LOG.error("Error creating SASL client:" + e);
+                    e.printStackTrace();
+                    return null;
                 }
             }
+        }
+        catch (LoginException e) {
+            throw e;
         }
         catch (Exception e) {
             LOG.error("Exception while trying to create SASL client: " + e);
@@ -155,8 +157,12 @@ public class ZooKeeperSaslClient {
     private void prepareSaslResponseToServer(byte[] serverToken) {
         saslToken = serverToken;
 
-        LOG.debug("saslToken (server) length: " + saslToken.length);
+        if (saslClient == null) {
+            LOG.error("saslClient is unexpectedly null. Cannot respond to server's SASL message; ignoring.");
+            return;
+        }
 
+        LOG.debug("saslToken (server) length: " + saslToken.length);
         if (!(saslClient.isComplete())) {
             try {
                 saslToken = createSaslToken(saslToken);
@@ -240,7 +246,7 @@ public class ZooKeeperSaslClient {
     // used by ClientCnxn to know when to emit SaslAuthenticated event.
     public boolean readyToSendSaslAuthEvent() {
         if (saslClient != null) {
-            if (saslClient.isComplete() == true) {
+            if (saslClient.isComplete()) {
                 if (saslState == SaslState.INTERMEDIATE) {
                     saslState = SaslState.COMPLETE;
                     return true;
@@ -281,7 +287,7 @@ public class ZooKeeperSaslClient {
                         }
                         catch (SaslException e) {
                             LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);
-                            returnState = States.AUTH_FAILED;
+                            return States.AUTH_FAILED;
                         }
                         if (saslToken == null) {
                             LOG.warn("SASL negotiation with Zookeeper Quorum member failed: saslToken is null.");

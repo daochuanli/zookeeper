@@ -47,8 +47,6 @@ public class Login {
     private String loginContextName;
     public CallbackHandler callbackHandler;
 
-    public boolean validCredentials = false;
-
     // LoginThread will sleep until 80% of time from last refresh to
     // ticket's expiry has been reached, at which time it will wake
     // and try to renew the ticket.
@@ -73,13 +71,12 @@ public class Login {
      * @param callbackHandler
      *               Passed as second param to javax.security.auth.login.LoginContext().
      */
-    public Login(final String loginContextName, CallbackHandler callbackHandler) {
+    public Login(final String loginContextName, CallbackHandler callbackHandler)
+      throws LoginException {
         this.loginContextName = loginContextName;
         this.callbackHandler = callbackHandler;
-
         try {
             this.login();
-            validCredentials = true;
             // determine Kerberos-related info, if any.
             this.subject = loginContext.getSubject();
             this.isKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
@@ -93,50 +90,54 @@ public class Login {
                         String cmd = "/usr/bin/kinit";
                         KerberosTicket tgt = getTGT();
                         if (tgt == null) {
+                            LOG.warn("No tgt found: ticket cache refresh thread will exit.");
                             return;
                         }
-                        while (true) {
-                            try {
-                                long now = System.currentTimeMillis();
-                                long nextRefresh = getRefreshTime(tgt);
-                                if (nextRefresh < (now + MIN_TIME_BEFORE_RELOGIN)) {
-                                    Date until = new Date(nextRefresh);
-                                    Date newuntil = new Date(now + MIN_TIME_BEFORE_RELOGIN);
-                                    LOG.warn("TGT refresh thread time adjusted from : " + until + " to : " + newuntil + " since "
-                                      + until + " is less than "
-                                      + MIN_TIME_BEFORE_RELOGIN / 1000 + " seconds from now.");
-                                }
-                                nextRefresh = Math.max(nextRefresh, now + MIN_TIME_BEFORE_RELOGIN);
-                                if (now < nextRefresh) {
-                                    Date until = new Date(nextRefresh);
-                                    LOG.info("TGT refresh thread sleeping until: " + until.toString());
+                        while (true) {  // renewal thread's main loop. if it exits from here, thread will exit.
+                            long now = System.currentTimeMillis();
+                            long nextRefresh = getRefreshTime(tgt);
+                            if (nextRefresh < (now + MIN_TIME_BEFORE_RELOGIN)) {
+                                Date until = new Date(nextRefresh);
+                                Date newuntil = new Date(now + MIN_TIME_BEFORE_RELOGIN);
+                                LOG.warn("TGT refresh thread time adjusted from : " + until + " to : " + newuntil + " since "
+                                  + until + " is less than "
+                                  + MIN_TIME_BEFORE_RELOGIN / 1000 + " seconds from now.");
+                            }
+                            nextRefresh = Math.max(nextRefresh, now + MIN_TIME_BEFORE_RELOGIN);
+                            if (now < nextRefresh) {
+                                Date until = new Date(nextRefresh);
+                                LOG.info("TGT refresh thread sleeping until: " + until.toString());
+                                try {
                                     Thread.sleep(nextRefresh - now);
                                 }
-
-                                Date nextRefreshDate = new Date(nextRefresh);
-                                try {
-                                    Shell.execCommand(cmd,"-R");
-                                    LOG.debug("renewed ticket");
-                                    reloginFromTicketCache();
-                                    tgt = getTGT();
+                                catch (InterruptedException ie) {
+                                    LOG.warn("TGT renewal thread has been interrupted and will exit.");
+                                    break;
                                 }
-                                catch (Shell.ExitCodeException e) {
-                                    LOG.error("Could not renew TGT due to problem running shell command: '" + cmd + " -R'" + "; exception was:" + e + ". Will try shell command again at: " + nextRefreshDate);
-                                }
-
-                                if (tgt == null) {
-                                    LOG.warn("No TGT after renewal. Aborting renew thread for " + getPrincipalName());
-                                }
-
                             }
-                            catch (InterruptedException ie) {
-                                LOG.warn("TGT renewal thread has been interrupted and will exit.");
-                                break;
+                            Date nextRefreshDate = new Date(nextRefresh);
+                            try {
+                                Shell.execCommand(cmd,"-R");
                             }
-                            catch (IOException ie) {
-                                LOG.warn("Exception encountered while running the" +
-                                  " renewal command. Aborting renew thread", ie);
-                                return;
+                            catch (Shell.ExitCodeException e) {
+                                LOG.error("Could not renew TGT due to problem running shell command: '" + cmd
+                                  + " -R'" + "; exception was:" + e + ". Will try shell command again at: "
+                                  + nextRefreshDate);
+                            }
+                             catch (IOException e) {
+                                LOG.error("Could not renew TGT due to problem running shell command: '" + cmd
+                                  + " -R'" + "; exception was:" + e + ". Will try shell command again at: "
+                                  + nextRefreshDate);
+                            }
+                            LOG.debug("renewed ticket");
+                            try {
+                                reloginFromTicketCache();
+                                tgt = getTGT();
+                            }
+                            catch (LoginException e) {
+                                LOG.error("Could not renew TGT due to problem renewing TGT from ticket cache. "
+                                  + "Will try again at: "
+                                  + nextRefreshDate);
                             }
                         }
                     }
@@ -152,7 +153,7 @@ public class Login {
                     + this.loginContextName+"' section of "
                     + System.getProperty("java.security.auth.login.config")
                     + ":" + e + ".");
-            validCredentials = false;
+            throw e;
         }
     }
 
@@ -168,7 +169,6 @@ public class Login {
         this.loginContext = new LoginContext(loginContextName,callbackHandler);
         this.loginContext.login();
         LOG.info("successfully logged in.");
-        validCredentials = true;
         setLastLogin(System.currentTimeMillis());
     }
     
@@ -201,16 +201,13 @@ public class Login {
 
     // TODO : refactor this with login() to maximize code-sharing.
     public synchronized void reloginFromTicketCache()
-        throws IOException {
+        throws LoginException {
         if (!isKrbTkt) {
             return;
         }
         LoginContext login = getLogin();
         if (login == null) {
-            throw new IOException("login must be done first");
-        }
-        if (!hasSufficientTimeElapsed()) {
-            return;
+            throw new LoginException("login must be done first");
         }
         final String principalName = getPrincipalName();
         try {
@@ -234,7 +231,7 @@ public class Login {
             LOG.info("Initiating re-login for " + principalName);
             login.login();
         } catch (LoginException le) {
-            throw new IOException("Login failure for " + principalName);
+            throw new LoginException("Login failure for " + principalName);
         }
     }
 
@@ -249,20 +246,6 @@ public class Login {
             LOG.warn("could not display principal name because login's subject had no principals: returning '(no principal found)'.");
         }
         return "(no principal found)";
-    }
-
-    private boolean hasSufficientTimeElapsed() {
-        long now = System.currentTimeMillis();
-        if (now - getLastLogin() < MIN_TIME_BEFORE_RELOGIN) {
-            // in Hadoop code this was LOG.warn(), which causes a lot of false alarms in production.
-            // Figure out how to better diagnose why we get here and reduce
-            // unnecessary calls to hasSufficientTimeElapsed().
-            LOG.info("Not attempting to re-login since the last re-login was " +
-              "attempted less than " + (MIN_TIME_BEFORE_RELOGIN/1000) + " seconds "+ "before.");
-            return false;
-        }
-        setLastLogin(now);
-        return true;
     }
 
     private void setLastLogin(long loginTime) {
