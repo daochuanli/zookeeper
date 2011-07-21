@@ -156,17 +156,20 @@ public class Login {
         }
     }
 
-    public void login() throws LoginException {
-        synchronized(this) {
-            if (this.loginContext != null) {
-                this.loginContext.logout();
-            }
-            this.loginContext = new LoginContext(loginContextName,callbackHandler);
-            this.loginContext.login();
-            LOG.info("successfully logged in.");
-            validCredentials = true;
-            setLastLogin(System.currentTimeMillis());
+    public synchronized void login() throws LoginException {
+        if (loginContextName == null) {
+            throw new LoginException("loginContext name (JAAS file section header) was null. " +
+              "Please check your java.security.login.auth.config setting.");
         }
+
+        if (this.loginContext != null) {
+            this.loginContext.logout();
+        }
+        this.loginContext = new LoginContext(loginContextName,callbackHandler);
+        this.loginContext.login();
+        LOG.info("successfully logged in.");
+        validCredentials = true;
+        setLastLogin(System.currentTimeMillis());
     }
     
     public LoginContext getLogin() {
@@ -225,7 +228,9 @@ public class Login {
             if (subject == null) {
                 throw new LoginException("login subject was null.");
             }
-            login =new LoginContext(loginContextName,subject);
+            // note that this LoginContext() call uses a Subject as the 2nd arg.
+            // this is in contrast with Login::login(), which uses a CallbackHandler as the second argument.
+            login = new LoginContext(loginContextName,subject);
             LOG.info("Initiating re-login for " + principalName);
             login.login();
         } catch (LoginException le) {
