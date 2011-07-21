@@ -338,7 +338,7 @@ public class ZooKeeperSaslClient {
                             pc.setPassword(this.password.toCharArray());
                         } else {
                             LOG.warn("Could not login: the client is being asked for a password, but the Zookeeper client " +
-                              " code does not currently support obtaining a password from the user running this code." +
+                              " code does not currently support obtaining a password from the user." +
                               " Make sure that the client is configured to use a ticket cache (using the JAAS configuration" +
                               " useTicketCache=true) and restart the client. If you still get this message, the TGT in the " +
                               " ticket cache has expired." +
