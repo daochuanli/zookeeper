@@ -152,7 +152,7 @@ public class Login {
                         }
                         catch (LoginException e) {
                             LOG.error("Could not renew TGT : " + e + "."
-                              + "Will try again at: "
+                              + " Will try again at: "
                               + nextRefreshDate);
                         }
                     }
