@@ -72,7 +72,7 @@ public class Login {
         this.subject = loginContext.getSubject();
         this.isKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
 
-        if (this.isKrbTkt == true) {
+        if (this.isKrbTkt) {
             t = new Thread(new Runnable() {
                 public void run() {
                     LOG.info("TGT refresh thread started.");
