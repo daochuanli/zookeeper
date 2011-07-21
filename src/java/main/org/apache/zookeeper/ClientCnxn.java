@@ -920,10 +920,10 @@ public class ClientCnxn {
                     zooKeeperSaslClient = new ZooKeeperSaslClient(ClientCnxn.this, "zookeeper"+"/"+ "mac.foofers.org");
                 }
                 catch (LoginException e) {
-                    LOG.warn("Zookeeper client cannot authenticate using the supplied configuration: '"
-                      + System.getProperty("java.security.auth.login.config")
-                      + "'. SASL authentication will not work. Will continue connection to Zookeeper server "
-                      + "without SASL authentication.");
+                    LOG.warn("Zookeeper client cannot authenticate using the Client section of the supplied "
+                      + "configuration file: '" + System.getProperty("java.security.auth.login.config")
+                      + "'. Will continue connection to Zookeeper server without SASL authentication, if Zookeeper "
+                      + "server allows it.");
                 }
             }
             clientCnxnSocket.connect(addr);
