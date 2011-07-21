@@ -345,7 +345,7 @@ public class ZooKeeperSaslClient {
                           " the console). If you are trying to use a ticket cache, manually refresh the TGT by" +
                           " doing (in a Unix shell) 'kinit <princ>' (where <princ> is the name of the Kerberos principal" +
                           " of this zookeeper client), which will refresh the ticket cache. Then, restart this client." +
-                          " If you continue to see this message, also ensure that your KDC host's clock is in sync " +
+                          " If you continue to see this message, also ensure that your KDC host's clock is in sync" +
                           " with this host's clock.");
                     }
                     else {
