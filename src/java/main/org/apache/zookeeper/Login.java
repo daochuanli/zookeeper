@@ -171,7 +171,7 @@ public class Login {
             t.start();
         }
         else {
-            LOG.error("Authentication was not via Ticket Cache: will not start a TGT renewal thread.");
+            LOG.error("Not using Ticket Granting Ticket cache: will not start a TGT renewal thread.");
         }
     }
 
