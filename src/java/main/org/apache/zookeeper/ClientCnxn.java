@@ -944,8 +944,6 @@ public class ClientCnxn {
                         startConnect();
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
-
-
                     if ((state == States.CONNECTED) && (zooKeeperSaslClient != null)
                         && (zooKeeperSaslClient.isComplete() != true)) {
                         // do SASL processing, if any. afterwards state will be either CONNECTED or AUTH_FAILED.
