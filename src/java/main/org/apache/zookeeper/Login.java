@@ -242,7 +242,7 @@ public class Login {
         }
         final String principalName = getPrincipalName();
         try {
-            LOG.info("Initiating logout for " + principalName);
+            LOG.info("Logging out " + principalName);
             //clear up the Kerberos state. But the tokens are not cleared! As per
             //the Java kerberos login module code, only the kerberos credentials
             //are cleared.
@@ -256,8 +256,9 @@ public class Login {
             if (subject == null) {
                 throw new LoginException("login subject was null.");
             }
-            LOG.info("Initiating re-login for " + principalName);
+            LOG.info("Logging in " + principalName);
             loginContext.login();
+            LOG.info("Login successful for " + principalName);
         } catch (LoginException le) {
             throw new LoginException("Login failure for " + principalName);
         }
