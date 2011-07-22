@@ -194,23 +194,10 @@ public class ZooKeeperSaslClient {
                     final byte[] retval =
                         Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
                                 public byte[] run() throws SaslException {
-                                    try {
-                                        LOG.debug("saslClient.evaluateChallenge(len="+saslToken.length+")");
-                                        return saslClient.evaluateChallenge(saslToken);
-                                    }
-                                    catch (NullPointerException e) {
-                                        LOG.error("Quorum Member's SASL challenge was null.");
-                                    }
-                                    // NOTE: saslClient.evaluateChallenge() will throw a SaslException if authentication fails.
-                                    // returning null here will cause another (new) SaslException to be thrown.
-                                    return null;
+                                    LOG.debug("saslClient.evaluateChallenge(len="+saslToken.length+")");
+                                    return saslClient.evaluateChallenge(saslToken);
                                 }
                             });
-
-                    if (retval != null) {
-                        LOG.debug("Successfully created token with length:"+retval.length);
-                    }
-
                     return retval;
                 }
                 catch (PrivilegedActionException e) {
