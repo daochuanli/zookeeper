@@ -148,7 +148,7 @@ public class Login {
                         }
                         else {
                             LOG.error("nextRefresh:" + nextRefreshDate + " is in the past: exiting refresh thread. Check"
-                              + " clock sync between this host and KDC - (KDC is likely ahead of this host).");
+                              + " clock sync between this host and KDC - (KDC's clock is likely ahead of this host).");
                             return;
                         }
 
