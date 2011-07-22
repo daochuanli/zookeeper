@@ -207,7 +207,8 @@ public class ZooKeeperSaslClient {
             }
         }
         else {
-            throw new SaslException("Cannot make SASL TOKEN without subject defined.");
+            throw new SaslException("Cannot make SASL token without subject defined. " +
+              "For diagnosis, please look for WARNs and ERRORs in your log related to the Login class.");
         }
     }
 
