@@ -277,12 +277,15 @@ public class ZooKeeperSaslClient {
                             LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);
                             return States.AUTH_FAILED;
                         }
+                        // TODO: createSaslToken() should never return null: if there's
+                        // an error, it should throw SaslException.
                         if (saslToken == null) {
                             LOG.warn("SASL negotiation with Zookeeper Quorum member failed: saslToken is null.");
                             returnState = States.AUTH_FAILED;
                         }
                         else {
                             LOG.debug("hasInitialResponse() == true; (2) SASL token length = " + saslToken.length);
+                            // TODO: remove: queue packets in ClientCnxn.
                             queueSaslPacket(saslToken);
                             returnState = state;
                             this.saslState = SaslState.INTERMEDIATE;
@@ -293,8 +296,11 @@ public class ZooKeeperSaslClient {
                         LOG.debug("sending empty SASL token to server.");
                         // send a blank initial token which will hopefully prompt the ZK server to start the
                         // real authentication process.
+
                         byte[] emptyToken = new byte[0];
-                        queueSaslPacket(emptyToken);
+                        saslToken = emptyToken;
+                        // TODO: remove: queue packets in ClientCnxn.
+                        queueSaslPacket(saslToken);
                         this.saslState = SaslState.INTERMEDIATE;
                         returnState = state;
                     }
@@ -302,6 +308,10 @@ public class ZooKeeperSaslClient {
             default:
         } // switch(state)
         return returnState;
+    }
+
+    public byte[] getSaslToken() {
+        return saslToken;
     }
 
     // CallbackHandler here refers to javax.security.auth.callback.CallbackHandler.

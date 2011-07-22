@@ -948,11 +948,13 @@ public class ClientCnxn {
                         && (zooKeeperSaslClient.isComplete() != true)) {
                         // do SASL processing, if any. afterwards state will be either CONNECTED or AUTH_FAILED.
                         state = zooKeeperSaslClient.stateTransition(state);
+                        byte[] clientToken = zooKeeperSaslClient.getSaslToken();
                         if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
                             eventThread.queueEvent(new WatchedEvent(
                               Watcher.Event.EventType.None,
                               Watcher.Event.KeeperState.SaslAuthenticated, null));
                         }
+                        int i = 42; // breakpoint.
                     }
 
                     if (state.isConnected()) {
