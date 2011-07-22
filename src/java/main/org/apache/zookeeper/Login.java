@@ -151,9 +151,10 @@ public class Login {
                             return;
                         }
 
-                        // TODO : make this a configurable option or search
-                        // a set of likely paths {/usr/bin/, /usr/krb5/bin, ...}
                         String cmd = "/usr/bin/kinit";
+                        if (System.getProperty("zookeeper.kinit") != null) {
+                            cmd = System.getProperty("zookeeper.kinit");
+                        }
                         String kinitArgs = "-R";
                         try {
                             Shell.execCommand(cmd,kinitArgs);
