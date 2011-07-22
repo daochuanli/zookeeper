@@ -103,6 +103,10 @@ public class Login {
                             LOG.warn("No TGT found: will try again at " + nextRefreshDate);
                         }
                         else {
+                            // determine how long to sleep from looking at ticket's expiry.
+                            // We must not allow the ticket to expire, but we should take into consideration
+                            // MIN_TIME_BEFORE_RELOGIN. Will not sleep less than MIN_TIME_BEFORE_RELOGIN, except when
+                            // unless it would cause ticket expiration.
                             nextRefresh = getRefreshTime(tgt);
                             long expiry = tgt.getEndTime().getTime();
 
@@ -114,7 +118,7 @@ public class Login {
                             }
                             else {
                                 if (nextRefresh < (now + MIN_TIME_BEFORE_RELOGIN)) {
-                                    // next scheduled refresh is sooner than (now + MIN_TIME_BEFORE_LOGIN)".
+                                    // next scheduled refresh is sooner than (now + MIN_TIME_BEFORE_LOGIN).
                                     Date until = new Date(nextRefresh);
                                     Date newuntil = new Date(now + MIN_TIME_BEFORE_RELOGIN);
                                     LOG.warn("TGT refresh thread time adjusted from : " + until + " to : " + newuntil + " since "
@@ -131,9 +135,7 @@ public class Login {
                                   + "hosts' clocks are in sync.");
                                 return;
                             }
-
                         }
-
 
                         if (now < nextRefresh) {
                             Date until = new Date(nextRefresh);
@@ -148,7 +150,10 @@ public class Login {
                         }
                         else {
                             LOG.error("nextRefresh:" + nextRefreshDate + " is in the past: exiting refresh thread. Check"
-                              + " clock sync between this host and KDC - (KDC's clock is likely ahead of this host).");
+                              + " clock sync between this host and KDC - (KDC's clock is likely ahead of this host)."
+                              + " Manual intervention will be required for this client to successfully authenticate.");
+                            // TODO: if we have a keytab, we can use that to re-initialize and avoid the need for
+                            // manual intervention.
                             return;
                         }
 
@@ -241,7 +246,7 @@ public class Login {
         if (loginContext == null) {
             throw new LoginException("login must be done first");
         }
-        final String principalName = getPrincipalName();
+        String principalName = getPrincipalName();
         try {
             LOG.info("Logging out " + principalName);
             //clear up the Kerberos state. But the tokens are not cleared! As per
@@ -259,6 +264,10 @@ public class Login {
             }
             LOG.info("Logging in " + principalName);
             loginContext.login();
+            if (principalName.equals("(no principal name)")) {
+                // try again to get the principal name, in case the ticket cache was manually refreshed.
+                principalName = getPrincipalName();
+            }
             LOG.info("Login successful for " + principalName);
         } catch (LoginException le) {
             throw new LoginException("Login failure for " + principalName);

@@ -335,9 +335,9 @@ public class ZooKeeperSaslClient {
                               " determine if you are using a password or a keytab. If the former, do (in a Unix shell):" +
                               " 'kinit <princ>' (where <princ> is the name of the Kerberos principal). If the latter, do" +
                               " 'kinit -k -t <keytab> <princ>' (where <princ> is the name of the Kerberos principal, and" +
-                              " <keytab> is the location of the keytab file). After manually refreshing your cache, restart" +
-                              " this client. If you continue to see this message after manually refreshing your cache, " +
-                              " ensure that your KDC host's clock is in sync with this host's clock.");
+                              " <keytab> is the location of the keytab file). After manually refreshing your cache," +
+                              " restart this client. If you continue to see this message after manually refreshing" +
+                              " your cache, ensure that your KDC host's clock is in sync with this host's clock.");
                         }
                     }
                     else {
