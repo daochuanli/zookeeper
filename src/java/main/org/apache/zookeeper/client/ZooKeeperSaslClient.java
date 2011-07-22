@@ -224,7 +224,7 @@ public class ZooKeeperSaslClient {
         }
     }
 
-    private void queueSaslPacket(byte[] saslToken) {
+    public void queueSaslPacket(byte[] saslToken) {
         LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
         RequestHeader h = new RequestHeader();
         h.setType(ZooDefs.OpCode.sasl);
@@ -287,6 +287,7 @@ public class ZooKeeperSaslClient {
                             LOG.debug("hasInitialResponse() == true; (2) SASL token length = " + saslToken.length);
                             // TODO: remove: queue packets in ClientCnxn.
                             queueSaslPacket(saslToken);
+                            saslToken = null;
                             returnState = state;
                             this.saslState = SaslState.INTERMEDIATE;
                         }
@@ -296,11 +297,10 @@ public class ZooKeeperSaslClient {
                         LOG.debug("sending empty SASL token to server.");
                         // send a blank initial token which will hopefully prompt the ZK server to start the
                         // real authentication process.
-
-                        byte[] emptyToken = new byte[0];
-                        saslToken = emptyToken;
+                        saslToken = new byte[0];
                         // TODO: remove: queue packets in ClientCnxn.
                         queueSaslPacket(saslToken);
+                        saslToken = null;
                         this.saslState = SaslState.INTERMEDIATE;
                         returnState = state;
                     }
@@ -312,6 +312,10 @@ public class ZooKeeperSaslClient {
 
     public byte[] getSaslToken() {
         return saslToken;
+    }
+
+    public void clearSaslToken() {
+        saslToken = null;
     }
 
     // CallbackHandler here refers to javax.security.auth.callback.CallbackHandler.

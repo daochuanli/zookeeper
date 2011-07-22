@@ -949,6 +949,12 @@ public class ClientCnxn {
                         // do SASL processing, if any. afterwards state will be either CONNECTED or AUTH_FAILED.
                         state = zooKeeperSaslClient.stateTransition(state);
                         byte[] clientToken = zooKeeperSaslClient.getSaslToken();
+                        if (state != States.AUTH_FAILED) {
+                            if (clientToken != null) {
+                                //zooKeeperSaslClient.queueSaslPacket(clientToken);
+                                //zooKeeperSaslClient.clearSaslToken();
+                            }
+                        }
                         if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
                             eventThread.queueEvent(new WatchedEvent(
                               Watcher.Event.EventType.None,
