@@ -77,7 +77,10 @@ public class Login {
         AppConfigurationEntry entries[] = Configuration.getConfiguration().getAppConfigurationEntry(loginContextName);
         for (AppConfigurationEntry entry: entries) {
             if (entry.getOptions().get("useTicketCache") != null) {
-                isUsingTicketCache = true;
+                String val = (String)entry.getOptions().get("useTicketCache");
+                if (val.equals("true")) {
+                    isUsingTicketCache = true;
+                }
                 break;
             }
         }
@@ -108,7 +111,6 @@ public class Login {
                                 // expiry is before next scheduled refresh).
                                 LOG.info("refreshing now because expiry is before next scheduled refresh time.");
                                 nextRefresh = now;
-                                nextRefreshDate = new Date(nextRefresh);
                             }
                             else {
                                 if (nextRefresh < (now + MIN_TIME_BEFORE_RELOGIN)) {
@@ -120,9 +122,18 @@ public class Login {
                                       + MIN_TIME_BEFORE_RELOGIN / 1000 + " seconds) from now.");
                                 }
                                 nextRefresh = Math.max(nextRefresh, now + MIN_TIME_BEFORE_RELOGIN);
-                                nextRefreshDate = new Date(nextRefresh);
                             }
+                            nextRefreshDate = new Date(nextRefresh);
+                            if (nextRefresh > expiry) {
+                                Date expiryDate = new Date(expiry);
+                                LOG.error("next refresh: " + nextRefreshDate + " is later than expiry " + expiryDate
+                                  + ". This may indicated a clock skew problem. Check that this host and the KDC's "
+                                  + "hosts' clocks are in sync.");
+                                return;
+                            }
+
                         }
+
 
                         if (now < nextRefresh) {
                             Date until = new Date(nextRefresh);
@@ -136,7 +147,8 @@ public class Login {
                             }
                         }
                         else {
-                            LOG.warn("nextRefresh:" + nextRefreshDate + " is in the past.");
+                            LOG.error("nextRefresh:" + nextRefreshDate + " is in the past: exiting refresh thread.");
+                            return;
                         }
 
                         // TODO : make this a configurable option or search
@@ -148,12 +160,12 @@ public class Login {
                         }
                         catch (Shell.ExitCodeException e) {
                             LOG.error("Could not renew TGT due to problem running shell command: '" + cmd
-                              + kinitArgs + "'" + "; exception was:" + e + ". Will try shell command again at: "
+                              + " " + kinitArgs + "'" + "; exception was:" + e + ". Will try shell command again at: "
                               + nextRefreshDate);
                         }
                         catch (IOException e) {
                             LOG.error("Could not renew TGT due to problem running shell command: '" + cmd
-                              + kinitArgs + "'; exception was:" + e + ". Will try shell command again at: "
+                              + " " + kinitArgs + "'; exception was:" + e + ". Will try shell command again at: "
                               + nextRefreshDate);
                         }
                         try {
@@ -161,7 +173,7 @@ public class Login {
                             LOG.debug("renewed TGT successfully.");
                         }
                         catch (LoginException e) {
-                            LOG.error("Could not renew TGT : " + e + "."
+                            LOG.error("Could not renew TGT due to LoginException: " + e + "."
                               + " Will try again at: "
                               + nextRefreshDate);
                         }
