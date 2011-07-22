@@ -956,11 +956,6 @@ public class ClientCnxn {
                         // do SASL processing, if any. afterwards state will be either CONNECTED or AUTH_FAILED.
                         state = zooKeeperSaslClient.stateTransition(state);
                         if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
-                            // TODO : determine whether authentication failed or
-                            // not. ZK server knows, but client (running this code here)
-                            // does not. (use something like zookeeperSaslClient.isSuccessful())
-                            // TODO: also queuing same event in ZooKeeperSaslClient.java: should
-                            // only have it once.
                             queueEvent(new WatchedEvent(
                               Watcher.Event.EventType.None,
                               Watcher.Event.KeeperState.SaslAuthenticated, null));
