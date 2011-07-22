@@ -174,17 +174,6 @@ public class ZooKeeperSaslClient {
                     LOG.debug("saslToken (client) length: " + saslToken.length);
                     queueSaslPacket(saslToken);
                 }
-
-                // TODO: consolidate this queueEvent() with the
-                // same call with same args in ClientCnxn.java.
-                // (should move from there to here).
-                if (saslClient.isComplete()) {
-                    LOG.info("SASL authentication with Zookeeper server succeeded.");
-                    cnxn.queueEvent(new WatchedEvent(
-                      Watcher.Event.EventType.None,
-                      Watcher.Event.KeeperState.SaslAuthenticated, null));
-                }
-
             } catch (SaslException e) {
                 // TODO sendThread should set state to AUTH_FAILED; but currently only sendThread modifies state.
                 LOG.error("SASL authentication failed.");
