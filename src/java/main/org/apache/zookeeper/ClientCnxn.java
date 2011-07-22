@@ -378,11 +378,6 @@ public class ClientCnxn {
 
     }
 
-    // used by ZooKeeperSaslClient.prepareSaslResponseToServer().
-    public void queueEvent(WatchedEvent event) {
-        eventThread.queueEvent(event);
-    }
-
     // used by ZooKeeperSaslClient.queueSaslPacket().
     public void queuePacket(RequestHeader h, ReplyHeader r, Record request,
             Record response, AsyncCallback cb) {
@@ -956,7 +951,7 @@ public class ClientCnxn {
                         // do SASL processing, if any. afterwards state will be either CONNECTED or AUTH_FAILED.
                         state = zooKeeperSaslClient.stateTransition(state);
                         if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
-                            queueEvent(new WatchedEvent(
+                            eventThread.queueEvent(new WatchedEvent(
                               Watcher.Event.EventType.None,
                               Watcher.Event.KeeperState.SaslAuthenticated, null));
                         }
