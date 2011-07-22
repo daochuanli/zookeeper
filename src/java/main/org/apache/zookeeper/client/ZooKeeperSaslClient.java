@@ -337,12 +337,12 @@ public class ZooKeeperSaslClient {
                         if (password != null) {
                             pc.setPassword(this.password.toCharArray());
                         } else {
-                            LOG.warn("Could not login: the client is being asked for a password, but the Zookeeper client " +
+                            LOG.warn("Could not login: the client is being asked for a password, but the Zookeeper client" +
                               " code does not currently support obtaining a password from the user." +
-                              " Make sure that the client is configured to use a ticket cache (using the JAAS configuration" +
-                              " useTicketCache=true) and restart the client. If you still get this message, the TGT in the " +
-                              " ticket cache has expired." +
-                              " You should manually refresh your TGT in your ticket cache. To do so, first " +
+                              " To avoid this, make sure that the client is configured to use a ticket cache " +
+                              " (using the JAAS configuration useTicketCache=true) and restart the client. If you still" +
+                              " get this message after that, the TGT in the ticket cache has expired and must be" +
+                              " manually refreshed. To do so, first " +
                               " determine if you are using a password or a keytab. If the former, do (in a Unix shell):" +
                               " 'kinit <princ>' (where <princ> is the name of the Kerberos principal). If the latter, do" +
                               " 'kinit -k -t <keytab> <princ>' (where <princ> is the name of the Kerberos principal, and" +
