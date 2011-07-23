@@ -945,6 +945,7 @@ public class ClientCnxn {
                         startConnect();
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
+
                     if (state.isConnected()) {
                         if ((zooKeeperSaslClient != null) && (zooKeeperSaslClient.isComplete() != true)) {
                             if (zooKeeperSaslClient.hasInitialResponse()) {
