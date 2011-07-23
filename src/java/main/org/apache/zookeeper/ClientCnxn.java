@@ -948,9 +948,8 @@ public class ClientCnxn {
                     if (state.isConnected()) {
                         if ((zooKeeperSaslClient != null) && (zooKeeperSaslClient.isComplete() != true)) {
                             if (zooKeeperSaslClient.hasInitialResponse()) {
-                                LOG.debug("saslClient.hasInitialResponse()==true");
                                 try {
-                                    zooKeeperSaslClient.queueSaslPacket(zooKeeperSaslClient.createSaslToken());
+                                    zooKeeperSaslClient.queueSaslPacket();
                                 }
                                 catch (SaslException e) {
                                     LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);

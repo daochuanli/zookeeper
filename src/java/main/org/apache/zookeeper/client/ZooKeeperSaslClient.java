@@ -26,10 +26,7 @@ import org.apache.zookeeper.proto.GetSASLRequest;
 import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.RequestHeader;
 import org.apache.zookeeper.proto.SetSASLResponse;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooDefs;
-import org.apache.zookeeper.ZooKeeper.States;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,14 +56,14 @@ public class ZooKeeperSaslClient {
     private static Login login = null;
     private SaslClient saslClient;
 
-    public byte[] saslToken = new byte[0];
+    private byte[] saslToken = new byte[0];
     private ClientCnxn cnxn;
 
-    public enum SaslState {
+    private enum SaslState {
         INITIAL,INTERMEDIATE,COMPLETE
     }
 
-    public SaslState saslState = SaslState.INITIAL;
+    private SaslState saslState = SaslState.INITIAL;
 
     public ZooKeeperSaslClient(ClientCnxn cnxn, String serverPrincipal) throws LoginException {
         this.cnxn = cnxn;
@@ -229,7 +226,13 @@ public class ZooKeeperSaslClient {
         cnxn.queuePacket(h,r,request,response,cb);
     }
 
+    public void queueSaslPacket() throws SaslException {
+        queueSaslPacket(createSaslToken());
+    }
+
     // used by ClientCnxn to know when to emit SaslAuthenticated event.
+    // transitions internally from INTERMEDIATE to COMPLETE as a side effect if
+    // it's ready to emit this event.
     public boolean readyToSendSaslAuthEvent() {
         if (saslClient != null) {
             if (saslClient.isComplete()) {
