@@ -121,8 +121,7 @@ public class QuorumPeerMain {
       try {
           ServerCnxnFactory cnxnFactory = ServerCnxnFactory.createFactory();
           cnxnFactory.configure(config.getClientPortAddress(),
-                                config.getMaxClientCnxns(),
-                                config.getRequireClientAuthScheme());
+                                config.getMaxClientCnxns());
           quorumPeer = new QuorumPeer();
           quorumPeer.setClientPortAddress(config.getClientPortAddress());
           quorumPeer.setTxnFactory(new FileTxnSnapLog(

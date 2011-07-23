@@ -45,11 +45,6 @@ public class ServerConfig {
     /** defaults to -1 if not set explicitly */
     protected int maxSessionTimeout = -1;
 
-    /** Require clients to authenticate using a given authentication scheme, e.g. "sasl";
-     *  clients that fail to do so are disconnected. Currently only used with sasl.
-     */
-    protected String requireClientAuthScheme;
-
     /**
      * Parse arguments for server configuration
      * @param args clientPort dataDir and optional tickTime
@@ -100,7 +95,6 @@ public class ServerConfig {
       maxClientCnxns = config.getMaxClientCnxns();
       minSessionTimeout = config.getMinSessionTimeout();
       maxSessionTimeout = config.getMaxSessionTimeout();
-      requireClientAuthScheme = config.getRequireClientAuthScheme();
     }
 
     public InetSocketAddress getClientPortAddress() {
@@ -114,5 +108,4 @@ public class ServerConfig {
     public int getMinSessionTimeout() { return minSessionTimeout; }
     /** maximum session timeout in milliseconds, -1 if unset */
     public int getMaxSessionTimeout() { return maxSessionTimeout; }
-    public String getRequireClientAuthScheme() { return requireClientAuthScheme;}
 }

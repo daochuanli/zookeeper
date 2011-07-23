@@ -56,27 +56,8 @@ public abstract class ServerCnxnFactory {
     public abstract void configure(InetSocketAddress addr,
                                    int maxClientCnxns) throws IOException;
 
-    public String requireClientAuthScheme = null;
-
-    private SaslServerCallbackHandler saslServerCallbackHandler;
+    protected SaslServerCallbackHandler saslServerCallbackHandler;
     public Login login;
-
-    public void configure(InetSocketAddress addr, int maxClientCnxns, String requireClientAuthScheme) throws IOException {
-        this.requireClientAuthScheme = requireClientAuthScheme;
-        // Use presence/absence of java.security.auth.login.config property
-        // as a boolean flag to decide where to obtain login credentials.
-        if (System.getProperty("java.security.auth.login.config") != null) {
-            saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
-            try {
-                login = new Login("Server",saslServerCallbackHandler);
-            }
-            catch (LoginException e) {
-                throw new IOException("Could not configure server because SASL configuration did not allow the "
-                  + " Zookeeper server to authenticate itself properly: " + e);
-            }
-        }
-        configure(addr,maxClientCnxns);  
-    }
 
     /** Maximum number of connections allowed from particular host (ip) */
     public abstract int getMaxClientCnxnsPerHost();
@@ -123,25 +104,12 @@ public abstract class ServerCnxnFactory {
     static public ServerCnxnFactory createFactory(int clientPort,
             int maxClientCnxns) throws IOException
     {
-        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns,null);
-    }
-
-    static public ServerCnxnFactory createFactory(int clientPort,
-            int maxClientCnxns, String requireClientAuthScheme) throws IOException
-    {
-        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns, requireClientAuthScheme);
+        return createFactory(new InetSocketAddress(clientPort), maxClientCnxns);
     }
 
     static public ServerCnxnFactory createFactory(InetSocketAddress addr,
-            int maxClientCnxns, String requireClientAuthScheme) throws IOException
+            int maxClientCnxns) throws IOException
     {
-        ServerCnxnFactory factory = createFactory();
-        factory.configure(addr, maxClientCnxns, requireClientAuthScheme);
-        return factory;
-    }
-
-    static public ServerCnxnFactory createFactory(InetSocketAddress addr,
-            int maxClientCnxns) throws IOException {
         ServerCnxnFactory factory = createFactory();
         factory.configure(addr, maxClientCnxns);
         return factory;

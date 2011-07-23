@@ -122,6 +122,7 @@ public class SaslServerCallbackHandler implements CallbackHandler {
                                 if (ac.isAuthorized()) {
                                     LOG.debug("isAuthorized() since ac.isAuthorized() == true");
                                     // canonicalize authorization id: remove hostname (if any).
+                                    // canonicalize authorization id according to server settings:
                                     String userName = authorizationID;
                                     int slashIndex = userName.indexOf('/');
                                     if (slashIndex != -1) {
