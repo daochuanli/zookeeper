@@ -121,13 +121,35 @@ public class SaslServerCallbackHandler implements CallbackHandler {
                                 }
                                 if (ac.isAuthorized()) {
                                     LOG.debug("isAuthorized() since ac.isAuthorized() == true");
-                                    // canonicalize authorization id: remove hostname (if any).
-                                    // canonicalize authorization id according to server settings:
-                                    String userName = authorizationID;
-                                    int slashIndex = userName.indexOf('/');
-                                    if (slashIndex != -1) {
-                                        LOG.debug("Removing hostname from authorizationID: " + authorizationID);
-                                        userName = userName.substring(0,slashIndex);
+                                    // canonicalize authorization id according to system properties:
+                                    // kerberos.removeRealmFromPrincipal(={true,false})
+                                    // kerberos.removeHostFromPrincipal(={true,false})
+                                    userName = authorizationID;
+                                    String user = null;
+                                    String realm = null;
+                                    String userAndHost = null;
+                                    if (userName.indexOf("@") != -1) {
+                                        userAndHost = userName.split("@")[0];
+                                        realm = userName.split("@")[1];
+                                    }
+                                    else {
+                                        userAndHost = userName;
+                                    }
+                                    if (removeRealm() == true) {
+                                        userName = userAndHost;
+                                    }
+                                    if (userAndHost.indexOf("/") != -1) {
+                                        user = userAndHost.split("/")[0];
+                                    }
+                                    else {
+                                        user = userAndHost;
+                                    }
+                                    if (removeHost() == true) {
+                                        userName = user;
+                                        if ((realm != null) && (removeRealm() == false)) {
+                                            // add realm back.
+                                            userName += "@" + realm;
+                                        }
                                     }
                                     LOG.info("Setting authorizedID to username: " + userName);
                                     ac.setAuthorizedID(userName);
@@ -138,4 +160,14 @@ public class SaslServerCallbackHandler implements CallbackHandler {
                 }
             }
         }
+
+    private boolean removeRealm() {
+        return ((System.getProperty("zookeeper.kerberos.removeRealmFromPrincipal") != null) &&
+          (System.getProperty("zookeeper.kerberos.removeRealmFromPrincipal").equals("true")));
+    }
+
+    private boolean removeHost() {
+        return ((System.getProperty("zookeeper.kerberos.removeHostFromPrincipal") != null) &&
+          (System.getProperty("zookeeper.kerberos.removeHostFromPrincipal").equals("true")));
+    }
 }
