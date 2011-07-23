@@ -905,7 +905,6 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                         // in the case of the DIGEST-MD5 mechanism, clientToken will be empty at the beginning of the
                         // SASL negotiation process.
                         responseToken = saslServer.evaluateResponse(clientToken);
-
                         if (saslServer.isComplete() == true) {
                             String authorizationID = saslServer.getAuthorizationID();
                             LOG.info("adding SASL authorization for authorizationID: " + authorizationID);
