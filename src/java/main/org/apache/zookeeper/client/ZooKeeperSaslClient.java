@@ -182,6 +182,7 @@ public class ZooKeeperSaslClient {
     }
 
     public byte[] createSaslToken() throws SaslException {
+        saslState = SaslState.INTERMEDIATE;
         return createSaslToken(saslToken);
     }
 
@@ -245,8 +246,9 @@ public class ZooKeeperSaslClient {
     }
 
     public boolean hasInitialResponse() {
+        // additional saslState is used here to make things easier on the caller (ClientCnxn.run()).
         if (saslClient != null) {
-            return saslClient.hasInitialResponse();
+            return ((saslState == SaslState.INITIAL) && (saslClient.hasInitialResponse()));
         }
         else {
             LOG.warn("saslClient is null: client could not authenticate properly.");

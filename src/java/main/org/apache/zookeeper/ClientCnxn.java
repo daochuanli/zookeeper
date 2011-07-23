@@ -945,10 +945,8 @@ public class ClientCnxn {
                         startConnect();
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
-
-                    if ((state == States.CONNECTED) &&
-                        (zooKeeperSaslClient != null) && (zooKeeperSaslClient.isComplete() != true)) {
-                        if (zooKeeperSaslClient.saslState == ZooKeeperSaslClient.SaslState.INITIAL) {
+                    if (state.isConnected()) {
+                        if ((zooKeeperSaslClient != null) && (zooKeeperSaslClient.isComplete() != true)) {
                             if (zooKeeperSaslClient.hasInitialResponse()) {
                                 LOG.debug("saslClient.hasInitialResponse()==true");
                                 try {
@@ -958,17 +956,13 @@ public class ClientCnxn {
                                     LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);
                                     state = States.AUTH_FAILED;
                                 }
-                                zooKeeperSaslClient.saslState = ZooKeeperSaslClient.SaslState.INTERMEDIATE;
+                            }
+                            if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
+                                eventThread.queueEvent(new WatchedEvent(
+                                  Watcher.Event.EventType.None,
+                                  Watcher.Event.KeeperState.SaslAuthenticated, null));
                             }
                         }
-                        if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
-                            eventThread.queueEvent(new WatchedEvent(
-                              Watcher.Event.EventType.None,
-                              Watcher.Event.KeeperState.SaslAuthenticated, null));
-                        }
-                    }
-
-                    if (state.isConnected()) {
                         to = readTimeout - clientCnxnSocket.getIdleRecv();
                     } else {
                         to = connectTimeout - clientCnxnSocket.getIdleRecv();
