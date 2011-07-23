@@ -951,19 +951,13 @@ public class ClientCnxn {
                         if (zooKeeperSaslClient.saslState == ZooKeeperSaslClient.SaslState.INITIAL) {
                             if (zooKeeperSaslClient.hasInitialResponse()) {
                                 LOG.debug("saslClient.hasInitialResponse()==true");
-                                LOG.debug("hasInitialResponse() == true; (1) SASL token length = " + zooKeeperSaslClient.saslToken.length);
                                 try {
-                                    zooKeeperSaslClient.saslToken = zooKeeperSaslClient.createSaslToken();
+                                    zooKeeperSaslClient.queueSaslPacket(zooKeeperSaslClient.createSaslToken());
                                 }
                                 catch (SaslException e) {
                                     LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);
                                     state = States.AUTH_FAILED;
                                 }
-                                LOG.debug("hasInitialResponse() == true; (2) SASL token length = " +
-                                  zooKeeperSaslClient.saslToken.length);
-                                // TODO: remove: queue packets in ClientCnxn.
-                                zooKeeperSaslClient.queueSaslPacket(zooKeeperSaslClient.saslToken);
-                                zooKeeperSaslClient.saslToken = null;
                                 zooKeeperSaslClient.saslState = ZooKeeperSaslClient.SaslState.INTERMEDIATE;
                             }
                         }
