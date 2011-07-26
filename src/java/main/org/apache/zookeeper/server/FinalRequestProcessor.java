@@ -32,6 +32,7 @@ import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.KeeperException.SessionMovedException;
 import org.apache.zookeeper.ZooDefs.OpCode;
 import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.CreateResponse;
 import org.apache.zookeeper.proto.ExistsRequest;
@@ -168,6 +169,33 @@ public class FinalRequestProcessor implements RequestProcessor {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("{}",request);
             }
+
+            // Disconnect sessions that are not authenticated according to requireClientAuth's specified value, if any.
+            // Check request type: all requests except for members of the set {createSession,ping,sasl,closeSession}
+            // should cause an immediate session termination if authentication of the specified scheme is not present.
+            String requiredAuthScheme = System.getProperty("zookeeper.requireClientAuth");
+
+            if (requiredAuthScheme != null) {
+                boolean authenticated= false;
+                if (!((request.type == OpCode.createSession) ||
+                      (request.type == OpCode.ping) ||
+                      (request.type == OpCode.sasl) ||
+                      (request.type == OpCode.closeSession))) {
+                    for(Id eachId: cnxn.authInfo) {
+                        if (eachId.getScheme().equals(requiredAuthScheme)) {
+                            authenticated = true;
+                            break;
+                        }
+                    }
+                    if (!authenticated) {
+                        LOG.warn("Disconnecting client: 'zookeeper.requireClientAuth' system property is: '" +
+                          requiredAuthScheme + "', but client is not "+requiredAuthScheme+"-authenticated.");
+                        cnxn.close();
+                        return;
+                    }
+                }
+            }
+
             switch (request.type) {
             case OpCode.ping: {
                 zks.serverStats().updateLatency(request.createTime);

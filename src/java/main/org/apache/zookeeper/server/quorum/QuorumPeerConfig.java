@@ -71,6 +71,7 @@ public class QuorumPeerConfig {
     protected QuorumVerifier quorumVerifier;
 
     protected LearnerType peerType = LearnerType.PARTICIPANT;
+    protected String requireClientAuthScheme;
 
     @SuppressWarnings("serial")
     public static class ConfigException extends Exception {
@@ -158,7 +159,10 @@ public class QuorumPeerConfig {
                 {
                     throw new ConfigException("Unrecognised peertype: " + value);
                 }
-            } else if (key.startsWith("server.")) {
+            } else if (key.equals("requireClientAuthScheme")) {
+                requireClientAuthScheme = value;
+            }
+            else if (key.startsWith("server.")) {
                 int dot = key.indexOf('.');
                 long sid = Long.parseLong(key.substring(dot + 1));
                 String parts[] = value.split(":");
@@ -227,14 +231,24 @@ public class QuorumPeerConfig {
                         + " is missing.");
             }
         }
-        if (clientPort == 0) {
-            throw new IllegalArgumentException("clientPort is not set");
-        }
         if (clientPortAddress != null) {
-            this.clientPortAddress = new InetSocketAddress(
-                    InetAddress.getByName(clientPortAddress), clientPort);
+            int colon = clientPortAddress.indexOf(':');
+            if (colon > -1) {
+                clientPort = Integer.parseInt(clientPortAddress.substring(colon + 1));
+                clientPortAddress = clientPortAddress.substring(0,colon);
+                this.clientPortAddress = new InetSocketAddress(
+                  InetAddress.getByName(clientPortAddress), clientPort);
+            }
+            else {
+                 if (clientPort == 0) {
+                     throw new IllegalArgumentException("clientPort is not set.");
+                 }
+                this.clientPortAddress = new InetSocketAddress(clientPort);
+            }
         } else {
-            this.clientPortAddress = new InetSocketAddress(clientPort);
+            if (clientPort == 0) {
+                throw new IllegalArgumentException("clientPort is not set.");
+            }
         }
 
         if (tickTime == 0) {
