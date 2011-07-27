@@ -16,6 +16,15 @@
  * limitations under the License.
  */
 
+ /* This file copied from Hadoop's security branch,
+  * with the following changes:
+  * 1. package changed from org.apache.hadoop.security to
+  *    org.apache.zookeeper.server.auth.
+  * 2. Usage of Hadoop's Configuration class removed since
+  *    it is not available in Zookeeper: instead, system property
+  *    "zookeeper.security.auth_to_local" is used.
+  */
+
 package org.apache.zookeeper.server.auth;
 
 import java.io.IOException;
@@ -77,7 +86,13 @@ public class KerberosName {
       kerbConf = Config.getInstance();
       defaultRealm = kerbConf.getDefaultRealm();
     } catch (KrbException ke) {
-        throw new IllegalArgumentException("Can't get Kerberos configuration",ke);
+      throw new IllegalArgumentException("Can't get Kerberos configuration",ke);
+    }
+    try {
+      setConfiguration();
+    }
+    catch (IOException e) {
+      throw new IllegalArgumentException("Could not configure Kerberos principal name mapping.");
     }
   }
 
@@ -325,6 +340,16 @@ public class KerberosName {
       remaining = remaining.substring(matcher.end());
     }
     return result;
+  }
+
+  /**
+   * Set the static configuration to get the rules.
+   * @param conf the new configuration
+   * @throws IOException
+   */
+  public static void setConfiguration() throws IOException {
+    String ruleString = System.getProperty("zookeeper.security.auth_to_local", "DEFAULT");
+    rules = parseRules(ruleString);
   }
 
   @SuppressWarnings("serial")
