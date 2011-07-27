@@ -71,7 +71,6 @@ public class QuorumPeerConfig {
     protected QuorumVerifier quorumVerifier;
 
     protected LearnerType peerType = LearnerType.PARTICIPANT;
-    protected String requireClientAuthScheme;
 
     @SuppressWarnings("serial")
     public static class ConfigException extends Exception {
@@ -159,8 +158,6 @@ public class QuorumPeerConfig {
                 {
                     throw new ConfigException("Unrecognised peertype: " + value);
                 }
-            } else if (key.equals("requireClientAuthScheme")) {
-                requireClientAuthScheme = value;
             }
             else if (key.startsWith("server.")) {
                 int dot = key.indexOf('.');
