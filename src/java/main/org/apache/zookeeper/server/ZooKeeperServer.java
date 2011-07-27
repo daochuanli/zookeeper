@@ -930,7 +930,6 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                     LOG.debug("Size of server SASL response: " + responseToken.length);
                 }
                 // wrap SASL response token to client inside a Response object.
-                //   in FinalRequestProcessor this was: rsp = new SetSaslResponse(responseToken).
                 Record rsp = new SetSASLResponse(responseToken);
                 ReplyHeader rh = new ReplyHeader(h.getXid(), 0, KeeperException.Code.OK.intValue());
                 cnxn.sendResponse(rh,rsp, "response"); // not sure about 3rd arg..what is it?
