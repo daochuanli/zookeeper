@@ -24,13 +24,11 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 
 import javax.management.JMException;
-import javax.security.auth.login.Configuration;
-import javax.security.auth.login.LoginException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.jmx.MBeanRegistry;
 import org.apache.zookeeper.Login;
+import org.apache.zookeeper.server.auth.SaslServerCallbackHandler;
 
 public abstract class ServerCnxnFactory {
 

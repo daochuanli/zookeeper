@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 
 import org.apache.zookeeper.Login;
+import org.apache.zookeeper.server.auth.SaslServerCallbackHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.jboss.netty.bootstrap.ServerBootstrap;
