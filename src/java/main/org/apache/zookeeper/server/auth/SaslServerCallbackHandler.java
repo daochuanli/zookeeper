@@ -35,8 +35,6 @@ import javax.security.auth.login.Configuration;
 import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.RealmCallback;
 
-import org.apache.zookeeper.server.auth.KerberosName;
-
 public class SaslServerCallbackHandler implements CallbackHandler {
     private String userName = null;
     private Map<String,String> credentials = new HashMap<String,String>();
