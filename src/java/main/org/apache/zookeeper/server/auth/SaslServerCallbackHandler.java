@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.zookeeper.server;
+package org.apache.zookeeper.server.auth;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -29,7 +30,6 @@ import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
-import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
 import javax.security.sasl.AuthorizeCallback;
@@ -127,39 +127,21 @@ public class SaslServerCallbackHandler implements CallbackHandler {
                                     // canonicalize authorization id according to system properties:
                                     // kerberos.removeRealmFromPrincipal(={true,false})
                                     // kerberos.removeHostFromPrincipal(={true,false})
-                                    userName = authorizationID;
-                                    KerberosPrincipal kerbName = new KerberosPrincipal(authorizationID);
-                                    int type = kerbName.getNameType();
-                                    String kerberosName = kerbName.getName();
-                                    String realm = kerbName.getRealm();
-                                    String user = null;
-                                    String userRealm = null;
-                                    String userAndHost = null;
-                                    if (userName.indexOf("@") != -1) {
-                                        userAndHost = userName.split("@")[0];
-                                        realm = userName.split("@")[1];
-                                    }
-                                    else {
-                                        userAndHost = userName;
-                                    }
-                                    if (removeRealm() == true) {
-                                        userName = userAndHost;
-                                    }
-                                    if (userAndHost.indexOf("/") != -1) {
-                                        user = userAndHost.split("/")[0];
-                                    }
-                                    else {
-                                        user = userAndHost;
-                                    }
-                                    if (removeHost() == true) {
-                                        userName = user;
-                                        if ((realm != null) && (removeRealm() == false)) {
-                                            // add realm back.
-                                            userName += "@" + realm;
+                                    KerberosName kerberosName = new KerberosName(authenticationID);
+                                    try {
+                                        String userName = kerberosName.getShortName();
+                                        if (!removeHost() && (kerberosName.getHostName() != null)) {
+                                            userName += "/" + kerberosName.getServiceName();
                                         }
+                                        if (!removeRealm() && (kerberosName.getRealm() != null)) {
+                                            userName += "@" + kerberosName.getRealm();
+                                        }
+                                        LOG.info("Setting authorizedID to username: " + userName);
+                                        ac.setAuthorizedID(userName);
                                     }
-                                    LOG.info("Setting authorizedID to username: " + userName);
-                                    ac.setAuthorizedID(userName);
+                                    catch (IOException e) {
+                                        LOG.error("Failed to set name based on Kerberos authentication rules.");
+                                    }
                                 }
                             }
                         }
