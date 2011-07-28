@@ -911,7 +911,6 @@ public class ClientCnxn {
                     "(" + addr.getHostName() + ":" + addr.getPort() + ")"));
 
             if (System.getProperty("java.security.auth.login.config") != null) {
-                LOG.info("Will authenticate with server using server principal: zookeeper/" + addr.getHostName());
                 try {
                     zooKeeperSaslClient = new ZooKeeperSaslClient(ClientCnxn.this, "zookeeper"+"/"+ addr.getHostName());
                 }
