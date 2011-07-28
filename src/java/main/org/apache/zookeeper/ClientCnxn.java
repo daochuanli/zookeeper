@@ -947,6 +947,7 @@ public class ClientCnxn {
 
                     if (state.isConnected()) {
                         if ((zooKeeperSaslClient != null) && (zooKeeperSaslClient.isComplete() != true)) {
+                            zooKeeperSaslClient.sendInitialEmptyToken();
                             if (zooKeeperSaslClient.hasInitialResponse()) {
                                 try {
                                     zooKeeperSaslClient.queueSaslPacket();

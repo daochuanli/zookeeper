@@ -223,6 +223,9 @@ public class ZooKeeperSaslClient {
         ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
         ReplyHeader r = new ReplyHeader();
         cnxn.queuePacket(h,r,request,response,cb);
+        if (saslState == SaslState.INITIAL) {
+            saslState = SaslState.INTERMEDIATE;
+        }
     }
 
     public void queueSaslPacket() throws SaslException {
@@ -247,8 +250,20 @@ public class ZooKeeperSaslClient {
         return false;
     }
 
+    public void sendInitialEmptyToken() {
+        // The client needs to send an initial empty token to the server for
+        // SASL authentication methods such as DIGEST-MD5 (but not GSSAPI) for which
+        // hasInitialResponse() == false.
+        if ((saslState == SaslState.INITIAL) && (!saslClient.hasInitialResponse())) {
+            byte[] emptyToken = new byte[0];
+            queueSaslPacket(emptyToken);
+        }
+    }
+
     public boolean hasInitialResponse() {
-        // additional saslState is used here to make things easier on the caller (ClientCnxn.run()).
+        // additional saslState is used here to make things easier on the caller (ClientCnxn$SendThread.run()).
+
+
         if (saslClient != null) {
             return ((saslState == SaslState.INITIAL) && (saslClient.hasInitialResponse()));
         }
@@ -256,14 +271,6 @@ public class ZooKeeperSaslClient {
             LOG.warn("saslClient is null: client could not authenticate properly.");
         }
         return false;
-    }
-
-    public byte[] getSaslToken() {
-        return saslToken;
-    }
-
-    public void clearSaslToken() {
-        saslToken = null;
     }
 
     // CallbackHandler here refers to javax.security.auth.callback.CallbackHandler.
