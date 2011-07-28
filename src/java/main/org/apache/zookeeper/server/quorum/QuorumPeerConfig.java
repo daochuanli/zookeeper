@@ -158,8 +158,7 @@ public class QuorumPeerConfig {
                 {
                     throw new ConfigException("Unrecognised peertype: " + value);
                 }
-            }
-            else if (key.startsWith("server.")) {
+            } else if (key.startsWith("server.")) {
                 int dot = key.indexOf('.');
                 long sid = Long.parseLong(key.substring(dot + 1));
                 String parts[] = value.split(":");
@@ -228,24 +227,14 @@ public class QuorumPeerConfig {
                         + " is missing.");
             }
         }
+        if (clientPort == 0) {
+            throw new IllegalArgumentException("clientPort is not set");
+        }
         if (clientPortAddress != null) {
-            int colon = clientPortAddress.indexOf(':');
-            if (colon > -1) {
-                clientPort = Integer.parseInt(clientPortAddress.substring(colon + 1));
-                clientPortAddress = clientPortAddress.substring(0,colon);
-                this.clientPortAddress = new InetSocketAddress(
-                  InetAddress.getByName(clientPortAddress), clientPort);
-            }
-            else {
-                 if (clientPort == 0) {
-                     throw new IllegalArgumentException("clientPort is not set.");
-                 }
-                this.clientPortAddress = new InetSocketAddress(clientPort);
-            }
+            this.clientPortAddress = new InetSocketAddress(
+                    InetAddress.getByName(clientPortAddress), clientPort);
         } else {
-            if (clientPort == 0) {
-                throw new IllegalArgumentException("clientPort is not set.");
-            }
+            this.clientPortAddress = new InetSocketAddress(clientPort);
         }
 
         if (tickTime == 0) {
