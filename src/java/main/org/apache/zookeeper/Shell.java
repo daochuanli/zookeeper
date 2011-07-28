@@ -15,6 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/* This file copied from Hadoop's security branch,
+  * with the following changes:
+  * 1. package changed from org.apache.hadoop.util to
+  *    org.apache.zookeeper.
+  * 2. Usage of Hadoop's Configuration class removed since
+  *    it is not available in Zookeeper: instead, system properties
+  *    are used.
+  * 3. The deprecated getUlimitMemoryCommand() method removed since
+  *    it is not needed.
+  */
+
+
 package org.apache.zookeeper;
 
 import java.io.BufferedReader;
