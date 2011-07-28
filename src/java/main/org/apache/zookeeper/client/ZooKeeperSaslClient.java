@@ -126,7 +126,6 @@ public class ZooKeeperSaslClient {
                 // determine client principal from subject.
                 final Principal clientPrincipal = (Principal)principals[0];
                 final String clientPrincipalName = clientPrincipal.getName();
-
                 try {
                     saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
                         public SaslClient run() throws SaslException {
