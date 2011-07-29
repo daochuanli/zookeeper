@@ -149,9 +149,8 @@ public class SaslAuthTest extends ClientBase {
         Thread.sleep(1000);
 
         List<String> invalidIds = new ArrayList<String>();
-        invalidIds.add("@user");
-        invalidIds.add("/host.name.com");
         invalidIds.add("user@KERB.REALM/server.com");
+        invalidIds.add("user@KERB.REALM1@KERB.REALM2");
 
         int i = 0;
         for(String invalidId: invalidIds) {

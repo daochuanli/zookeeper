@@ -22,6 +22,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.server.ServerCnxn;
+import org.apache.zookeeper.server.auth.KerberosName;
 
 public class SASLAuthenticationProvider implements AuthenticationProvider {
 
@@ -59,9 +60,13 @@ public class SASLAuthenticationProvider implements AuthenticationProvider {
         // 3. sErVeR/hOsTnAmE
         // 4. sErVeR/hOsTnAmE@rEaLm
         //
-        final Pattern cpValuePattern = Pattern.compile("^\\w+(/[\\w\\-\\.]+)?(@[\\w\\-\\.]+)?$");
-        Matcher matcher = cpValuePattern.matcher(id);
-        return matcher.matches();
+        try {
+            new KerberosName(id);
+            return true;
+        }
+        catch (IllegalArgumentException e) {
+            return false;
+        }
    }
 
 
