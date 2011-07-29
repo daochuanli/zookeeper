@@ -27,6 +27,7 @@ import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.RequestHeader;
 import org.apache.zookeeper.proto.SetSASLResponse;
 import org.apache.zookeeper.ZooDefs;
+import org.apache.zookeeper.server.auth.KerberosName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,10 +105,7 @@ public class ZooKeeperSaslClient {
                 login = new Login("Client",new ClientCallbackHandler(null));
             }
             Subject subject = login.getSubject();
-            SaslClient saslClient = null;
-            int indexOf = servicePrincipal.indexOf("/");
-            final String serviceName = servicePrincipal.substring(0, indexOf);
-            final String serviceHostname = servicePrincipal.substring(indexOf+1,servicePrincipal.length());
+            SaslClient saslClient;
             // Use subject.getPrincipals().isEmpty() as an indication of which SASL mechanism to use:
             // if empty, use DIGEST-MD5; otherwise, use GSSAPI.
             if (subject.getPrincipals().isEmpty()) {
@@ -117,14 +115,21 @@ public class ZooKeeperSaslClient {
                 String username = (String)(subject.getPublicCredentials().toArray()[0]);
                 String password = (String)(subject.getPrivateCredentials().toArray()[0]);
                 // "zk-sasl-md5" is a hard-wired 'domain' parameter shared with zookeeper server code (see ServerCnxnFactory.java)
-                saslClient = Sasl.createSaslClient(mechs, username, serviceName, "zk-sasl-md5", null, new ClientCallbackHandler(password));
+                saslClient = Sasl.createSaslClient(mechs, username, "zookeeper", "zk-sasl-md5", null, new ClientCallbackHandler(password));
                 return saslClient;
             }
             else { // GSSAPI.
                 final Object[] principals = subject.getPrincipals().toArray();
                 // determine client principal from subject.
                 final Principal clientPrincipal = (Principal)principals[0];
-                final String clientPrincipalName = clientPrincipal.getName();
+                final KerberosName clientKerberosName = new KerberosName(clientPrincipal.getName());
+                // assume that server and client are in the same realm (by default; unless some system property
+                // overrides: say, "zookeeper.server.realm").
+                String serverRealm = System.getProperty("zookeeper.server.realm",clientKerberosName.getRealm());
+                KerberosName serviceKerberosName = new KerberosName(servicePrincipal+"@"+serverRealm);
+                final String serviceName = serviceKerberosName.getServiceName();
+                final String serviceHostname = serviceKerberosName.getHostName();
+                final String clientPrincipalName = clientKerberosName.toString();
                 try {
                     saslClient = Subject.doAs(subject,new PrivilegedExceptionAction<SaslClient>() {
                         public SaslClient run() throws SaslException {
