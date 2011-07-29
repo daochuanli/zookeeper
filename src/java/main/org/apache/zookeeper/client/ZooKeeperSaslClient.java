@@ -223,9 +223,6 @@ public class ZooKeeperSaslClient {
         ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
         ReplyHeader r = new ReplyHeader();
         cnxn.queuePacket(h,r,request,response,cb);
-        if (saslState == SaslState.INITIAL) {
-            saslState = SaslState.INTERMEDIATE;
-        }
     }
 
     public void queueSaslPacket() throws SaslException {
@@ -252,38 +249,21 @@ public class ZooKeeperSaslClient {
 
     public void initialize() throws SaslException {
         if (saslState == SaslState.INITIAL) {
-            if (hasInitialResponse()) {
+            if (saslClient.hasInitialResponse()) {
                 queueSaslPacket();
             }
             else {
                 byte[] emptyToken = new byte[0];
                 queueSaslPacket(emptyToken);
             }
+            saslState = SaslState.INTERMEDIATE;
         }
     }
 
-    public void sendInitialEmptyToken() {
-        // The client needs to send an initial empty token to the server for
-        // SASL authentication methods such as DIGEST-MD5 (but not GSSAPI) for which
-        // hasInitialResponse() == false.
-
-    }
-
-    public boolean hasInitialResponse() {
-        // additional saslState is used here to make things easier on the caller (ClientCnxn$SendThread.run()).
-
-
-        if (saslClient != null) {
-            return ((saslState == SaslState.INITIAL) && (saslClient.hasInitialResponse()));
-        }
-        else {
-            LOG.warn("saslClient is null: client could not authenticate properly.");
-        }
-        return false;
-    }
-
-    // CallbackHandler here refers to javax.security.auth.callback.CallbackHandler.
-    // (not to be confused with packet callbacks like ServerSaslResponseCallback, defined above).
+    // The CallbackHandler interface here refers to
+    // javax.security.auth.callback.CallbackHandler.
+    // It should not be confused with Zookeeper packet callbacks like
+    //  org.apache.zookeeper.server.auth.SaslServerCallbackHandler.
     public static class ClientCallbackHandler implements CallbackHandler {
         private String password = null;
 
