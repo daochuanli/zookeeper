@@ -123,8 +123,8 @@ public class ZooKeeperSaslClient {
                 // determine client principal from subject.
                 final Principal clientPrincipal = (Principal)principals[0];
                 final KerberosName clientKerberosName = new KerberosName(clientPrincipal.getName());
-                // assume that server and client are in the same realm (by default; unless some system property
-                // overrides: say, "zookeeper.server.realm").
+                // assume that server and client are in the same realm (by default; unless the system property
+                // "zookeeper.server.realm" is set).
                 String serverRealm = System.getProperty("zookeeper.server.realm",clientKerberosName.getRealm());
                 KerberosName serviceKerberosName = new KerberosName(servicePrincipal+"@"+serverRealm);
                 final String serviceName = serviceKerberosName.getServiceName();
