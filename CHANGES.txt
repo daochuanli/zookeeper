@@ -268,6 +268,10 @@ BUGFIXES:
 
   ZOOKEEPER-1090. Race condition while taking snapshot can lead to not restoring data tree correctly (Vishal K via breed)
 
+  ZOOKEEPER-1138. release audit failing for a number of new files. (phunt via mahadev) 
+
+  ZOOKEEPER-1139. jenkins is reporting two warnings, fix these (phunt via mahadev)
+
 IMPROVEMENTS:
   ZOOKEEPER-724. Improve junit test integration - log harness information 
   (phunt via mahadev)
