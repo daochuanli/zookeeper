@@ -47,9 +47,8 @@ import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 
 /**
- * This class manages SASL authentication and, optionally, encryption for the client. It
- * allows ClientCnxn to authenticate using SASL with a Zookeeper server and optionally encrypt
- * communication to it and decrypt communication from it.
+ * This class manages SASL authentication for the client. It
+ * allows ClientCnxn to authenticate using SASL with a Zookeeper server.
  */
 public class ZooKeeperSaslClient {
     private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperSaslClient.class);
