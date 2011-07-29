@@ -134,7 +134,7 @@ public class SaslServerCallbackHandler implements CallbackHandler {
                                         if (!removeRealm() && (kerberosName.getRealm() != null)) {
                                             userName += "@" + kerberosName.getRealm();
                                         }
-                                        LOG.info("Setting authorizedID to username: " + userName);
+                                        LOG.info("Setting authorizedID: " + userName);
                                         ac.setAuthorizedID(userName);
                                     }
                                     catch (IOException e) {
