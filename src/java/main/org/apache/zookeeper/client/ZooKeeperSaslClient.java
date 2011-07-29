@@ -250,14 +250,23 @@ public class ZooKeeperSaslClient {
         return false;
     }
 
+    public void initialize() throws SaslException {
+        if (saslState == SaslState.INITIAL) {
+            if (hasInitialResponse()) {
+                queueSaslPacket();
+            }
+            else {
+                byte[] emptyToken = new byte[0];
+                queueSaslPacket(emptyToken);
+            }
+        }
+    }
+
     public void sendInitialEmptyToken() {
         // The client needs to send an initial empty token to the server for
         // SASL authentication methods such as DIGEST-MD5 (but not GSSAPI) for which
         // hasInitialResponse() == false.
-        if ((saslState == SaslState.INITIAL) && (!saslClient.hasInitialResponse())) {
-            byte[] emptyToken = new byte[0];
-            queueSaslPacket(emptyToken);
-        }
+
     }
 
     public boolean hasInitialResponse() {

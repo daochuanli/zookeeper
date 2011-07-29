@@ -947,15 +947,12 @@ public class ClientCnxn {
 
                     if (state.isConnected()) {
                         if ((zooKeeperSaslClient != null) && (zooKeeperSaslClient.isComplete() != true)) {
-                            zooKeeperSaslClient.sendInitialEmptyToken();
-                            if (zooKeeperSaslClient.hasInitialResponse()) {
-                                try {
-                                    zooKeeperSaslClient.queueSaslPacket();
-                                }
-                                catch (SaslException e) {
-                                    LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);
-                                    state = States.AUTH_FAILED;
-                                }
+                            try {
+                                zooKeeperSaslClient.initialize();
+                            }
+                            catch (SaslException e) {
+                                LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);
+                                state = States.AUTH_FAILED;
                             }
                             if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
                                 eventThread.queueEvent(new WatchedEvent(
