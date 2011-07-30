@@ -52,13 +52,13 @@ public class SASLAuthenticationProvider implements AuthenticationProvider {
     }
 
     public boolean isValid(String id) {
-        // Since the SASL authenticator can be used with Kerberos authentication, it should allow
-        // for Kerberos-style principals, which can look like any of the following examples:
+        // Since the SASL authenticator will usually be used with Kerberos authentication,
+        // it should enforce that these names are valid according to Kerberos's
+        // syntax for principals.
         //
-        // 1. cLiEnT
-        // 2. cLiEnT@rEaLm
-        // 3. sErVeR/hOsTnAmE
-        // 4. sErVeR/hOsTnAmE@rEaLm
+        // Use the KerberosName(id) constructor to define validity:
+        // if KerberosName(id) throws IllegalArgumentException, then id is invalid.
+        // otherwise, it is valid.
         //
         try {
             new KerberosName(id);
