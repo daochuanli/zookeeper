@@ -35,7 +35,7 @@ import org.junit.Assert;
 public class SaslAuthFailTest extends ClientBase {
     static {
         System.setProperty("zookeeper.authProvider.1","org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
-        System.setProperty("zookeeper.maintain_connection_despite_sasl_failure","yes");
+        System.setProperty("zookeeper.allowSaslFailedClients","true");
 
         try {
             File tmpDir = createTmpDir();
