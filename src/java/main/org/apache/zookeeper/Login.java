@@ -187,6 +187,7 @@ public class Login {
                     }
                 }
             });
+            t.setDaemon(true);
             t.start();
         }
         else {
