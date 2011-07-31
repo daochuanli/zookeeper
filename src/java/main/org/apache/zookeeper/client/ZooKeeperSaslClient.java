@@ -206,8 +206,20 @@ public class ZooKeeperSaslClient {
                     return retval;
                 }
                 catch (PrivilegedActionException e) {
-                    LOG.error("An error: " + e + " occurred when evaluating Zookeeper Quorum Member's received SASL token. Client will go to AUTH_FAILED state.");
-                    throw new SaslException("An error: " + e + " occurred when evaluating Zookeeper Quorum Member's received SASL token. Client will go to AUTH_FAILED state.");
+                    String error = "An error: (" + e + ") occurred when evaluating Zookeeper Quorum Member's " +
+                      " received SASL token.";
+                    // Try to provide hints to use about what went wrong so they can fix their configuration.
+                    // TODO: introspect about e: look for GSS information.
+                    final String UNKNOWN_SERVER_ERROR_TEXT =
+                      "(Mechanism level: Server not found in Kerberos database (7) - UNKNOWN_SERVER)";
+                    if (e.toString().indexOf(UNKNOWN_SERVER_ERROR_TEXT) > -1) {
+                        error += " This may be caused by Java's being unable to resolve the Zookeeper Quorum Member's" +
+                          " hostname correctly. You may want to try to adding" +
+                          " '-Dsun.net.spi.nameservice.provider.1=dns,sun' to your client's JVMFLAGS environment.";
+                    }
+                    error += " Zookeeper Client will go to AUTH_FAILED state.";
+                    LOG.error(error);
+                    throw new SaslException(error);
                 }
             }
         }
