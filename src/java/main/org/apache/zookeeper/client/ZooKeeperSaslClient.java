@@ -192,9 +192,9 @@ public class ZooKeeperSaslClient {
             throw new SaslException("Error in authenticating with a Zookeeper Quorum member: the quorum member's saslToken is null.");
         }
 
-        Subject subject = this.login.getSubject();
+        Subject subject = login.getSubject();
         if (subject != null) {
-            synchronized(this.login) {
+            synchronized(login) {
                 try {
                     final byte[] retval =
                         Subject.doAs(subject, new PrivilegedExceptionAction<byte[]>() {
