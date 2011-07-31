@@ -40,13 +40,13 @@ public class SaslServerCallbackHandler implements CallbackHandler {
     private Map<String,String> credentials = new HashMap<String,String>();
     Logger LOG = LoggerFactory.getLogger(SaslServerCallbackHandler.class);
 
-    public SaslServerCallbackHandler(Configuration configuration) {
+    public SaslServerCallbackHandler(Configuration configuration) throws IOException {
         AppConfigurationEntry configurationEntries[] = configuration.getAppConfigurationEntry("Server");
 
         if (configurationEntries == null) {
             String errorMessage = "could not find a 'Server' entry in this configuration: server cannot start.";
             LOG.error(errorMessage);
-            throw(new NullPointerException(errorMessage));
+            throw(new IOException(errorMessage));
         }
         credentials.clear();
         for(AppConfigurationEntry entry: configurationEntries) {
