@@ -276,6 +276,20 @@ BUGFIXES:
   
   ZOOKEEPER-1144. ZooKeeperServer not starting on leader due to a race condition (Vishal K via camille)
 
+  ZOOKEEPER-839. deleteRecursive does not belong to the other methods.
+   (mahadev)
+ 
+  ZOOKEEPER-1146. significant regression in client (c/python) performance.
+  (phunt via mahadev)
+
+  ZOOKEEPER-1150. fix for this patch to compile on windows. (dheeraj
+  via mahadev)
+
+  ZOOKEEPER-1055. check for duplicate ACLs in addACL() and create().
+  (Eugene Koontz via mahadev)
+
+  ZOOKEEPER-1141. zkpython fails tests under python 2.4. (phunt via mahadev)
+
 IMPROVEMENTS:
   ZOOKEEPER-724. Improve junit test integration - log harness information 
   (phunt via mahadev)
@@ -366,6 +380,16 @@ IMPROVEMENTS:
   (Eric Sammer via henry and phunt)
 
   ZOOKEEPER-1076. some quorum tests are unnecessarily extending QuorumBase (phunt via mahadev)
+
+  ZOOKEEPER-1143. quorum send & recv workers are missing thread names
+  (phunt via mahadev)
+  
+  ZOOKEEPER-1104. CLONE - In QuorumTest, use the same "for ( .. try { break }
+  catch { } )" pattern in testFollowersStartAfterLeaders as in testSessionMove. 
+  (Eugene Koontz via mahadev)
+ 
+  ZOOKEEPER-1034. perl bindings should automatically find the zookeeper
+  c-client headers (nicholas harteau via mahadev)
 
 NEW FEATURES:
   ZOOKEEPER-729. Java client API to recursively delete a subtree.
