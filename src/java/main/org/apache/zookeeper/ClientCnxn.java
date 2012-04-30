@@ -959,7 +959,13 @@ public class ClientCnxn {
 
         private static final String RETRY_CONN_MSG =
             ", closing socket connection and attempting reconnect";
-        
+
+        private boolean needsSaslInitialization() {
+          return (zooKeeperSaslClient != null) &&
+            (zooKeeperSaslClient.isFailed() != true) &&
+            (zooKeeperSaslClient.isComplete() != true);
+        }
+
         @Override
         public void run() {
             clientCnxnSocket.introduce(this,sessionId);
@@ -979,11 +985,10 @@ public class ClientCnxn {
                     }
 
                     if (state.isConnected()) {
-                        if ((zooKeeperSaslClient != null) && (zooKeeperSaslClient.isFailed() != true) && (zooKeeperSaslClient.isComplete() != true)) {
+                        if (needsSaslInitialization()) {
                             try {
                                 zooKeeperSaslClient.initialize(ClientCnxn.this);
-                            }
-                            catch (SaslException e) {
+                            } catch (SaslException e) {
                                 LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);
                                 state = States.AUTH_FAILED;
                                 eventThread.queueEvent(new WatchedEvent(
