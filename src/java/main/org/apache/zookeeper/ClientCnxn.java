@@ -952,6 +952,7 @@ public class ClientCnxn {
             } catch (LoginException e) {
                 LOG.warn("SASL authentication failed: " + e + " Will continue connection to Zookeeper server without "
                         + "SASL authentication, if Zookeeper server allows it.");
+                authInitFailed = true;
                 eventThread.queueEvent(new WatchedEvent(
                         Watcher.Event.EventType.None,
                         Watcher.Event.KeeperState.AuthFailed, null));
