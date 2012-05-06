@@ -990,21 +990,17 @@ public class ClientCnxn {
                         if (needsSaslInitialization()) {
                             try {
                                 zooKeeperSaslClient.initialize(ClientCnxn.this);
+				if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
+				    eventThread.queueEvent(new WatchedEvent(
+                                      Watcher.Event.EventType.None,
+                                      Watcher.Event.KeeperState.SaslAuthenticated, null));
+				}
                             } catch (SaslException e) {
                                 LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);
                                 state = States.AUTH_FAILED;
                                 eventThread.queueEvent(new WatchedEvent(
                                         Watcher.Event.EventType.None,
                                         KeeperState.AuthFailed,null));
-                            }
-                            // TODO: move the following to inside the try block,
-                            // since, if we caught a SaslException,
-                            // readyToSendSaslAuthEvent() should always be
-                            // false.
-                            if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
-                                eventThread.queueEvent(new WatchedEvent(
-                                  Watcher.Event.EventType.None,
-                                  Watcher.Event.KeeperState.SaslAuthenticated, null));
                             }
                         }
                         to = readTimeout - clientCnxnSocket.getIdleRecv();
