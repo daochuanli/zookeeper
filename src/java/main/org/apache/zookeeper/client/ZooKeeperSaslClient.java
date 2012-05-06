@@ -274,6 +274,7 @@ public class ZooKeeperSaslClient {
     private byte[] createSaslToken(final byte[] saslToken) throws SaslException {
         if (saslToken == null) {
             // TODO: introspect about runtime environment (such as jaas.conf)
+            saslState = SaslState.FAILED;
             throw new SaslException("Error in authenticating with a Zookeeper Quorum member: the quorum member's saslToken is null.");
         }
 
