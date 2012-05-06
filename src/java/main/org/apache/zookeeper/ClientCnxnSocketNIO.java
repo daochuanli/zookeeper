@@ -106,21 +106,30 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 if (!outgoingQueue.isEmpty()) {
                     Packet p = null;
                     if (cnxn.clientTunneledAuthenticationInProgress()) {
-                        // find the first non-permission-requiring packet, if any.
+                        // Client's authentication with server is in progress:
+                        // Until it's complete, send only non-permission-requiring
+                        // packets. Find the first such packet, if any, to send.
                         Iterator<Packet> packets = outgoingQueue.listIterator();
                         while(packets.hasNext()) {
                             p = packets.next();
                             if ((p.requestHeader == null) ||
                                 (cnxn.operationRequiresPermissions(
                                 p.requestHeader.getType()) == false)) {
+                                // We've found a packet that doesn't require
+                                // permissions from the server: send it.
                                 break;
                             } else {
+                                // This packet *does* require permission:
+                                // defer it until later, leaving it in the queue
+                                // until authentication completes.
                                 LOG.debug("deferring permission-requiring packet:" +
                                   p.requestHeader.getType());
                                 p = null;
                             }
                         }
                     } else {
+                        // Tunnelled authentication is not in progress: just
+                        // send the first packet in the queue.
                         p = outgoingQueue.getFirst();
                     }
                     if (p != null) {
