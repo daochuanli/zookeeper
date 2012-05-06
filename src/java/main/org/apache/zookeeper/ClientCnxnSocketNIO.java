@@ -109,9 +109,9 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                         // Client's authentication with server is in progress:
                         // Until it's complete, send only non-permission-requiring
                         // packets. Find the first such packet, if any, to send.
-                        Iterator<Packet> packets = outgoingQueue.listIterator();
-                        while(packets.hasNext()) {
-                            p = packets.next();
+                        Iterator<Packet> iter = outgoingQueue.listIterator();
+                        while(iter.hasNext()) {
+                            p = iter.next();
                             if ((p.requestHeader == null) ||
                                 (cnxn.operationRequiresPermissions(
                                 p.requestHeader.getType()) == false)) {
