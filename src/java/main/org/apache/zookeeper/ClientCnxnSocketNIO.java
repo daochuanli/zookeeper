@@ -107,37 +107,37 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     Packet p = null;
                     if (cnxn.clientTunneledAuthenticationInProgress()) {
                         // find the first non-permission-requiring packet, if any.
-                        for (Iterator<Packet> packets = outgoingQueue.listIterator();
-                           packets.hasNext();
-                           packets.next()) {
-                               p = packets.next();
-                               if ((p.requestHeader == null) ||
-                                   (cnxn.operationRequiresPermissions(
-                                     p.requestHeader.getType()) == false)) {
-                                   break;
-                               } else {
-                                   LOG.debug("deferring permission-requiring packet:" +
-                                     p.requestHeader.toString());
-                               }
-                           }
-                        } else {
-                            p = outgoingQueue.getFirst();
+                        Iterator<Packet> packets = outgoingQueue.listIterator();
+                        while(packets.hasNext()) {
+                            p = packets.next();
+                            if ((p.requestHeader == null) ||
+                                (cnxn.operationRequiresPermissions(
+                                p.requestHeader.getType()) == false)) {
+                                break;
+                            } else {
+                                LOG.debug("deferring permission-requiring packet:" +
+                                  p.requestHeader.getType());
+                                p = null;
+                            }
                         }
-                        if (p != null) {
-                            outgoingQueue.removeFirstOccurrence(p);
-                            updateLastSend();
-                            ByteBuffer pbb = p.bb;
-                            sock.write(pbb);
-                            if (!pbb.hasRemaining()) {
-                                sentCount++;
-                                if (p.requestHeader != null
-                                  && p.requestHeader.getType() != OpCode.ping
-                                  && p.requestHeader.getType() != OpCode.auth) {
-                                    pending.add(p);
-                                }
+                    } else {
+                        p = outgoingQueue.getFirst();
+                    }
+                    if (p != null) {
+                        outgoingQueue.removeFirstOccurrence(p);
+                        updateLastSend();
+                        ByteBuffer pbb = p.bb;
+                        sock.write(pbb);
+                        if (!pbb.hasRemaining()) {
+                            sentCount++;
+                            if (p.requestHeader != null
+                              && p.requestHeader.getType() != OpCode.ping
+                              && p.requestHeader.getType() != OpCode.auth) {
+                                pending.add(p);
                             }
                         }
                     }
+                }
                 synchronized(pendingQueue) {
                     pendingQueue.addAll(pending);
                 }
