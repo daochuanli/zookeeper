@@ -304,6 +304,7 @@ public class ZooKeeperSaslClient {
                     }
                     error += " Zookeeper Client will go to AUTH_FAILED state.";
                     LOG.error(error);
+                    saslState = SaslState.FAILED;
                     throw new SaslException(error);
                 }
             }
@@ -350,6 +351,7 @@ public class ZooKeeperSaslClient {
 
     public void initialize(ClientCnxn cnxn) throws SaslException {
         if (saslClient == null) {
+            saslState = SaslState.FAILED;
             throw new SaslException("saslClient failed to initialize properly: it's null.");
         }
         if (saslState == SaslState.INITIAL) {

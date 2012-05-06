@@ -163,8 +163,8 @@ abstract class ClientCnxnSocket {
     abstract void enableReadWriteOnly();
 
     abstract void doTransport(int waitTimeOut, List<Packet> pendingQueue,
-            LinkedList<Packet> outgoingQueue) throws IOException,
-            InterruptedException;
+            LinkedList<Packet> outgoingQueue, ClientCnxn.SendThread cnxn)
+      throws IOException, InterruptedException;
 
     abstract void testableCloseSocket() throws IOException;
 }

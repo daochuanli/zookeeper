@@ -923,6 +923,8 @@ public class ClientCnxn {
 
         private int pingRwTimeout = minPingRwTimeout;
 
+        public boolean authInitFailed = false;
+
         private void startConnect() throws IOException {
             if(!isFirstConnect){
                 try {
@@ -995,6 +997,10 @@ public class ClientCnxn {
                                         Watcher.Event.EventType.None,
                                         KeeperState.AuthFailed,null));
                             }
+                            // TODO: move the following to inside the try block,
+                            // since, if we caught a SaslException,
+                            // readyToSendSaslAuthEvent() should always be
+                            // false.
                             if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
                                 eventThread.queueEvent(new WatchedEvent(
                                   Watcher.Event.EventType.None,
@@ -1041,7 +1047,7 @@ public class ClientCnxn {
                         to = Math.min(to, pingRwTimeout - idlePingRwServer);
                     }
 
-                    clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue);
+                    clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue, this);
 
                 } catch (Throwable e) {
                     if (closing) {
@@ -1200,6 +1206,59 @@ public class ClientCnxn {
 
         void testableCloseSocket() throws IOException {
             clientCnxnSocket.testableCloseSocket();
+        }
+
+        public boolean operationRequiresPermissions(int opCode) {
+          return
+            ((opCode == OpCode.create) ||
+              (opCode == OpCode.check) ||
+              (opCode == OpCode.delete) ||
+              (opCode == OpCode.exists) ||
+              (opCode == OpCode.getChildren) ||
+              (opCode == OpCode.getChildren2) ||
+              (opCode == OpCode.getData) ||
+              (opCode == OpCode.setACL) ||
+              (opCode == OpCode.setData));
+        }
+
+        public boolean clientTunneledAuthenticationInProgress() {
+          // Currently, Zookeeper only supports one tunnelled authentication
+          // protocol: SASL. Others might be added in the future, though. We
+          // currently check the following system property below to determine if
+          // the client is configured to use SASL.
+          // If other tunnelled authentication methods are added in the future,
+          // this method would need to be modified to return true or false in
+          // appropriate circumstances.
+          // TODO: Make an interface or an abstract class
+          // called 'TunnelledClientAuthenticator', which would allow a cleaner
+          // way to add new tunnelled authentication methods. ZooKeeperSaslClient
+          // would implement or subclass this.
+          if (System.getProperty("java.security.auth.login.config") != null) {
+            // Client is configured to use SASL.
+
+            // 1. SendThread attempted SASL authentication, but initialization
+            // of the authenticating object failed: client should proceed
+            // without authentication as best it can.
+            if (authInitFailed == true) {
+              return false;
+            }
+            // 2. SendThread has not created the authenticating object yet:
+            // We must wait for it to do so.
+            if (zooKeeperSaslClient == null) {
+              return true;
+            }
+
+            // 3.  SendThread has created the authenticating object, but
+            // authentication hasn't finished yet: we must wait for it to do so.
+            if ((zooKeeperSaslClient.isComplete() == false) &&
+                (zooKeeperSaslClient.isFailed() == false)) {
+              return true;
+            }
+          }
+          // Either client is not configured to use a tunnelled authentication
+          // scheme, or tunnelled authentication has completed (successfully or
+          // not).
+          return false;
         }
     }
 

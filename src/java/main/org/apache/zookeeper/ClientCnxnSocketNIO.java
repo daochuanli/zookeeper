@@ -26,6 +26,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -62,7 +63,8 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
      * @throws InterruptedException
      * @throws IOException
      */
-    void doIO(List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue) throws InterruptedException, IOException {
+    void doIO(List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue,
+              ClientCnxn.SendThread cnxn) throws InterruptedException, IOException {
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
             throw new IOException("Socket is null!");
@@ -102,22 +104,43 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             LinkedList<Packet> pending = new LinkedList<Packet>();
             synchronized (outgoingQueue) {
                 if (!outgoingQueue.isEmpty()) {
-                    updateLastSend();
-                    ByteBuffer pbb = outgoingQueue.getFirst().bb;
-                    sock.write(pbb);
-                    if (!pbb.hasRemaining()) {
-                        sentCount++;
-                        Packet p = outgoingQueue.removeFirst();
-                        if (p.requestHeader != null
-                                && p.requestHeader.getType() != OpCode.ping
-                                && p.requestHeader.getType() != OpCode.auth) {
-                            pending.add(p);
+                    Packet p = null;
+                    if (cnxn.clientTunneledAuthenticationInProgress()) {
+                        // find the first non-permission-requiring packet, if any.
+                        for (Iterator<Packet> packets = outgoingQueue.listIterator();
+                           packets.hasNext();
+                           packets.next()) {
+                               p = packets.next();
+                               if ((p.requestHeader == null) ||
+                                   (cnxn.operationRequiresPermissions(
+                                     p.requestHeader.getType()) == false)) {
+                                   break;
+                               } else {
+                                   LOG.debug("deferring permission-requiring packet:" +
+                                     p.requestHeader.toString());
+                               }
+                           }
+                        } else {
+                            p = outgoingQueue.getFirst();
+                        }
+                        if (p != null) {
+                            outgoingQueue.removeFirstOccurrence(p);
+                            updateLastSend();
+                            ByteBuffer pbb = p.bb;
+                            sock.write(pbb);
+                            if (!pbb.hasRemaining()) {
+                                sentCount++;
+                                if (p.requestHeader != null
+                                  && p.requestHeader.getType() != OpCode.ping
+                                  && p.requestHeader.getType() != OpCode.auth) {
+                                    pending.add(p);
+                                }
+                            }
                         }
                     }
+                synchronized(pendingQueue) {
+                    pendingQueue.addAll(pending);
                 }
-            }
-            synchronized(pendingQueue) {
-                pendingQueue.addAll(pending);
             }
         }
     }
@@ -264,7 +287,8 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     }
     
     @Override
-    void doTransport(int waitTimeOut, List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue )
+    void doTransport(int waitTimeOut, List<Packet> pendingQueue,
+                     LinkedList<Packet> outgoingQueue, ClientCnxn.SendThread cnxn)
             throws IOException, InterruptedException {
         selector.select(waitTimeOut);
         Set<SelectionKey> selected;
@@ -284,7 +308,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     sendThread.primeConnection();
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
-                doIO(pendingQueue, outgoingQueue);
+                doIO(pendingQueue, outgoingQueue, cnxn);
             }
         }
         if (sendThread.getZkState().isConnected()) {
