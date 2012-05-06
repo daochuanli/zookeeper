@@ -113,8 +113,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                         while(iter.hasNext()) {
                             p = iter.next();
                             if ((p.requestHeader == null) ||
-                                (cnxn.operationRequiresPermissions(
-                                p.requestHeader.getType()) == false)) {
+                                (!cnxn.operationRequiresPermissions(p.requestHeader.getType()))) {
                                 // We've found a packet that doesn't require
                                 // permissions from the server: send it.
                                 break;
