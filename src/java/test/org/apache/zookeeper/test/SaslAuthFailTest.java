@@ -104,8 +104,10 @@ public class SaslAuthFailTest extends ClientBase {
     @Test
     public void testBadSaslAuthNotifiesWatch() throws Exception {
         ZooKeeper zk = createClient();
-        synchronized (authFailed) {
-            authFailed.notifyAll();
+
+        // We now need to wait for the authFailed event to happen.
+        synchronized(authFailed) {
+            authFailed.wait();
         }
         Assert.assertEquals(authFailed.get(),1);
         zk.close();
