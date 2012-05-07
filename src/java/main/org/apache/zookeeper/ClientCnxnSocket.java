@@ -163,7 +163,8 @@ abstract class ClientCnxnSocket {
     abstract void enableReadWriteOnly();
 
     abstract void doTransport(int waitTimeOut, List<Packet> pendingQueue,
-            LinkedList<Packet> outgoingQueue, ClientCnxn.SendThread cnxn)
+            LinkedList<Packet> outgoingQueue,
+            boolean clientTunneledAuthenticationInProgress)
       throws IOException, InterruptedException;
 
     abstract void testableCloseSocket() throws IOException;

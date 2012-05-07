@@ -64,7 +64,8 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
      * @throws IOException
      */
     void doIO(List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue,
-              ClientCnxn.SendThread cnxn) throws InterruptedException, IOException {
+              boolean clientTunneledAuthenticationInProgress)
+      throws InterruptedException, IOException {
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
             throw new IOException("Socket is null!");
@@ -105,7 +106,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             synchronized (outgoingQueue) {
                 if (!outgoingQueue.isEmpty()) {
                     Packet p = null;
-                    if (cnxn.clientTunneledAuthenticationInProgress()) {
+                    if (clientTunneledAuthenticationInProgress) {
                         // Client's authentication with server is in progress:
                         // Until it's complete, send only non-permission-requiring
                         // packets. Find the first such packet, if any, to send.
@@ -113,7 +114,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                         while(iter.hasNext()) {
                             p = iter.next();
                             if ((p.requestHeader == null) ||
-                                (!cnxn.operationRequiresPermissions(p.requestHeader.getType()))) {
+                                (!ZooDefs.operationRequiresPermissions(p.requestHeader.getType()))) {
                                 // We've found a packet that doesn't require
                                 // permissions from the server: send it.
                                 break;
@@ -121,8 +122,10 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                                 // This packet *does* require permission:
                                 // defer it until later, leaving it in the queue
                                 // until authentication completes.
-                                LOG.debug("deferring permission-requiring packet:" +
-                                  p.requestHeader.getType());
+                                if (LOG.isDebugEnabled()) {
+                                    LOG.debug("deferring permission-requiring packet:" +
+                                      p.requestHeader.getType());
+                                }
                                 p = null;
                             }
                         }
@@ -296,7 +299,8 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     
     @Override
     void doTransport(int waitTimeOut, List<Packet> pendingQueue,
-                     LinkedList<Packet> outgoingQueue, ClientCnxn.SendThread cnxn)
+                     LinkedList<Packet> outgoingQueue,
+                     boolean clientTunneledAuthenticationInProgress)
             throws IOException, InterruptedException {
         selector.select(waitTimeOut);
         Set<SelectionKey> selected;
@@ -316,7 +320,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     sendThread.primeConnection();
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
-                doIO(pendingQueue, outgoingQueue, cnxn);
+                doIO(pendingQueue, outgoingQueue, clientTunneledAuthenticationInProgress);
             }
         }
         if (sendThread.getZkState().isConnected()) {

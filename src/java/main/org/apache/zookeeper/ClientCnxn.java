@@ -1039,7 +1039,8 @@ public class ClientCnxn {
                         to = Math.min(to, pingRwTimeout - idlePingRwServer);
                     }
 
-                    clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue, this);
+                    clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue,
+                      clientTunneledAuthenticationInProgress());
 
                 } catch (Throwable e) {
                     if (closing) {
@@ -1200,20 +1201,7 @@ public class ClientCnxn {
             clientCnxnSocket.testableCloseSocket();
         }
 
-        public boolean operationRequiresPermissions(int opCode) {
-            return
-              ((opCode == OpCode.create)       ||
-               (opCode == OpCode.check)        ||
-               (opCode == OpCode.delete)       ||
-               (opCode == OpCode.exists)       ||
-               (opCode == OpCode.getChildren)  ||
-               (opCode == OpCode.getChildren2) ||
-               (opCode == OpCode.getData)      ||
-               (opCode == OpCode.setACL)       ||
-               (opCode == OpCode.setData));
-        }
-
-        public boolean clientTunneledAuthenticationInProgress() {
+        private boolean clientTunneledAuthenticationInProgress() {
             // Currently, Zookeeper only supports one tunnelled authentication
             // protocol: SASL. Others might be added in the future, though. We
             // currently check the following system property below to determine if
