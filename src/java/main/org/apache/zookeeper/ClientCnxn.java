@@ -485,6 +485,12 @@ public class ClientCnxn {
             waitingEvents.add(eventOfDeath);
         }
 
+        private boolean needsSaslInitialization() {
+          return (zooKeeperSaslClient != null) &&
+            (zooKeeperSaslClient.isFailed() != true) &&
+            (zooKeeperSaslClient.isComplete() != true);
+        }
+
         @Override
         public void run() {
            try {
