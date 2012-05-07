@@ -991,17 +991,18 @@ public class ClientCnxn {
                         if (needsSaslInitialization()) {
                             try {
                                 zooKeeperSaslClient.initialize(ClientCnxn.this);
-				if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
-				    eventThread.queueEvent(new WatchedEvent(
-                                      Watcher.Event.EventType.None,
-                                      Watcher.Event.KeeperState.SaslAuthenticated, null));
-				}
-                            } catch (SaslException e) {
+                            }
+                            catch (SaslException e) {
                                 LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);
                                 state = States.AUTH_FAILED;
                                 eventThread.queueEvent(new WatchedEvent(
                                         Watcher.Event.EventType.None,
                                         KeeperState.AuthFailed,null));
+                            }
+                            if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
+                                eventThread.queueEvent(new WatchedEvent(
+                                  Watcher.Event.EventType.None,
+                                  Watcher.Event.KeeperState.SaslAuthenticated, null));
                             }
                         }
                         to = readTimeout - clientCnxnSocket.getIdleRecv();
