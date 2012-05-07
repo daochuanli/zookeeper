@@ -962,7 +962,7 @@ public class ClientCnxn {
 
         private static final String RETRY_CONN_MSG =
             ", closing socket connection and attempting reconnect";
-
+        
         @Override
         public void run() {
             clientCnxnSocket.introduce(this,sessionId);
