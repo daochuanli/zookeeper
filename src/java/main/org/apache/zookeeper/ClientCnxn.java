@@ -1202,14 +1202,14 @@ public class ClientCnxn {
 
         public boolean operationRequiresPermissions(int opCode) {
           return
-            ((opCode == OpCode.create) ||
-              (opCode == OpCode.check) ||
-              (opCode == OpCode.delete) ||
-              (opCode == OpCode.exists) ||
-              (opCode == OpCode.getChildren) ||
+            ((opCode == OpCode.create)        ||
+              (opCode == OpCode.check)        ||
+              (opCode == OpCode.delete)       ||
+              (opCode == OpCode.exists)       ||
+              (opCode == OpCode.getChildren)  ||
               (opCode == OpCode.getChildren2) ||
-              (opCode == OpCode.getData) ||
-              (opCode == OpCode.setACL) ||
+              (opCode == OpCode.getData)      ||
+              (opCode == OpCode.setACL)       ||
               (opCode == OpCode.setData));
         }
 
