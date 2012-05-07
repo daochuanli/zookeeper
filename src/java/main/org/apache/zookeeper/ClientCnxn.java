@@ -963,12 +963,6 @@ public class ClientCnxn {
         private static final String RETRY_CONN_MSG =
             ", closing socket connection and attempting reconnect";
 
-        private boolean needsSaslInitialization() {
-          return (zooKeeperSaslClient != null) &&
-            (zooKeeperSaslClient.isFailed() != true) &&
-            (zooKeeperSaslClient.isComplete() != true);
-        }
-
         @Override
         public void run() {
             clientCnxnSocket.introduce(this,sessionId);
@@ -988,7 +982,7 @@ public class ClientCnxn {
                     }
 
                     if (state.isConnected()) {
-                        if (needsSaslInitialization()) {
+                        if ((zooKeeperSaslClient != null) && (zooKeeperSaslClient.isFailed() != true) && (zooKeeperSaslClient.isComplete() != true)) {
                             try {
                                 zooKeeperSaslClient.initialize(ClientCnxn.this);
                             }
