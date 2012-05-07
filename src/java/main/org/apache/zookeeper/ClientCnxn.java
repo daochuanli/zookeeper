@@ -1231,9 +1231,9 @@ public class ClientCnxn {
                 // 1. SendThread attempted SASL authentication, but initialization
                 // of the authenticating object failed: client should proceed
                 // without authentication as best it can.
-            if (authInitFailed == true) {
-                return false;
-            }
+                if (authInitFailed == true) {
+                    return false;
+                }
                 // 2. SendThread has not created the authenticating object yet:
                 // We must wait for it to do so.
                 if (zooKeeperSaslClient == null) {
