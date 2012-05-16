@@ -189,9 +189,8 @@ public class ClientCnxn {
      */
     volatile boolean seenRwServerBefore = false;
 
-
+    private CountDownLatch saslAuthenticationLatch = null;
     public ZooKeeperSaslClient zooKeeperSaslClient;
-    private CountDownLatch waitForSaslAuthentication = null;
 
     public long getSessionId() {
         return sessionId;
@@ -378,7 +377,7 @@ public class ClientCnxn {
         readOnly = canBeReadOnly;
 
         if (System.getProperty("java.security.auth.login.config") != null) {
-            this.waitForSaslAuthentication = new CountDownLatch(1);
+            this.saslAuthenticationLatch = new CountDownLatch(1);
         }
 
         sendThread = new SendThread(clientCnxnSocket);
@@ -567,7 +566,7 @@ public class ClientCnxn {
                       ClientCnxn clientCnxn = (ClientCnxn)p.ctx;
                       if ((clientCnxn == null) || (clientCnxn.zooKeeperSaslClient == null) ||
                               (clientCnxn.zooKeeperSaslClient.getSaslState() == ZooKeeperSaslClient.SaslState.FAILED)) {
-                          waitForSaslAuthentication.countDown();
+                          saslAuthenticationLatch.countDown();
                           queueEvent(new WatchedEvent(EventType.None,
                                   KeeperState.AuthFailed, null));
                       }
@@ -957,7 +956,7 @@ public class ClientCnxn {
             } catch (LoginException e) {
                 LOG.warn("SASL authentication failed: " + e + " Will continue connection to Zookeeper server without "
                         + "SASL authentication, if Zookeeper server allows it.");
-                waitForSaslAuthentication.countDown();
+                saslAuthenticationLatch.countDown();
                 eventThread.queueEvent(new WatchedEvent(
                         Watcher.Event.EventType.None,
                         Watcher.Event.KeeperState.AuthFailed, null));
@@ -994,13 +993,13 @@ public class ClientCnxn {
                             catch (SaslException e) {
                                 LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);
                                 state = States.AUTH_FAILED;
-                                waitForSaslAuthentication.countDown();
+                                saslAuthenticationLatch.countDown();
                                 eventThread.queueEvent(new WatchedEvent(
                                         Watcher.Event.EventType.None,
                                         KeeperState.AuthFailed,null));
                             }
                             if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
-                                waitForSaslAuthentication.countDown();
+                                saslAuthenticationLatch.countDown();
                                 eventThread.queueEvent(new WatchedEvent(
                                   Watcher.Event.EventType.None,
                                   Watcher.Event.KeeperState.SaslAuthenticated, null));
@@ -1274,11 +1273,11 @@ public class ClientCnxn {
             Record response, AsyncCallback cb, String clientPath,
             String serverPath, Object ctx, WatchRegistration watchRegistration)
     {
-        if ((this.waitForSaslAuthentication != null) &&
+        if ((this.saslAuthenticationLatch != null) &&
             (h.getType() != OpCode.sasl)) {
             while (true) {
                 try {
-                    this.waitForSaslAuthentication.await();
+                    this.saslAuthenticationLatch.await();
                     // authentication has finished; continue with
                     // packet-queueing.
                     break;
