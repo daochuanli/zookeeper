@@ -189,6 +189,7 @@ public class ClientCnxn {
      */
     volatile boolean seenRwServerBefore = false;
 
+
     private CountDownLatch saslAuthenticationLatch = null;
     public ZooKeeperSaslClient zooKeeperSaslClient;
 
