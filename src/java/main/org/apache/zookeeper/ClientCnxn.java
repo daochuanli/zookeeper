@@ -567,6 +567,7 @@ public class ClientCnxn {
                       ClientCnxn clientCnxn = (ClientCnxn)p.ctx;
                       if ((clientCnxn == null) || (clientCnxn.zooKeeperSaslClient == null) ||
                               (clientCnxn.zooKeeperSaslClient.getSaslState() == ZooKeeperSaslClient.SaslState.FAILED)) {
+                          waitForSaslAuthentication.countDown();
                           queueEvent(new WatchedEvent(EventType.None,
                                   KeeperState.AuthFailed, null));
                       }
