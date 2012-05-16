@@ -101,7 +101,6 @@ public class SaslAuthFailTest extends ClientBase {
     @Test
     public void testBadSaslAuthNotifiesWatch() throws Exception {
         ZooKeeper zk = createClient();
-        Thread.sleep(1000);
         Assert.assertEquals(authFailed.get(),1);
         zk.close();
     }
@@ -110,7 +109,6 @@ public class SaslAuthFailTest extends ClientBase {
     @Test
     public void testAuthFail() throws Exception {
         ZooKeeper zk = createClient();
-        Thread.sleep(1000);
         try {
             zk.create("/path1", null, Ids.CREATOR_ALL_ACL, CreateMode.PERSISTENT);
             Assert.fail("Should have gotten exception.");
