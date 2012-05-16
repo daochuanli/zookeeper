@@ -378,7 +378,7 @@ public class ClientCnxn {
         readOnly = canBeReadOnly;
 
         if (System.getProperty("java.security.auth.login.config") != null) {
-            this.saslAuthenticationLatch = new CountDownLatch(1);
+            saslAuthenticationLatch = new CountDownLatch(1);
         }
 
         sendThread = new SendThread(clientCnxnSocket);
