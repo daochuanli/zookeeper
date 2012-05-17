@@ -705,6 +705,26 @@ public class ClientCnxn {
             4096 * 1024);
 
     /**
+     *
+     * @param serverHostName
+     * @return Name of Kerberos server principal.
+     */
+    public static String getServerPrincipalName(String serverHostName) {
+        // The instance, in Kerberos terminology, is the part of the
+        // Kerberos principal that follows the slash character (/),
+        // if present.
+        // If the system property 'zookeeper.clusterName' exists, use
+        // this as the instance; otherwise, the default is to use the
+        // Zookeeper server name as the instance.
+        String instanceName = serverHostName;
+        String clusterName = System.getProperty("zookeeper.clusterName");
+        if (clusterName != null) {
+            instanceName = clusterName;
+        }
+        return "zookeeper/" + instanceName;
+    }
+
+    /**
      * This class services the outgoing request queue and generates the heart
      * beats. It also spawns the ReadThread.
      */
@@ -946,18 +966,8 @@ public class ClientCnxn {
             setName(getName().replaceAll("\\(.*\\)",
                     "(" + addr.getHostName() + ":" + addr.getPort() + ")"));
             try {
-                // The instance, in Kerberos terminology, is the part of the
-                // Kerberos principal that follows the slash character (/),
-                // if present.
-                // If the system property 'zookeeper.clusterName' exists, use
-                // this as the instance; otherwise, the default is to use the
-                // Zookeeper server name.
-                String instanceName = addr.getHostName();
-                String clusterName = System.getProperty("zookeeper.clusterName");
-                if (clusterName != null) {
-                    instanceName = clusterName;
-                }
-                zooKeeperSaslClient = new ZooKeeperSaslClient("zookeeper/"+instanceName);
+                zooKeeperSaslClient =
+                  new ZooKeeperSaslClient(getServerPrincipalName(addr.getHostName()));
             } catch (LoginException e) {
                 LOG.warn("SASL authentication failed: " + e + " Will continue connection to Zookeeper server without "
                         + "SASL authentication, if Zookeeper server allows it.");

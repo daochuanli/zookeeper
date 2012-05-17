@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.zookeeper.ClientCnxn;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.TestableZooKeeper;
@@ -162,4 +163,19 @@ public class SaslAuthTest extends ClientBase {
         }
     }
 
+    @Test
+    public void testDefaultServerInstanceName() throws Exception {
+        String instanceName =
+          ClientCnxn.getServerPrincipalName("myzk.mydomain.com");
+        Assert.assertEquals(instanceName,"zookeeper/myzk.mydomain.com");
+    }
+
+    @Test
+    public void testSpecifiedServerInstanceName() throws Exception {
+        // override the default instance name with "mycluster":
+        System.setProperty("zookeeper.clusterName", "mycluster");
+        String instanceName =
+          ClientCnxn.getServerPrincipalName("myzk.mydomain.com");
+        Assert.assertEquals(instanceName,"zookeeper/mycluster");
+    }
 }
