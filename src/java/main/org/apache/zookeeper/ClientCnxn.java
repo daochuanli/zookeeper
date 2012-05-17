@@ -946,7 +946,18 @@ public class ClientCnxn {
             setName(getName().replaceAll("\\(.*\\)",
                     "(" + addr.getHostName() + ":" + addr.getPort() + ")"));
             try {
-                zooKeeperSaslClient = new ZooKeeperSaslClient("zookeeper/"+addr.getHostName());
+                // The instance, in Kerberos terminology, is the part of the
+                // Kerberos principal that follows the slash character (/),
+                // if present.
+                // If the system property 'zookeeper.clusterName' exists, use
+                // this as the instance; otherwise, the default is to use the
+                // Zookeeper server name.
+                String instanceName = addr.getHostName();
+                String clusterName = System.getProperty("zookeeper.clusterName");
+                if (clusterName != null) {
+                    instanceName = clusterName;
+                }
+                zooKeeperSaslClient = new ZooKeeperSaslClient("zookeeper/"+instanceName);
             } catch (LoginException e) {
                 LOG.warn("SASL authentication failed: " + e + " Will continue connection to Zookeeper server without "
                         + "SASL authentication, if Zookeeper server allows it.");
