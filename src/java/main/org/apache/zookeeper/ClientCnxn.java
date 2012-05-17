@@ -705,17 +705,21 @@ public class ClientCnxn {
             4096 * 1024);
 
     /**
+     * Determine the Zookeeper Server's principal name that the client will
+     * use when doing mutual authentication with the server.
+     * Principal name will be the string "zookeeper/" concatenated with
+     * the server's instance name.
+     * The instance name, in Kerberos terminology, is the part of the
+     * Kerberos principal that follows the slash character (/), if present.
+     * If the system property 'zookeeper.clusterName' exists, use
+     * this as the instance name; otherwise, the default is to use the
+     * Zookeeper server name (as supplied by the input serverHostName) as
+     * the instance name.
      *
      * @param serverHostName
      * @return Name of Kerberos server principal.
      */
     public static String getServerPrincipalName(String serverHostName) {
-        // The instance, in Kerberos terminology, is the part of the
-        // Kerberos principal that follows the slash character (/),
-        // if present.
-        // If the system property 'zookeeper.clusterName' exists, use
-        // this as the instance; otherwise, the default is to use the
-        // Zookeeper server name as the instance.
         String instanceName = serverHostName;
         String clusterName = System.getProperty("zookeeper.clusterName");
         if (clusterName != null) {
