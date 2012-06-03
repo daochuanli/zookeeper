@@ -914,8 +914,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                     LOG.info("adding SASL authorization for authorizationID: " + authorizationID);
                     cnxn.addAuthInfo(new Id("sasl",authorizationID));
                 }
-            }
-            catch (SaslException e) {
+            } catch (SaslException e) {
                 LOG.warn("Client failed to SASL authenticate: " + e);
                 if ((System.getProperty("zookeeper.allowSaslFailedClients") != null)
                   &&
@@ -926,8 +925,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                     cnxn.close();
                 }
             }
-        }
-        catch (NullPointerException e) {
+        } catch (NullPointerException e) {
             LOG.error("cnxn.saslServer is null: cnxn object did not initialize its saslServer properly.");
         }
         if (responseToken != null) {

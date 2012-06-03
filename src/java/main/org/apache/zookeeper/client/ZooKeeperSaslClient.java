@@ -31,6 +31,7 @@ import org.apache.zookeeper.server.auth.KerberosName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -256,7 +257,7 @@ public class ZooKeeperSaslClient {
                 saslToken = createSaslToken(saslToken);
                 if (saslToken != null) {
                     LOG.debug("saslToken (client) length: " + saslToken.length);
-                    queueSaslPacket(saslToken, cnxn);
+                    sendSaslPacket(saslToken, cnxn);
                 }
             } catch (SaslException e) {
                 LOG.error("SASL authentication failed using login context '" +
@@ -314,7 +315,8 @@ public class ZooKeeperSaslClient {
         }
     }
 
-    private void queueSaslPacket(byte[] saslToken, ClientCnxn cnxn) {
+    private void sendSaslPacket(byte[] saslToken, ClientCnxn cnxn)
+      throws SaslException{
         LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
         RequestHeader h = new RequestHeader();
         h.setType(ZooDefs.OpCode.sasl);
@@ -323,11 +325,29 @@ public class ZooKeeperSaslClient {
         SetSASLResponse response = new SetSASLResponse();
         ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
         ReplyHeader r = new ReplyHeader();
-        cnxn.queuePacket(h,r,request,response,cb);
+        try {
+            cnxn.sendPacket(h,r,request,response,cb);
+        } catch (IOException e) {
+            throw new SaslException("Failed to send SASL packet to server due " +
+              "to IOException:" + e);
+        }
     }
-    
-    private void queueSaslPacket(ClientCnxn cnxn) throws SaslException {
-        queueSaslPacket(createSaslToken(), cnxn);
+
+    private void sendSaslPacket(ClientCnxn cnxn) throws SaslException {
+        LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
+        RequestHeader h = new RequestHeader();
+        h.setType(ZooDefs.OpCode.sasl);
+        GetSASLRequest request = new GetSASLRequest();
+        request.setToken(createSaslToken());
+        SetSASLResponse response = new SetSASLResponse();
+        ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
+        ReplyHeader r = new ReplyHeader();
+        try {
+            cnxn.sendPacket(h,r,request,response,cb);
+        } catch (IOException e) {
+            throw new SaslException("Failed to send SASL packet to server due " +
+              "to IOException:" + e);
+        }
     }
 
     // used by ClientCnxn to know when to emit SaslAuthenticated event.
@@ -354,11 +374,11 @@ public class ZooKeeperSaslClient {
         }
         if (saslState == SaslState.INITIAL) {
             if (saslClient.hasInitialResponse()) {
-                queueSaslPacket(cnxn);
+                sendSaslPacket(cnxn);
             }
             else {
                 byte[] emptyToken = new byte[0];
-                queueSaslPacket(emptyToken, cnxn);
+                sendSaslPacket(emptyToken, cnxn);
             }
             saslState = SaslState.INTERMEDIATE;
         }

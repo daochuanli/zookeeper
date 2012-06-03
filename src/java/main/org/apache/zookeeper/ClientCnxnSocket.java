@@ -26,8 +26,11 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.jute.BinaryInputArchive;
+import org.apache.jute.Record;
 import org.apache.zookeeper.ClientCnxn.Packet;
 import org.apache.zookeeper.proto.ConnectResponse;
+import org.apache.zookeeper.proto.ReplyHeader;
+import org.apache.zookeeper.proto.RequestHeader;
 import org.apache.zookeeper.server.ByteBufferInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -167,4 +170,6 @@ abstract class ClientCnxnSocket {
             InterruptedException;
 
     abstract void testableCloseSocket() throws IOException;
+
+    abstract void sendPacket(Packet p) throws IOException;
 }

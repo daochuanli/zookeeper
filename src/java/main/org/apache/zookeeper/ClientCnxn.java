@@ -1260,6 +1260,14 @@ public class ClientCnxn {
         return r;
     }
 
+    public void sendPacket(RequestHeader h, ReplyHeader r, Record request,
+                    Record response, AsyncCallback cb)
+    throws IOException {
+        Packet p = new Packet(h, r, request, response, null);
+        p.cb = cb;
+        sendThread.clientCnxnSocket.sendPacket(p);
+    }
+
     Packet queuePacket(RequestHeader h, ReplyHeader r, Record request,
             Record response, AsyncCallback cb, String clientPath,
             String serverPath, Object ctx, WatchRegistration watchRegistration)
