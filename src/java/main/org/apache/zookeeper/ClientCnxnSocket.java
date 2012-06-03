@@ -168,5 +168,5 @@ public abstract class ClientCnxnSocket {
 
     abstract void testableCloseSocket() throws IOException;
 
-    abstract public void sendPacket(Packet p) throws IOException;
+    abstract void sendPacket(Packet p) throws IOException;
 }

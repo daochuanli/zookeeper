@@ -338,7 +338,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     }
 
     @Override
-    public void sendPacket(Packet p) throws IOException {
+    void sendPacket(Packet p) throws IOException {
         // cf doIO()
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
