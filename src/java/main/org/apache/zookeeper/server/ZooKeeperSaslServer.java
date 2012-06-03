@@ -113,8 +113,7 @@ public class ZooKeeperSaslServer {
     }
 
     public byte[] evaluateResponse(byte[] response) throws SaslException {
-        byte[] retval = saslServer.evaluateResponse(response);
-        return retval;
+        return saslServer.evaluateResponse(response);
     }
 
     public boolean isComplete() {
