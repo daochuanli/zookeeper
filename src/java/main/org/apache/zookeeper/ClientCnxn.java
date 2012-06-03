@@ -1204,6 +1204,10 @@ public class ClientCnxn {
         void testableCloseSocket() throws IOException {
             clientCnxnSocket.testableCloseSocket();
         }
+
+        public void sendPacket(Packet p) throws IOException {
+            clientCnxnSocket.sendPacket(p);
+        }
     }
 
     /**
@@ -1273,7 +1277,7 @@ public class ClientCnxn {
     throws IOException {
         Packet p = new Packet(h, r, request, response, null);
         p.cb = cb;
-        sendThread.clientCnxnSocket.sendPacket(p);
+        sendThread.sendPacket(p);
     }
 
     Packet queuePacket(RequestHeader h, ReplyHeader r, Record request,
