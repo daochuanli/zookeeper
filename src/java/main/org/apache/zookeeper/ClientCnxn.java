@@ -774,14 +774,18 @@ public class ClientCnxn {
             }
             Packet packet;
             if (replyHdr.getXid() == 0) {
+                // getXid() == 0 means that this is a SASL response from the
+                // Zookeeper server.
                 LOG.debug("processing server's SASL response.");
                 GetSASLRequest request = new GetSASLRequest();
                 request.deserialize(bbia,"token");
                 if (request.getToken() == null) {
+                    // SASL authentication failed.
                     eventThread.queueEvent(new WatchedEvent(
                       Watcher.Event.EventType.None,
                       Watcher.Event.KeeperState.AuthFailed, null));
                 } else {
+                    // the SASL authentication process is successful so far.
                     zooKeeperSaslClient.respondToServer(request.getToken(),ClientCnxn.this);
                 }
                 return;
