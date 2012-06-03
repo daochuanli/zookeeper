@@ -158,7 +158,7 @@ public class ZooKeeperSaslClient {
         public void processResult(int rc, String path, Object ctx, byte data[], Stat stat) {
             // processResult() is used by ClientCnxn's sendThread to respond to
             // data[] contains the Zookeeper Server's SASL token.
-            // ctx is the ZooKeeperSaslClient object. We use this object's prepareSaslResponseToServer() method
+            // ctx is the ZooKeeperSaslClient object. We use this object's respondToServer() method
             // to reply to the Zookeeper Server's SASL token
             ZooKeeperSaslClient client = ((ClientCnxn)ctx).zooKeeperSaslClient;
             if (client == null) {
@@ -173,7 +173,7 @@ public class ZooKeeperSaslClient {
                 usedata = new byte[0];
                 LOG.debug("ServerSaslResponseCallback(): using empty data[] as server response (length="+usedata.length+")");
             }
-            client.prepareSaslResponseToServer(usedata, (ClientCnxn)ctx);
+            client.respondToServer(usedata, (ClientCnxn)ctx);
         }
     }
 
@@ -244,7 +244,7 @@ public class ZooKeeperSaslClient {
         }
     }
 
-    public void prepareSaslResponseToServer(byte[] serverToken, ClientCnxn cnxn) {
+    public void respondToServer(byte[] serverToken, ClientCnxn cnxn) {
         saslToken = serverToken;
 
         if (saslClient == null) {
