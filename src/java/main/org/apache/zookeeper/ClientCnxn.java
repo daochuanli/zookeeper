@@ -782,7 +782,7 @@ public class ClientCnxn {
                       Watcher.Event.EventType.None,
                       Watcher.Event.KeeperState.AuthFailed, null));
                 } else {
-                    zooKeeperSaslClient.prepareSaslResponseToServer(request.getToken(),ClientCnxn.this);
+                    zooKeeperSaslClient.respondToServer(request.getToken(),ClientCnxn.this);
                 }
                 return;
             }
