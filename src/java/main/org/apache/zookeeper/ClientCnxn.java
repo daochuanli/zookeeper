@@ -228,7 +228,7 @@ public class ClientCnxn {
     /**
      * This class allows us to pass the headers and the relevant records around.
      */
-    public static class Packet {
+    static class Packet {
         RequestHeader requestHeader;
 
         ReplyHeader replyHeader;
@@ -246,21 +246,21 @@ public class ClientCnxn {
 
         boolean finished;
 
-        public AsyncCallback cb;
+        AsyncCallback cb;
 
         Object ctx;
 
         WatchRegistration watchRegistration;
 
         /** Convenience ctor */
-        public Packet(RequestHeader requestHeader, ReplyHeader replyHeader,
+        Packet(RequestHeader requestHeader, ReplyHeader replyHeader,
                Record request, Record response,
                WatchRegistration watchRegistration) {
             this(requestHeader, replyHeader, request, response,
                  watchRegistration, false);
         }
 
-        public Packet(RequestHeader requestHeader, ReplyHeader replyHeader,
+        Packet(RequestHeader requestHeader, ReplyHeader replyHeader,
                Record request, Record response,
                WatchRegistration watchRegistration, boolean readOnly) {
 
