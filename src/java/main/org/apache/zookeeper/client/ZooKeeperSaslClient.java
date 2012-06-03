@@ -20,7 +20,6 @@ package org.apache.zookeeper.client;
 
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.ClientCnxn;
-import org.apache.zookeeper.ClientCnxnSocket;
 import org.apache.zookeeper.Login;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.Stat;

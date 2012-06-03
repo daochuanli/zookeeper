@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * be provided as an alternative to the NIO socket code.
  * 
  */
-public abstract class ClientCnxnSocket {
+abstract class ClientCnxnSocket {
     private static final Logger LOG = LoggerFactory.getLogger(ClientCnxnSocket.class);
 
     protected boolean initialized;

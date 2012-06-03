@@ -36,7 +36,7 @@ import org.apache.zookeeper.ClientCnxn.EndOfStreamException;
 import org.apache.zookeeper.ClientCnxn.Packet;
 import org.apache.zookeeper.ZooDefs.OpCode;
 
-public class ClientCnxnSocketNIO extends ClientCnxnSocket {
+class ClientCnxnSocketNIO extends ClientCnxnSocket {
     private static final Logger LOG = LoggerFactory
             .getLogger(ClientCnxnSocketNIO.class);
 
