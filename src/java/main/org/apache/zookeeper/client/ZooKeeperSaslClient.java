@@ -248,7 +248,13 @@ public class ZooKeeperSaslClient {
             return;
         }
 
-        LOG.debug("saslToken (server) length: " + saslToken.length);
+        if (saslToken != null) {
+            LOG.debug("saslToken (server) length: " + saslToken.length);
+        } else {
+            LOG.error("saslToken is unexpectedly null.");
+            saslState = SaslState.FAILED;
+        }
+
         if (!(saslClient.isComplete())) {
             try {
                 saslToken = createSaslToken(saslToken);
