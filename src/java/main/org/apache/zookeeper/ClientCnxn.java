@@ -990,7 +990,8 @@ public class ClientCnxn {
                         if ((zooKeeperSaslClient != null) && (zooKeeperSaslClient.isFailed() != true) && (zooKeeperSaslClient.isComplete() != true)) {
                             try {
                                 zooKeeperSaslClient.initialize(ClientCnxn.this);
-                            } catch (SaslException e) {
+                            }
+                            catch (SaslException e) {
                                 LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);
                                 state = States.AUTH_FAILED;
                                 eventThread.queueEvent(new WatchedEvent(
