@@ -56,21 +56,7 @@ import org.apache.zookeeper.ZooKeeper.States;
 import org.apache.zookeeper.ZooKeeper.WatchRegistration;
 import org.apache.zookeeper.client.HostProvider;
 import org.apache.zookeeper.client.ZooKeeperSaslClient;
-import org.apache.zookeeper.proto.AuthPacket;
-import org.apache.zookeeper.proto.ConnectRequest;
-import org.apache.zookeeper.proto.CreateResponse;
-import org.apache.zookeeper.proto.ExistsResponse;
-import org.apache.zookeeper.proto.GetACLResponse;
-import org.apache.zookeeper.proto.GetChildren2Response;
-import org.apache.zookeeper.proto.GetChildrenResponse;
-import org.apache.zookeeper.proto.GetDataResponse;
-import org.apache.zookeeper.proto.ReplyHeader;
-import org.apache.zookeeper.proto.RequestHeader;
-import org.apache.zookeeper.proto.SetACLResponse;
-import org.apache.zookeeper.proto.SetDataResponse;
-import org.apache.zookeeper.proto.SetSASLResponse;
-import org.apache.zookeeper.proto.SetWatches;
-import org.apache.zookeeper.proto.WatcherEvent;
+import org.apache.zookeeper.proto.*;
 import org.apache.zookeeper.server.ByteBufferInputStream;
 import org.apache.zookeeper.server.ZooTrace;
 import org.slf4j.Logger;
@@ -780,7 +766,9 @@ public class ClientCnxn {
             Packet packet;
             if (replyHdr.getXid() == 0) {
                 LOG.debug("processing server's SASL response.");
-                zooKeeperSaslClient.prepareSaslResponseToServer(incomingBuffer.array(),getClientCnxnSocket());
+                GetSASLRequest request = new GetSASLRequest();
+                request.deserialize(bbia,"token");
+                zooKeeperSaslClient.prepareSaslResponseToServer(request.getToken(),getClientCnxnSocket());
                 return;
             }
             synchronized (pendingQueue) {
