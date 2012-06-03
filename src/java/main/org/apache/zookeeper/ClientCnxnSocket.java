@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  * be provided as an alternative to the NIO socket code.
  * 
  */
-abstract class ClientCnxnSocket {
+public abstract class ClientCnxnSocket {
     private static final Logger LOG = LoggerFactory.getLogger(ClientCnxnSocket.class);
 
     protected boolean initialized;
@@ -171,5 +171,5 @@ abstract class ClientCnxnSocket {
 
     abstract void testableCloseSocket() throws IOException;
 
-    abstract void sendPacket(Packet p) throws IOException;
+    abstract public void sendPacket(Packet p) throws IOException;
 }

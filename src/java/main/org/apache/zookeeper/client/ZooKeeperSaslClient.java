@@ -18,10 +18,7 @@
 
 package org.apache.zookeeper.client;
 
-import org.apache.zookeeper.AsyncCallback;
-import org.apache.zookeeper.ClientCnxn;
-import org.apache.zookeeper.Login;
-import org.apache.zookeeper.ZooDefs;
+import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.GetSASLRequest;
 import org.apache.zookeeper.proto.ReplyHeader;
@@ -243,7 +240,31 @@ public class ZooKeeperSaslClient {
         }
     }
 
-    private void prepareSaslResponseToServer(byte[] serverToken, ClientCnxn cnxn) {
+    public void prepareSaslResponseToServer(byte[] serverToken, ClientCnxnSocket socket) {
+        saslToken = serverToken;
+
+        if (saslClient == null) {
+            LOG.error("saslClient is unexpectedly null. Cannot respond to server's SASL message; ignoring.");
+            return;
+        }
+
+        LOG.debug("saslToken (server) length: " + saslToken.length);
+        if (!(saslClient.isComplete())) {
+            try {
+                saslToken = createSaslToken(saslToken);
+                if (saslToken != null) {
+                    LOG.debug("saslToken (client) length: " + saslToken.length);
+                    sendSaslPacket(saslToken, socket);
+                }
+            } catch (SaslException e) {
+                LOG.error("SASL authentication failed using login context '" +
+                  this.getLoginContext() + "'.");
+                saslState = SaslState.FAILED;
+            }
+        }
+    }
+
+    public void prepareSaslResponseToServer(byte[] serverToken, ClientCnxn cnxn) {
         saslToken = serverToken;
 
         if (saslClient == null) {
@@ -327,6 +348,26 @@ public class ZooKeeperSaslClient {
         ReplyHeader r = new ReplyHeader();
         try {
             cnxn.sendPacket(h,r,request,response,cb);
+        } catch (IOException e) {
+            throw new SaslException("Failed to send SASL packet to server due " +
+              "to IOException:" + e);
+        }
+    }
+
+    private void sendSaslPacket(byte[] saslToken, ClientCnxnSocket socket)
+      throws SaslException{
+        LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
+        RequestHeader h = new RequestHeader();
+        h.setType(ZooDefs.OpCode.sasl);
+        GetSASLRequest request = new GetSASLRequest();
+        request.setToken(saslToken);
+        SetSASLResponse response = new SetSASLResponse();
+        ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
+        ReplyHeader r = new ReplyHeader();
+        try {
+            ClientCnxn.Packet p = new ClientCnxn.Packet(h, r, request, response, null);
+            p.cb = cb;
+            socket.sendPacket(p);
         } catch (IOException e) {
             throw new SaslException("Failed to send SASL packet to server due " +
               "to IOException:" + e);

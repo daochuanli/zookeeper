@@ -227,7 +227,7 @@ public class ClientCnxn {
     /**
      * This class allows us to pass the headers and the relevant records around.
      */
-    static class Packet {
+    public static class Packet {
         RequestHeader requestHeader;
 
         ReplyHeader replyHeader;
@@ -245,21 +245,21 @@ public class ClientCnxn {
 
         boolean finished;
 
-        AsyncCallback cb;
+        public AsyncCallback cb;
 
         Object ctx;
 
         WatchRegistration watchRegistration;
 
         /** Convenience ctor */
-        Packet(RequestHeader requestHeader, ReplyHeader replyHeader,
+        public Packet(RequestHeader requestHeader, ReplyHeader replyHeader,
                Record request, Record response,
                WatchRegistration watchRegistration) {
             this(requestHeader, replyHeader, request, response,
                  watchRegistration, false);
         }
 
-        Packet(RequestHeader requestHeader, ReplyHeader replyHeader,
+        public Packet(RequestHeader requestHeader, ReplyHeader replyHeader,
                Record request, Record response,
                WatchRegistration watchRegistration, boolean readOnly) {
 
@@ -778,6 +778,11 @@ public class ClientCnxn {
                 return;
             }
             Packet packet;
+            if (replyHdr.getXid() == 0) {
+                LOG.debug("processing server's SASL response.");
+                zooKeeperSaslClient.prepareSaslResponseToServer(incomingBuffer.array(),getClientCnxnSocket());
+                return;
+            }
             synchronized (pendingQueue) {
                 if (pendingQueue.size() == 0) {
                     throw new IOException("Nothing in the queue, but got "
