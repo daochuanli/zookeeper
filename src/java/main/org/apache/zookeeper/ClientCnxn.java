@@ -381,12 +381,6 @@ public class ClientCnxn {
 
     }
 
-    // used by ZooKeeperSaslClient.queueSaslPacket().
-    public void queuePacket(RequestHeader h, ReplyHeader r, Record request,
-            Record response, AsyncCallback cb) {
-        queuePacket(h,r,request,response, cb, null, null, this, null);
-    }
-
     /**
      * tests use this to check on reset of watches
      * @return if the auto reset of watches are disabled
