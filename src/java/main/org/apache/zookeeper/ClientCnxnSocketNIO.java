@@ -62,7 +62,9 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
      * @throws InterruptedException
      * @throws IOException
      */
-    void doIO(List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue) throws InterruptedException, IOException {
+    void doIO(List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue,
+              boolean clientAuthenticationInProgress)
+      throws InterruptedException, IOException {
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
             throw new IOException("Socket is null!");
@@ -102,17 +104,24 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             LinkedList<Packet> pending = new LinkedList<Packet>();
             synchronized (outgoingQueue) {
                 if (!outgoingQueue.isEmpty()) {
-                    updateLastSend();
-                    ByteBuffer pbb = outgoingQueue.getFirst().bb;
-                    sock.write(pbb);
-                    if (!pbb.hasRemaining()) {
-                        sentCount++;
-                        Packet p = outgoingQueue.removeFirst();
-                        if (p.requestHeader != null
-                                && p.requestHeader.getType() != OpCode.ping
-                                && p.requestHeader.getType() != OpCode.auth) {
-                            pending.add(p);
+                    Packet checkp = outgoingQueue.getFirst();
+                    if ((clientAuthenticationInProgress == false) ||
+                        (checkp.requestHeader == null) ||
+                        (!ZooDefs.operationRequiresPermissions(checkp.requestHeader.getType()))) {
+                        updateLastSend();
+                        ByteBuffer pbb = outgoingQueue.getFirst().bb;
+                        sock.write(pbb);
+                        if (!pbb.hasRemaining()) {
+                            sentCount++;
+                            Packet p = outgoingQueue.removeFirst();
+                            if (p.requestHeader != null
+                              && p.requestHeader.getType() != OpCode.ping
+                              && p.requestHeader.getType() != OpCode.auth) {
+                                pending.add(p);
+                            }
                         }
+                    } else {
+                        LOG.info("client is not ready to send packet yet: clientAuthenticationInProgress:" + clientAuthenticationInProgress);
                     }
                 }
             }
@@ -264,7 +273,9 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     }
     
     @Override
-    void doTransport(int waitTimeOut, List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue )
+    void doTransport(int waitTimeOut, List<Packet> pendingQueue,
+                     LinkedList<Packet> outgoingQueue,
+                     boolean clientAuthenticationInProgress)
             throws IOException, InterruptedException {
         selector.select(waitTimeOut);
         Set<SelectionKey> selected;
@@ -284,7 +295,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     sendThread.primeConnection();
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
-                doIO(pendingQueue, outgoingQueue);
+                doIO(pendingQueue, outgoingQueue, clientAuthenticationInProgress);
             }
         }
         if (sendThread.getZkState().isConnected()) {
