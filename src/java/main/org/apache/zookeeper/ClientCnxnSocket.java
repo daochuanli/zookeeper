@@ -27,6 +27,7 @@ import java.util.List;
 
 import org.apache.jute.BinaryInputArchive;
 import org.apache.zookeeper.ClientCnxn.Packet;
+import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.proto.ConnectResponse;
 import org.apache.zookeeper.server.ByteBufferInputStream;
 import org.slf4j.Logger;
@@ -163,9 +164,8 @@ abstract class ClientCnxnSocket {
     abstract void enableReadWriteOnly();
 
     abstract void doTransport(int waitTimeOut, List<Packet> pendingQueue,
-            LinkedList<Packet> outgoingQueue,
-            boolean clientAuthenticationInProgress) throws IOException,
-            InterruptedException;
+            LinkedList<Packet> outgoingQueue, ZooKeeperSaslClient saslClient)
+            throws IOException, InterruptedException;
 
     abstract void testableCloseSocket() throws IOException;
 

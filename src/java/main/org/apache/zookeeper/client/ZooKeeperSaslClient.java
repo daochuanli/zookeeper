@@ -65,6 +65,12 @@ public class ZooKeeperSaslClient {
     public enum SaslState {
         INITIAL,INTERMEDIATE,COMPLETE,FAILED
     }
+    public boolean isSaslCompleted() {
+        if (saslClient != null) {
+            return saslClient.isComplete();
+        }
+        return false;
+    }
 
     private SaslState saslState = SaslState.INITIAL;
 
@@ -146,7 +152,8 @@ public class ZooKeeperSaslClient {
     }
 
     public boolean isComplete() {
-        return (saslState == SaslState.COMPLETE);
+        return saslClient.isComplete();
+//        return (saslState == SaslState.COMPLETE);
     }
 
     public boolean isFailed() {
@@ -251,12 +258,10 @@ public class ZooKeeperSaslClient {
             return;
         }
 
-        LOG.debug("saslToken (server) length: " + saslToken.length);
         if (!(saslClient.isComplete())) {
             try {
                 saslToken = createSaslToken(saslToken);
                 if (saslToken != null) {
-                    LOG.debug("saslToken (client) length: " + saslToken.length);
                     sendSaslPacket(saslToken, cnxn);
                 }
             } catch (SaslException e) {
@@ -275,6 +280,7 @@ public class ZooKeeperSaslClient {
     private byte[] createSaslToken(final byte[] saslToken) throws SaslException {
         if (saslToken == null) {
             // TODO: introspect about runtime environment (such as jaas.conf)
+            saslState = SaslState.FAILED;
             throw new SaslException("Error in authenticating with a Zookeeper Quorum member: the quorum member's saslToken is null.");
         }
 
@@ -305,6 +311,7 @@ public class ZooKeeperSaslClient {
                     }
                     error += " Zookeeper Client will go to AUTH_FAILED state.";
                     LOG.error(error);
+                    saslState = SaslState.FAILED;
                     throw new SaslException(error);
                 }
             }
@@ -334,6 +341,7 @@ public class ZooKeeperSaslClient {
     }
 
     private void sendSaslPacket(ClientCnxn cnxn) throws SaslException {
+        LOG.info("SENDING SASL PACKET NOW.");
         LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
         RequestHeader h = new RequestHeader();
         h.setType(ZooDefs.OpCode.sasl);
@@ -370,9 +378,11 @@ public class ZooKeeperSaslClient {
 
     public void initialize(ClientCnxn cnxn) throws SaslException {
         if (saslClient == null) {
+            saslState = SaslState.FAILED;
             throw new SaslException("saslClient failed to initialize properly: it's null.");
         }
         if (saslState == SaslState.INITIAL) {
+            LOG.info("SENDING INITIAL SASL PACKET.");
             if (saslClient.hasInitialResponse()) {
                 sendSaslPacket(cnxn);
             }

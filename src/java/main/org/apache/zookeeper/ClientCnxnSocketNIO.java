@@ -26,10 +26,12 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.ClientCnxn.EndOfStreamException;
@@ -63,7 +65,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
      * @throws IOException
      */
     void doIO(List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue,
-              boolean clientAuthenticationInProgress)
+              ZooKeeperSaslClient saslClient)
       throws InterruptedException, IOException {
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
@@ -104,29 +106,54 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             LinkedList<Packet> pending = new LinkedList<Packet>();
             synchronized (outgoingQueue) {
                 if (!outgoingQueue.isEmpty()) {
-                    Packet checkp = outgoingQueue.getFirst();
-                    if ((clientAuthenticationInProgress == false) ||
-                        (checkp.requestHeader == null) ||
-                        (!ZooDefs.operationRequiresPermissions(checkp.requestHeader.getType()))) {
+                    Packet p = null;
+                    if ((saslClient != null) && (saslClient.isSaslCompleted() == false)) {
+                        // Client's authentication with server is in progress:
+                        // Until it's complete, send only non-permission-requiring
+                        // packets. Find the first such packet, if any, to send.
+                        Iterator<Packet> iter = outgoingQueue.listIterator();
+                        while(iter.hasNext()) {
+                            p = iter.next();
+                            if ((p.requestHeader == null) ||
+                                (!ZooDefs.operationRequiresPermissions(p.requestHeader.getType()))) {
+                                // We've found a packet that doesn't require
+                                // permissions from the server: send it.
+                                break;
+                            } else {
+                                // This packet *does* require permission:
+                                // defer it until later, leaving it in the queue
+                                // until authentication completes.
+                                if (false && LOG.isDebugEnabled()) {
+                                    LOG.debug("deferring permission-requiring packet:" +
+                                      p.requestHeader.getType());
+                                }
+                                p = null;
+                            }
+                        }
+                    } else {
+                        LOG.debug("authentication is done: queuing normally.");
+                        // Tunnelled authentication is not in progress: just
+                        // send the first packet in the queue.
+                        p = outgoingQueue.getFirst();
+                    }
+                    if (p != null) {
+                        outgoingQueue.removeFirstOccurrence(p);
                         updateLastSend();
-                        ByteBuffer pbb = outgoingQueue.getFirst().bb;
+                        ByteBuffer pbb = p.bb;
                         sock.write(pbb);
                         if (!pbb.hasRemaining()) {
                             sentCount++;
-                            Packet p = outgoingQueue.removeFirst();
                             if (p.requestHeader != null
                               && p.requestHeader.getType() != OpCode.ping
                               && p.requestHeader.getType() != OpCode.auth) {
                                 pending.add(p);
                             }
                         }
-                    } else {
-                        LOG.info("client is not ready to send packet yet: clientAuthenticationInProgress:" + clientAuthenticationInProgress);
+                    }
+                    synchronized(pendingQueue) {
+                        pendingQueue.addAll(pending);
                     }
                 }
-            }
-            synchronized(pendingQueue) {
-                pendingQueue.addAll(pending);
             }
         }
     }
@@ -274,8 +301,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     
     @Override
     void doTransport(int waitTimeOut, List<Packet> pendingQueue,
-                     LinkedList<Packet> outgoingQueue,
-                     boolean clientAuthenticationInProgress)
+                     LinkedList<Packet> outgoingQueue, ZooKeeperSaslClient saslClient)
             throws IOException, InterruptedException {
         selector.select(waitTimeOut);
         Set<SelectionKey> selected;
@@ -295,7 +321,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     sendThread.primeConnection();
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
-                doIO(pendingQueue, outgoingQueue, clientAuthenticationInProgress);
+                doIO(pendingQueue, outgoingQueue, saslClient);
             }
         }
         if (sendThread.getZkState().isConnected()) {
@@ -350,6 +376,8 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
 
     @Override
     void sendPacket(Packet p) throws IOException {
+        enableWrite();
+        updateLastSend();
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
             throw new IOException("Socket is null!");

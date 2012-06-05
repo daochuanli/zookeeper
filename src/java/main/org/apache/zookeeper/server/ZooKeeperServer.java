@@ -835,6 +835,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         BinaryInputArchive bia = BinaryInputArchive.getArchive(bais);
         RequestHeader h = new RequestHeader();
         h.deserialize(bia, "header");
+        LOG.info("server:responding to packet of type:" + h.getType());
         // Through the magic of byte buffers, txn will not be
         // pointing
         // to the start of the txn

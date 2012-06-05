@@ -202,6 +202,7 @@
 
     <path id="test.java.classpath">
       <pathelement location="${test.java.classes}" />
+      <pathelement location="${config.dir}" />
       <fileset dir="${ivy.test.lib}">
         <include name="**/*.jar" />
       </fileset>

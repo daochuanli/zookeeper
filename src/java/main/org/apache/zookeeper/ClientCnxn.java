@@ -710,11 +710,11 @@ public class ClientCnxn {
         private boolean isFirstConnect = true;
 
         void readResponse(ByteBuffer incomingBuffer) throws IOException {
+            LOG.info("READING RESPONSE FROM SERVER..");
             ByteBufferInputStream bbis = new ByteBufferInputStream(
-                    incomingBuffer);
+              incomingBuffer);
             BinaryInputArchive bbia = BinaryInputArchive.getArchive(bbis);
             ReplyHeader replyHdr = new ReplyHeader();
-
             replyHdr.deserialize(bbia, "header");
             if (replyHdr.getXid() == -2) {
                 // -2 is the xid for pings
@@ -772,24 +772,29 @@ public class ClientCnxn {
                 eventThread.queueEvent( we );
                 return;
             }
-            Packet packet;
-            if (replyHdr.getXid() == 0) {
-                // getXid() == 0 means that this is a SASL response from the
-                // Zookeeper server.
-                LOG.debug("processing server's SASL response.");
-                GetSASLRequest request = new GetSASLRequest();
-                request.deserialize(bbia,"token");
-                if (request.getToken() == null) {
-                    // SASL authentication failed.
-                    eventThread.queueEvent(new WatchedEvent(
-                      Watcher.Event.EventType.None,
-                      Watcher.Event.KeeperState.AuthFailed, null));
-                } else {
-                    // the SASL authentication process is successful so far.
-                    zooKeeperSaslClient.respondToServer(request.getToken(),ClientCnxn.this);
+
+            if (zooKeeperSaslClient.isSaslCompleted() == false) {
+                try {
+                    GetSASLRequest request = new GetSASLRequest();
+                    request.deserialize(bbia,"token");
+                    if (request.getToken() == null) {
+                        LOG.info("SASL server token was null.");
+                        // SASL authentication failed.
+                        eventThread.queueEvent(new WatchedEvent(
+                          Watcher.Event.EventType.None,
+                          Watcher.Event.KeeperState.AuthFailed, null));
+                    } else {
+                        LOG.info("size of SASL response is: " + request.getToken().length);
+                        // the SASL authentication process is successful so far.
+                        zooKeeperSaslClient.respondToServer(request.getToken(),ClientCnxn.this);
+                    }
+                    return;
+                } catch (IOException ioe) {
+                    LOG.info("IGNORING NON-SASL PACKET; CONTINUING.");
                 }
-                return;
             }
+
+            Packet packet;
             synchronized (pendingQueue) {
                 if (pendingQueue.size() == 0) {
                     throw new IOException("Nothing in the queue, but got "
@@ -994,18 +999,20 @@ public class ClientCnxn {
                     }
 
                     if (state.isConnected()) {
-                        if ((zooKeeperSaslClient != null) && (zooKeeperSaslClient.isFailed() != true) && (zooKeeperSaslClient.isComplete() != true)) {
-                            try {
-                                zooKeeperSaslClient.initialize(ClientCnxn.this);
+                        if (zooKeeperSaslClient != null) {
+                            if (zooKeeperSaslClient.getSaslState() == ZooKeeperSaslClient.SaslState.INITIAL) {
+                                try {
+                                    LOG.info("initializing sasl client.");
+                                    zooKeeperSaslClient.initialize(ClientCnxn.this);
+                                } catch (SaslException e) {
+                                    LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);
+                                    state = States.AUTH_FAILED;
+                                    eventThread.queueEvent(new WatchedEvent(
+                                      Watcher.Event.EventType.None,
+                                      KeeperState.AuthFailed,null));
+                                }
                             }
-                            catch (SaslException e) {
-                                LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);
-                                state = States.AUTH_FAILED;
-                                eventThread.queueEvent(new WatchedEvent(
-                                        Watcher.Event.EventType.None,
-                                        KeeperState.AuthFailed,null));
-                            }
-                            if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
+                            if (zooKeeperSaslClient.isSaslCompleted()) {
                                 eventThread.queueEvent(new WatchedEvent(
                                   Watcher.Event.EventType.None,
                                   Watcher.Event.KeeperState.SaslAuthenticated, null));
@@ -1017,6 +1024,7 @@ public class ClientCnxn {
                     }
                     
                     if (to <= 0) {
+                        LOG.info("SASL STATE at timeout:" + zooKeeperSaslClient.isSaslCompleted());
                         throw new SessionTimeoutException(
                                 "Client session timed out, have not heard from server in "
                                         + clientCnxnSocket.getIdleRecv() + "ms"
@@ -1052,7 +1060,7 @@ public class ClientCnxn {
                     }
 
                     clientCnxnSocket.doTransport(to, pendingQueue,
-                      outgoingQueue, clientTunneledAuthenticationInProgress());
+                      outgoingQueue, zooKeeperSaslClient);
 
                 } catch (Throwable e) {
                     if (closing) {
