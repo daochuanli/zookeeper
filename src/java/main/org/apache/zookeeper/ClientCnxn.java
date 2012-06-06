@@ -710,7 +710,6 @@ public class ClientCnxn {
         private boolean isFirstConnect = true;
 
         void readResponse(ByteBuffer incomingBuffer) throws IOException {
-            LOG.info("READING RESPONSE FROM SERVER..");
             ByteBufferInputStream bbis = new ByteBufferInputStream(
               incomingBuffer);
             BinaryInputArchive bbia = BinaryInputArchive.getArchive(bbis);
@@ -784,7 +783,6 @@ public class ClientCnxn {
                           Watcher.Event.EventType.None,
                           Watcher.Event.KeeperState.AuthFailed, null));
                     } else {
-                        LOG.info("size of SASL response is: " + request.getToken().length);
                         // the SASL authentication process is successful so far.
                         zooKeeperSaslClient.respondToServer(request.getToken(),ClientCnxn.this);
                     }
