@@ -1000,7 +1000,6 @@ public class ClientCnxn {
                         if (zooKeeperSaslClient != null) {
                             if (zooKeeperSaslClient.getSaslState() == ZooKeeperSaslClient.SaslState.INITIAL) {
                                 try {
-                                    LOG.info("initializing sasl client.");
                                     zooKeeperSaslClient.initialize(ClientCnxn.this);
                                 } catch (SaslException e) {
                                     LOG.error("SASL authentication with Zookeeper Quorum member failed: " + e);
@@ -1022,7 +1021,6 @@ public class ClientCnxn {
                     }
                     
                     if (to <= 0) {
-                        LOG.info("SASL STATE at timeout:" + zooKeeperSaslClient.isSaslCompleted());
                         throw new SessionTimeoutException(
                                 "Client session timed out, have not heard from server in "
                                         + clientCnxnSocket.getIdleRecv() + "ms"
