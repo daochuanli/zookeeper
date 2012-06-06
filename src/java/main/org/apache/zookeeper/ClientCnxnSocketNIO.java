@@ -65,7 +65,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
      * @throws IOException
      */
     void doIO(List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue,
-              ZooKeeperSaslClient saslClient)
+              ClientCnxn cnxn)
       throws InterruptedException, IOException {
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
@@ -107,7 +107,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             synchronized (outgoingQueue) {
                 if (!outgoingQueue.isEmpty()) {
                     Packet p = null;
-                    if ((saslClient != null) && (saslClient.isSaslCompleted() == false)) {
+                    if (cnxn.sendThread.clientTunneledAuthenticationInProgress()) {
                         // Client's authentication with server is in progress:
                         // Until it's complete, send only non-permission-requiring
                         // packets. Find the first such packet, if any, to send.
@@ -301,7 +301,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     
     @Override
     void doTransport(int waitTimeOut, List<Packet> pendingQueue,
-                     LinkedList<Packet> outgoingQueue, ZooKeeperSaslClient saslClient)
+                     LinkedList<Packet> outgoingQueue, ClientCnxn cnxn)
             throws IOException, InterruptedException {
         selector.select(waitTimeOut);
         Set<SelectionKey> selected;
@@ -321,12 +321,12 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     sendThread.primeConnection();
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
-                doIO(pendingQueue, outgoingQueue, saslClient);
+                doIO(pendingQueue, outgoingQueue, cnxn);
             }
         }
         if (sendThread.getZkState().isConnected()) {
             synchronized(outgoingQueue) {
-                if ((!outgoingQueue.isEmpty()) || (saslClient.isSaslCompleted() == false)) {
+                if ((!outgoingQueue.isEmpty()) || (cnxn.sendThread.clientTunneledAuthenticationInProgress())) {
                     enableWrite();
                 } else {
                     disableWrite();

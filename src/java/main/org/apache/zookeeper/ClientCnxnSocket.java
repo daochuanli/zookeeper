@@ -164,7 +164,7 @@ abstract class ClientCnxnSocket {
     abstract void enableReadWriteOnly();
 
     abstract void doTransport(int waitTimeOut, List<Packet> pendingQueue,
-            LinkedList<Packet> outgoingQueue, ZooKeeperSaslClient saslClient)
+            LinkedList<Packet> outgoingQueue, ClientCnxn cnxn)
             throws IOException, InterruptedException;
 
     abstract void testableCloseSocket() throws IOException;

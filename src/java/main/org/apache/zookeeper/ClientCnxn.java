@@ -1057,7 +1057,7 @@ public class ClientCnxn {
                     }
 
                     clientCnxnSocket.doTransport(to, pendingQueue,
-                      outgoingQueue, zooKeeperSaslClient);
+                      outgoingQueue, ClientCnxn.this);
 
                 } catch (Throwable e) {
                     if (closing) {
@@ -1218,7 +1218,7 @@ public class ClientCnxn {
             clientCnxnSocket.testableCloseSocket();
         }
 
-        private boolean clientTunneledAuthenticationInProgress() {
+        public boolean clientTunneledAuthenticationInProgress() {
             // Currently, Zookeeper only supports one tunnelled authentication
             // protocol: SASL. Others might be added in the future, though. We
             // currently check the following system property below to determine if
