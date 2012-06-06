@@ -333,7 +333,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 if ((!outgoingQueue.isEmpty()) || (saslClient.isSaslCompleted() == false)) {
                     enableWrite();
                 } else {
-                    LOG.info("disabling write now.");
                     disableWrite();
                 }
             }
@@ -381,15 +380,12 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
 
     @Override
     void sendPacket(Packet p) throws IOException {
-        LOG.info("SENDING PACKET:"+p.requestHeader);
-
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
             throw new IOException("Socket is null!");
         }
         ByteBuffer pbb = p.bb;
         sock.write(pbb);
-        LOG.info("SENT PACKET:"+p.requestHeader);
     }
 
 
