@@ -772,7 +772,7 @@ public class ClientCnxn {
                 return;
             }
 
-            if (zooKeeperSaslClient.isSaslCompleted() == false) {
+            if (clientTunneledAuthenticationInProgress()) {
                 try {
                     GetSASLRequest request = new GetSASLRequest();
                     request.deserialize(bbia,"token");
@@ -1246,8 +1246,8 @@ public class ClientCnxn {
 
                 // 3.  SendThread has created the authenticating object, but
                 // authentication hasn't finished yet: we must wait for it to do so.
-                if ((zooKeeperSaslClient.isComplete() == false) &&
-                  (zooKeeperSaslClient.isFailed() == false)) {
+                if ((zooKeeperSaslClient.isSaslCompleted() == false) &&
+                    (zooKeeperSaslClient.isFailed() == false)) {
                     return true;
                 }
             }

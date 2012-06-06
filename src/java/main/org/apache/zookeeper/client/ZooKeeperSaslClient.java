@@ -385,7 +385,6 @@ public class ZooKeeperSaslClient {
             throw new SaslException("saslClient failed to initialize properly: it's null.");
         }
         if (saslState == SaslState.INITIAL) {
-            LOG.info("SENDING INITIAL SASL PACKET.");
             if (saslClient.hasInitialResponse()) {
                 sendSaslPacket(cnxn);
             }
