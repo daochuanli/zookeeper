@@ -714,7 +714,9 @@ public class ClientCnxn {
               incomingBuffer);
             BinaryInputArchive bbia = BinaryInputArchive.getArchive(bbis);
             ReplyHeader replyHdr = new ReplyHeader();
+
             replyHdr.deserialize(bbia, "header");
+
             if (replyHdr.getXid() == -2) {
                 // -2 is the xid for pings
                 if (LOG.isDebugEnabled()) {
