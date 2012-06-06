@@ -72,9 +72,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             throw new IOException("Socket is null!");
         }
         if (sockKey.isReadable()) {
-            LOG.info("sockKey is readable.");
             int rc = sock.read(incomingBuffer);
-            LOG.info("RC="+rc);
             if (rc < 0) {
                 throw new EndOfStreamException(
                         "Unable to read additional data from server sessionid 0x"
@@ -140,7 +138,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     }
                     if (p != null) {
                         outgoingQueue.removeFirstOccurrence(p);
-                        LOG.info("SENDING PACKET:"+p.requestHeader);
                         updateLastSend();
                         ByteBuffer pbb = p.bb;
                         sock.write(pbb);
@@ -152,7 +149,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                                 pending.add(p);
                             }
                         }
-                        LOG.info("SENT PACKET:"+p.requestHeader);
                     }
                     synchronized(pendingQueue) {
                         pendingQueue.addAll(pending);

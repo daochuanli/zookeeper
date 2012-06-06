@@ -324,7 +324,9 @@ public class ZooKeeperSaslClient {
 
     private void sendSaslPacket(byte[] saslToken, ClientCnxn cnxn)
       throws SaslException{
-        LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
+        }
         RequestHeader h = new RequestHeader();
         h.setType(ZooDefs.OpCode.sasl);
         GetSASLRequest request = new GetSASLRequest();
@@ -341,8 +343,9 @@ public class ZooKeeperSaslClient {
     }
 
     private void sendSaslPacket(ClientCnxn cnxn) throws SaslException {
-        LOG.info("SENDING SASL PACKET NOW.");
-        LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
+        }
         RequestHeader h = new RequestHeader();
         h.setType(ZooDefs.OpCode.sasl);
         GetSASLRequest request = new GetSASLRequest();
