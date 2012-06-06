@@ -65,12 +65,6 @@ public class ZooKeeperSaslClient {
     public enum SaslState {
         INITIAL,INTERMEDIATE,COMPLETE,FAILED
     }
-    public boolean isSaslCompleted() {
-        if (saslClient != null) {
-            return saslClient.isComplete();
-        }
-        return false;
-    }
 
     private SaslState saslState = SaslState.INITIAL;
 
@@ -152,8 +146,7 @@ public class ZooKeeperSaslClient {
     }
 
     public boolean isComplete() {
-        return saslClient.isComplete();
-//        return (saslState == SaslState.COMPLETE);
+        return (saslState == SaslState.COMPLETE);
     }
 
     public boolean isFailed() {

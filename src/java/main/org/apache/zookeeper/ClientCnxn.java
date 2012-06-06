@@ -1010,7 +1010,7 @@ public class ClientCnxn {
                                       KeeperState.AuthFailed,null));
                                 }
                             }
-                            if (zooKeeperSaslClient.isSaslCompleted()) {
+                            if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
                                 eventThread.queueEvent(new WatchedEvent(
                                   Watcher.Event.EventType.None,
                                   Watcher.Event.KeeperState.SaslAuthenticated, null));
@@ -1247,7 +1247,7 @@ public class ClientCnxn {
 
                 // 3.  SendThread has created the authenticating object, but
                 // authentication hasn't finished yet: we must wait for it to do so.
-                if ((zooKeeperSaslClient.isSaslCompleted() == false) &&
+                if ((zooKeeperSaslClient.isComplete() == false) &&
                     (zooKeeperSaslClient.isFailed() == false)) {
                     return true;
                 }
