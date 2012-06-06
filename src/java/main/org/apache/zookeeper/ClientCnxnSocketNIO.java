@@ -72,7 +72,9 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             throw new IOException("Socket is null!");
         }
         if (sockKey.isReadable()) {
+            LOG.info("sockKey is readable.");
             int rc = sock.read(incomingBuffer);
+            LOG.info("RC="+rc);
             if (rc < 0) {
                 throw new EndOfStreamException(
                         "Unable to read additional data from server sessionid 0x"
@@ -138,6 +140,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     }
                     if (p != null) {
                         outgoingQueue.removeFirstOccurrence(p);
+                        LOG.info("SENDING PACKET:"+p.requestHeader);
                         updateLastSend();
                         ByteBuffer pbb = p.bb;
                         sock.write(pbb);
@@ -149,6 +152,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                                 pending.add(p);
                             }
                         }
+                        LOG.info("SENT PACKET:"+p.requestHeader);
                     }
                     synchronized(pendingQueue) {
                         pendingQueue.addAll(pending);
@@ -241,7 +245,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     void registerAndConnect(SocketChannel sock, InetSocketAddress addr) 
     throws IOException {
         sockKey = sock.register(selector, SelectionKey.OP_CONNECT);
-        boolean immediateConnect = sock.connect(addr);            
+        boolean immediateConnect = sock.connect(addr);
         if (immediateConnect) {
             sendThread.primeConnection();
         }
@@ -326,9 +330,10 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         }
         if (sendThread.getZkState().isConnected()) {
             synchronized(outgoingQueue) {
-                if (!outgoingQueue.isEmpty()) {
+                if ((!outgoingQueue.isEmpty()) || (saslClient.isSaslCompleted() == false)) {
                     enableWrite();
                 } else {
+                    LOG.info("disabling write now.");
                     disableWrite();
                 }
             }
@@ -376,14 +381,15 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
 
     @Override
     void sendPacket(Packet p) throws IOException {
-        enableWrite();
-        updateLastSend();
+        LOG.info("SENDING PACKET:"+p.requestHeader);
+
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
             throw new IOException("Socket is null!");
         }
         ByteBuffer pbb = p.bb;
         sock.write(pbb);
+        LOG.info("SENT PACKET:"+p.requestHeader);
     }
 
 
