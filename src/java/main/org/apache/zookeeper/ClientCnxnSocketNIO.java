@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.zookeeper.client.ZooKeeperSaslClient;
+import org.apache.zookeeper.proto.ReplyHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.ClientCnxn.EndOfStreamException;
@@ -69,11 +70,14 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
       throws InterruptedException, IOException {
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
+            LOG.info("SOCKET IS NULL.");
             throw new IOException("Socket is null!");
         }
         if (sockKey.isReadable()) {
+            LOG.info("SOCKET IS READABLE.");
             int rc = sock.read(incomingBuffer);
             if (rc < 0) {
+                LOG.info("SOCKET WAS READABLE BUT EOS.");
                 throw new EndOfStreamException(
                         "Unable to read additional data from server sessionid 0x"
                                 + Long.toHexString(sessionId)
@@ -108,36 +112,47 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 if (!outgoingQueue.isEmpty()) {
                     Packet p = null;
                     if (cnxn.sendThread.clientTunneledAuthenticationInProgress()) {
-                        // Client's authentication with server is in progress:
-                        // Until it's complete, send only non-permission-requiring
-                        // packets. Find the first such packet, if any, to send.
+                        // Since client's authentication with server is in progress,
+                        // send only ping packets. Find the first such packet, if any, to send.
                         Iterator<Packet> iter = outgoingQueue.listIterator();
                         while(iter.hasNext()) {
                             p = iter.next();
-                            if ((p.requestHeader == null) ||
-                                (!ZooDefs.operationRequiresPermissions(p.requestHeader.getType()))) {
-                                // We've found a packet that doesn't require
-                                // permissions from the server: send it.
+                            if ((p.requestHeader == null)||
+                                 (p.requestHeader.getType() == OpCode.ping)||
+                                 (p.requestHeader.getType() == OpCode.auth)) {
+                                // We've found a ping packet: send it.
                                 break;
                             } else {
-                                // This packet *does* require permission:
+                                // Non-ping packet:
                                 // defer it until later, leaving it in the queue
                                 // until authentication completes.
+                                LOG.info("DEFERRING PERMISSIONS-REQUIRING PACKET: " + p);
                                 if (LOG.isDebugEnabled()) {
-                                    LOG.debug("deferring permission-requiring packet:" +
-                                      p.requestHeader.getType());
+                                    LOG.debug("deferring permission-requiring packet: " + p);
                                 }
                                 p = null;
                             }
                         }
                     } else {
-                        LOG.debug("authentication is done: queuing normally.");
                         // Tunnelled authentication is not in progress: just
                         // send the first packet in the queue.
                         p = outgoingQueue.getFirst();
                     }
                     if (p != null) {
                         outgoingQueue.removeFirstOccurrence(p);
+                        // update Xid to make sure that packet is sent in correct order.
+                        if (p.requestHeader != null) {
+                            int xid = cnxn.getXid();
+                            p.requestHeader.setXid(xid);
+                            if (p.replyHeader != null) {
+                                p.replyHeader.setXid(xid);
+                            } else {
+                                p.replyHeader = new ReplyHeader();
+                                p.replyHeader.setXid(xid);
+                            }
+                            p.rewritebb();
+                        }
+                        LOG.info("SENDING PACKET: " + p);
                         updateLastSend();
                         ByteBuffer pbb = p.bb;
                         sock.write(pbb);
@@ -315,6 +330,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         for (SelectionKey k : selected) {
             SocketChannel sc = ((SocketChannel) k.channel());
             if ((k.readyOps() & SelectionKey.OP_CONNECT) != 0) {
+                LOG.info("OP_CONNECT FLAG SET.");
                 if (sc.finishConnect()) {
                     updateLastSendAndHeard();
                     updateSocketAddresses();
@@ -376,6 +392,9 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
 
     @Override
     void sendPacket(Packet p) throws IOException {
+        if (p.requestHeader != null) {
+            LOG.info("QUEUE-BYPASS SENDING (SASL) packet with XID=" + p.requestHeader.getXid());
+        }
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
             throw new IOException("Socket is null!");

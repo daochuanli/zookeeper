@@ -324,13 +324,16 @@ public class ZooKeeperSaslClient {
         if (LOG.isDebugEnabled()) {
             LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
         }
+        int xid = cnxn.getXid();
         RequestHeader h = new RequestHeader();
+        h.setXid(xid);
         h.setType(ZooDefs.OpCode.sasl);
         GetSASLRequest request = new GetSASLRequest();
         request.setToken(saslToken);
         SetSASLResponse response = new SetSASLResponse();
         ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
         ReplyHeader r = new ReplyHeader();
+        r.setXid(xid);
         try {
             cnxn.sendPacket(h,r,request,response,cb);
         } catch (IOException e) {
@@ -362,6 +365,9 @@ public class ZooKeeperSaslClient {
     // transitions internally from INTERMEDIATE to COMPLETE as a side effect if
     // it's ready to emit this event.
     public boolean readyToSendSaslAuthEvent() {
+        if (saslState == SaslState.FAILED) {
+            return false;
+        }
         if (saslClient != null) {
             if (saslClient.isComplete()) {
                 if (saslState == SaslState.INTERMEDIATE) {
@@ -369,9 +375,6 @@ public class ZooKeeperSaslClient {
                     return true;
                 }
             }
-        }
-        else {
-            LOG.warn("saslClient is null: client could not authenticate properly.");
         }
         return false;
     }

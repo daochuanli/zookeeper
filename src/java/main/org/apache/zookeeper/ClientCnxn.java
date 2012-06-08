@@ -252,6 +252,8 @@ public class ClientCnxn {
 
         WatchRegistration watchRegistration;
 
+        boolean readOnly;
+
         /** Convenience ctor */
         Packet(RequestHeader requestHeader, ReplyHeader replyHeader,
                Record request, Record response,
@@ -268,6 +270,7 @@ public class ClientCnxn {
             this.replyHeader = replyHeader;
             this.request = request;
             this.response = response;
+            this.readOnly = readOnly;
 
             try {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -292,6 +295,30 @@ public class ClientCnxn {
             }
 
             this.watchRegistration = watchRegistration;
+        }
+
+        public void rewritebb() {
+            try {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                BinaryOutputArchive boa = BinaryOutputArchive.getArchive(baos);
+                boa.writeInt(-1, "len"); // We'll fill this in later
+                if (requestHeader != null) {
+                    requestHeader.serialize(boa, "header");
+                }
+                if (request instanceof ConnectRequest) {
+                    request.serialize(boa, "connect");
+                    // append "am-I-allowed-to-be-readonly" flag
+                    boa.writeBool(readOnly, "readOnly");
+                } else if (request != null) {
+                    request.serialize(boa, "request");
+                }
+                baos.close();
+                this.bb = ByteBuffer.wrap(baos.toByteArray());
+                this.bb.putInt(this.bb.capacity() - 4);
+                this.bb.rewind();
+            } catch (IOException e) {
+                LOG.warn("Ignoring unexpected exception", e);
+            }
         }
 
         @Override
@@ -784,7 +811,8 @@ public class ClientCnxn {
                       Watcher.Event.EventType.None,
                       Watcher.Event.KeeperState.AuthFailed, null));
                 } else {
-                    // the SASL authentication process is successful so far.
+                    // Continue SASL negotiation process with server by replying
+                    // to server's SASL token.
                     zooKeeperSaslClient.respondToServer(request.getToken(),ClientCnxn.this);
                 }
                 return;
@@ -804,6 +832,7 @@ public class ClientCnxn {
              */
             try {
                 if (packet.requestHeader.getXid() != replyHdr.getXid()) {
+                    LOG.info("OUT OF ORDER PACKET.");
                     packet.replyHeader.setErr(
                             KeeperException.Code.CONNECTIONLOSS.intValue());
                     throw new IOException("Xid out of order. Got Xid "
@@ -1052,10 +1081,8 @@ public class ClientCnxn {
                         }
                         to = Math.min(to, pingRwTimeout - idlePingRwServer);
                     }
-
                     clientCnxnSocket.doTransport(to, pendingQueue,
                       outgoingQueue, ClientCnxn.this);
-
                 } catch (Throwable e) {
                     if (closing) {
                         if (LOG.isDebugEnabled()) {
@@ -1096,6 +1123,7 @@ public class ClientCnxn {
                     }
                 }
             }
+            LOG.info("send thread CLEANUP AND CLOSE.");
             cleanup();
             clientCnxnSocket.close();
             if (state.isAlive()) {
@@ -1304,7 +1332,7 @@ public class ClientCnxn {
 
     private volatile States state = States.NOT_CONNECTED;
 
-    synchronized private int getXid() {
+    synchronized public int getXid() {
         return xid++;
     }
 
@@ -1336,8 +1364,10 @@ public class ClientCnxn {
     {
         Packet packet = null;
         synchronized (outgoingQueue) {
-            if (h.getType() != OpCode.ping && h.getType() != OpCode.auth) {
-                h.setXid(getXid());
+            if (false) { // moving code within to ClientCnxnSocketNIO.doIO().
+                if (h.getType() != OpCode.ping && h.getType() != OpCode.auth) {
+                    h.setXid(getXid());
+                }
             }
             packet = new Packet(h, r, request, response, watchRegistration);
             packet.cb = cb;
