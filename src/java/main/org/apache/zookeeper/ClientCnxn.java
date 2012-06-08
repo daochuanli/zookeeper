@@ -780,6 +780,7 @@ public class ClientCnxn {
                     if (request.getToken() == null) {
                         LOG.info("SASL server token was null.");
                         // SASL authentication failed.
+                        zooKeeperSaslClient.setFailed();
                         eventThread.queueEvent(new WatchedEvent(
                           Watcher.Event.EventType.None,
                           Watcher.Event.KeeperState.AuthFailed, null));

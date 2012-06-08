@@ -243,6 +243,10 @@ public class ZooKeeperSaslClient {
         }
     }
 
+    public void setFailed() {
+        saslState = SaslState.FAILED;
+    }
+
     public void respondToServer(byte[] serverToken, ClientCnxn cnxn) {
         saslToken = serverToken;
 
