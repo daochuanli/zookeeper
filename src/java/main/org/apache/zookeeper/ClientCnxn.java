@@ -774,24 +774,20 @@ public class ClientCnxn {
             }
 
             if (clientTunneledAuthenticationInProgress()) {
-                try {
-                    GetSASLRequest request = new GetSASLRequest();
-                    request.deserialize(bbia,"token");
-                    if (request.getToken() == null) {
-                        LOG.info("SASL server token was null.");
-                        // SASL authentication failed.
-                        zooKeeperSaslClient.setFailed();
-                        eventThread.queueEvent(new WatchedEvent(
-                          Watcher.Event.EventType.None,
-                          Watcher.Event.KeeperState.AuthFailed, null));
-                    } else {
-                        // the SASL authentication process is successful so far.
-                        zooKeeperSaslClient.respondToServer(request.getToken(),ClientCnxn.this);
-                    }
-                    return;
-                } catch (IOException ioe) {
-                    LOG.info("IGNORING NON-SASL PACKET; CONTINUING.");
+                GetSASLRequest request = new GetSASLRequest();
+                request.deserialize(bbia,"token");
+                if (request.getToken() == null) {
+                    LOG.info("SASL server token was null.");
+                    // SASL authentication failed.
+                    zooKeeperSaslClient.setFailed();
+                    eventThread.queueEvent(new WatchedEvent(
+                      Watcher.Event.EventType.None,
+                      Watcher.Event.KeeperState.AuthFailed, null));
+                } else {
+                    // the SASL authentication process is successful so far.
+                    zooKeeperSaslClient.respondToServer(request.getToken(),ClientCnxn.this);
                 }
+                return;
             }
 
             Packet packet;
