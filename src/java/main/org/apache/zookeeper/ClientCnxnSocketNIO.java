@@ -123,7 +123,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                                 // This packet *does* require permission:
                                 // defer it until later, leaving it in the queue
                                 // until authentication completes.
-                                if (false && LOG.isDebugEnabled()) {
+                                if (LOG.isDebugEnabled()) {
                                     LOG.debug("deferring permission-requiring packet:" +
                                       p.requestHeader.getType());
                                 }
