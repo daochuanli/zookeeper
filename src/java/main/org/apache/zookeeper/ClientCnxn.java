@@ -868,6 +868,22 @@ public class ClientCnxn {
         }
 
         void primeConnection() throws IOException {
+            // All packets queued here are generated with createBB=true:
+            // so that their Xids are generated at packet-creation time,
+            // rather than packet-send time.
+            // This should be OK because the server initiates the SASL process:
+            // so no client SASL packets will be sent before the server's first
+            // such packet.
+            // In turn, the server will not initiate SASL process until the client
+            // sends its "priming" packet, which is generated here.
+            // Therefore, all packets generated here will be sent prior to SASL
+            // packets' being sent. Therefore priming packets' Xids should all
+            // be lower than any SASL packet's Xids.
+            //
+            // However, it might be preferable for consistency to also change
+            // primeConnection() to generate its Xids at send-time.
+            // To do this, set the last param of the Packet constructors used
+            // herein to false.
             LOG.info("Socket connection established to "
                      + clientCnxnSocket.getRemoteSocketAddress()
                      + ", initiating session");
