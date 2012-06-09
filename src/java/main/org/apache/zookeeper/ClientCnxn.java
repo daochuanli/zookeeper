@@ -804,7 +804,8 @@ public class ClientCnxn {
                 GetSASLRequest request = new GetSASLRequest();
                 request.deserialize(bbia,"token");
                 if (request.getToken() == null) {
-                    LOG.info("SASL server token was null.");
+                    LOG.info("Zookeeper server's SASL token was null: perhaps " + "" +
+                      "your Zookeeper Server's authentication configuration is incorrect?");
                     // SASL authentication failed.
                     zooKeeperSaslClient.setFailed();
                     eventThread.queueEvent(new WatchedEvent(

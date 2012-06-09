@@ -1143,7 +1143,6 @@ public class ZooKeeper {
         GetDataResponse response = new GetDataResponse();
         ReplyHeader r = cnxn.submitRequest(h, request, response, wcb);
         if (r.getErr() != 0) {
-            LOG.info("GOT ERROR IN REPLY: " + r);
             throw KeeperException.create(KeeperException.Code.get(r.getErr()),
                     clientPath);
         }

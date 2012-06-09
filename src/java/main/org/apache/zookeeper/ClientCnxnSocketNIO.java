@@ -70,14 +70,11 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
       throws InterruptedException, IOException {
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
-            LOG.info("SOCKET IS NULL.");
             throw new IOException("Socket is null!");
         }
         if (sockKey.isReadable()) {
-            LOG.info("SOCKET IS READABLE.");
             int rc = sock.read(incomingBuffer);
             if (rc < 0) {
-                LOG.info("SOCKET WAS READABLE BUT EOS.");
                 throw new EndOfStreamException(
                         "Unable to read additional data from server sessionid 0x"
                                 + Long.toHexString(sessionId)
@@ -126,7 +123,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                                 // Non-ping packet:
                                 // defer it until later, leaving it in the queue
                                 // until authentication completes.
-                                LOG.info("DEFERRING PERMISSIONS-REQUIRING PACKET: " + p);
                                 if (LOG.isDebugEnabled()) {
                                     LOG.debug("deferring permission-requiring packet: " + p);
                                 }
@@ -152,7 +148,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                             }
                             p.rewritebb();
                         }
-                        LOG.info("SENDING PACKET: " + p);
                         updateLastSend();
                         ByteBuffer pbb = p.bb;
                         sock.write(pbb);
@@ -330,7 +325,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         for (SelectionKey k : selected) {
             SocketChannel sc = ((SocketChannel) k.channel());
             if ((k.readyOps() & SelectionKey.OP_CONNECT) != 0) {
-                LOG.info("OP_CONNECT FLAG SET.");
                 if (sc.finishConnect()) {
                     updateLastSendAndHeard();
                     updateSocketAddresses();
@@ -392,9 +386,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
 
     @Override
     void sendPacket(Packet p) throws IOException {
-        if (p.requestHeader != null) {
-            LOG.info("QUEUE-BYPASS SENDING (SASL) packet with XID=" + p.requestHeader.getXid());
-        }
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
             throw new IOException("Socket is null!");
