@@ -1343,10 +1343,13 @@ public class ClientCnxn {
     {
         Packet packet = null;
         synchronized (outgoingQueue) {
-            if (h.getType() != OpCode.ping && h.getType() != OpCode.auth) {
-                h.setXid(getXid());
+            if (true) {
+                if (h.getType() != OpCode.ping && h.getType() != OpCode.auth) {
+                    h.setXid(getXid());
+                }
             }
-            packet = new Packet(h, r, request, response, watchRegistration, false, true);
+            packet = new Packet(h, r, request, response, watchRegistration, false, false);
+            packet.createBB(false);
             packet.cb = cb;
             packet.ctx = ctx;
             packet.clientPath = clientPath;
