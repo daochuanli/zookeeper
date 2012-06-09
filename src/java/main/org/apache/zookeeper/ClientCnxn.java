@@ -257,18 +257,46 @@ public class ClientCnxn {
                Record request, Record response,
                WatchRegistration watchRegistration) {
             this(requestHeader, replyHeader, request, response,
-                 watchRegistration, false);
+                 watchRegistration, false, true);
         }
 
         Packet(RequestHeader requestHeader, ReplyHeader replyHeader,
                Record request, Record response,
-               WatchRegistration watchRegistration, boolean readOnly) {
+               WatchRegistration watchRegistration, boolean readOnly, boolean createBB) {
 
             this.requestHeader = requestHeader;
             this.replyHeader = replyHeader;
             this.request = request;
             this.response = response;
 
+            if (true || createBB == true) {
+//                this.createBB(readOnly);
+                try {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    BinaryOutputArchive boa = BinaryOutputArchive.getArchive(baos);
+                    boa.writeInt(-1, "len"); // We'll fill this in later
+                    if (requestHeader != null) {
+                        requestHeader.serialize(boa, "header");
+                    }
+                    if (request instanceof ConnectRequest) {
+                        request.serialize(boa, "connect");
+                        // append "am-I-allowed-to-be-readonly" flag
+                        boa.writeBool(readOnly, "readOnly");
+                    } else if (request != null) {
+                        request.serialize(boa, "request");
+                    }
+                    baos.close();
+                    this.bb = ByteBuffer.wrap(baos.toByteArray());
+                    this.bb.putInt(this.bb.capacity() - 4);
+                    this.bb.rewind();
+                } catch (IOException e) {
+                    LOG.warn("Ignoring unexpected exception", e);
+                }
+            }
+            this.watchRegistration = watchRegistration;
+        }
+
+        private void createBB(boolean readOnly) {
             try {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 BinaryOutputArchive boa = BinaryOutputArchive.getArchive(baos);
@@ -290,8 +318,6 @@ public class ClientCnxn {
             } catch (IOException e) {
                 LOG.warn("Ignoring unexpected exception", e);
             }
-
-            this.watchRegistration = watchRegistration;
         }
 
         @Override
@@ -898,7 +924,7 @@ public class ClientCnxn {
                             id.data), null, null));
                 }
                 outgoingQueue.addFirst(new Packet(null, null, conReq,
-                            null, null, readOnly));
+                            null, null, readOnly, true));
             }
             clientCnxnSocket.enableReadWriteOnly();
             if (LOG.isDebugEnabled()) {
@@ -1326,7 +1352,7 @@ public class ClientCnxn {
     public void sendPacket(RequestHeader h, ReplyHeader r, Record request,
                     Record response, AsyncCallback cb)
     throws IOException {
-        Packet p = new Packet(h, r, request, response, null);
+        Packet p = new Packet(h, r, request, response, null, false, true);
         p.cb = cb;
         sendThread.sendPacket(p);
     }
@@ -1340,7 +1366,7 @@ public class ClientCnxn {
             if (h.getType() != OpCode.ping && h.getType() != OpCode.auth) {
                 h.setXid(getXid());
             }
-            packet = new Packet(h, r, request, response, watchRegistration);
+            packet = new Packet(h, r, request, response, watchRegistration, false, true);
             packet.cb = cb;
             packet.ctx = ctx;
             packet.clientPath = clientPath;
