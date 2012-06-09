@@ -112,4 +112,51 @@ public class SaslAuthTest extends ClientBase {
             zk.close();
         }
     }
+
+    @Test
+    public void testValidSaslIds() throws Exception {
+        ZooKeeper zk = createClient();
+
+        List<String> validIds = new ArrayList<String>();
+        validIds.add("user");
+        validIds.add("service/host.name.com");
+        validIds.add("user@KERB.REALM");
+        validIds.add("service/host.name.com@KERB.REALM");
+
+        int i = 0;
+        for(String validId: validIds) {
+            List<ACL> aclList = new ArrayList<ACL>();
+            ACL acl = new ACL(0,new Id("sasl",validId));
+            aclList.add(acl);
+            zk.create("/valid"+i,null,aclList,CreateMode.PERSISTENT);
+            i++;
+        }
+    }
+
+    @Test
+    public void testInvalidSaslIds() throws Exception {
+        ZooKeeper zk = createClient();
+
+        List<String> invalidIds = new ArrayList<String>();
+        invalidIds.add("user@KERB.REALM/server.com");
+        invalidIds.add("user@KERB.REALM1@KERB.REALM2");
+
+        int i = 0;
+        for(String invalidId: invalidIds) {
+            List<ACL> aclList = new ArrayList<ACL>();
+            try {
+                ACL acl = new ACL(0,new Id("sasl",invalidId));
+                aclList.add(acl);
+                zk.create("/invalid"+i,null,aclList,CreateMode.PERSISTENT);
+                Assert.fail("SASLAuthenticationProvider.isValid() failed to catch invalid Id.");
+            }
+            catch (KeeperException.InvalidACLException e) {
+                // ok.
+            }
+            finally {
+                i++;
+            }
+        }
+    }
+
 }
