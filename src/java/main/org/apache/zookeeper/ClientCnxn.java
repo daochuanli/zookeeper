@@ -883,7 +883,9 @@ public class ClientCnxn {
             // However, it might be preferable for consistency to also change
             // primeConnection() to generate its Xids at send-time.
             // To do this, set the last param of the Packet constructors used
-            // herein to false.
+            // herein to false (and also change signatures of some Packet constructors
+            // which do not set this flag, to signature where createBB is used
+            // and set this param to false).
             LOG.info("Socket connection established to "
                      + clientCnxnSocket.getRemoteSocketAddress()
                      + ", initiating session");
@@ -1348,6 +1350,8 @@ public class ClientCnxn {
     public void sendPacket(RequestHeader h, ReplyHeader r, Record request,
                     Record response, AsyncCallback cb)
     throws IOException {
+        // note last param: createBB is true because we are ready to send the
+        // packet: we are not queueing for sending later.
         Packet p = new Packet(h, r, request, response, null, false, true);
         p.cb = cb;
         sendThread.sendPacket(p);
@@ -1364,12 +1368,13 @@ public class ClientCnxn {
                     h.setXid(getXid());
                 }
             }
-            packet = new Packet(h, r, request, response, watchRegistration, false, false);
-            packet.createBB(false);
+            final boolean readOnly = false;
+            packet = new Packet(h, r, request, response, watchRegistration, readOnly, false);
             packet.cb = cb;
             packet.ctx = ctx;
             packet.clientPath = clientPath;
             packet.serverPath = serverPath;
+            packet.createBB(readOnly);
             if (!state.isAlive() || closing) {
                 conLossPacket(packet);
             } else {
