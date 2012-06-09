@@ -298,6 +298,7 @@ public class ClientCnxn {
         }
 
         public void rewritebb() {
+            // copied from Packet constructor above.
             try {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 BinaryOutputArchive boa = BinaryOutputArchive.getArchive(baos);
