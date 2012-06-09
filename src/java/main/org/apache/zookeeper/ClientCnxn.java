@@ -834,7 +834,6 @@ public class ClientCnxn {
              */
             try {
                 if (packet.requestHeader.getXid() != replyHdr.getXid()) {
-                    LOG.info("OUT OF ORDER PACKET.");
                     packet.replyHeader.setErr(
                             KeeperException.Code.CONNECTIONLOSS.intValue());
                     throw new IOException("Xid out of order. Got Xid "
@@ -1366,7 +1365,7 @@ public class ClientCnxn {
     {
         Packet packet = null;
         synchronized (outgoingQueue) {
-            if (false) { // moving code within to ClientCnxnSocketNIO.doIO().
+            if (true) { // moving code within to ClientCnxnSocketNIO.doIO().
                 if (h.getType() != OpCode.ping && h.getType() != OpCode.auth) {
                     h.setXid(getXid());
                 }

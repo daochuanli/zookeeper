@@ -137,7 +137,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     if (p != null) {
                         outgoingQueue.removeFirstOccurrence(p);
                         // update Xid to make sure that packet is sent in correct order.
-                        if (p.requestHeader != null) {
+                        if (false && p.requestHeader != null) {
                             int xid = cnxn.getXid();
                             p.requestHeader.setXid(xid);
                             if (p.replyHeader != null) {
