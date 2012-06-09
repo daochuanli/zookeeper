@@ -252,8 +252,6 @@ public class ClientCnxn {
 
         WatchRegistration watchRegistration;
 
-        boolean readOnly;
-
         /** Convenience ctor */
         Packet(RequestHeader requestHeader, ReplyHeader replyHeader,
                Record request, Record response,
@@ -270,7 +268,6 @@ public class ClientCnxn {
             this.replyHeader = replyHeader;
             this.request = request;
             this.response = response;
-            this.readOnly = readOnly;
 
             try {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -714,7 +711,7 @@ public class ClientCnxn {
 
         void readResponse(ByteBuffer incomingBuffer) throws IOException {
             ByteBufferInputStream bbis = new ByteBufferInputStream(
-              incomingBuffer);
+                   incomingBuffer);
             BinaryInputArchive bbia = BinaryInputArchive.getArchive(bbis);
             ReplyHeader replyHdr = new ReplyHeader();
 
