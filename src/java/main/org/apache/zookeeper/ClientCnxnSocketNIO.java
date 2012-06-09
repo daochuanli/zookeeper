@@ -136,18 +136,6 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     }
                     if (p != null) {
                         outgoingQueue.removeFirstOccurrence(p);
-                        // update Xid to make sure that packet is sent in correct order.
-                        if (false && p.requestHeader != null) {
-                            int xid = cnxn.getXid();
-                            p.requestHeader.setXid(xid);
-                            if (p.replyHeader != null) {
-                                p.replyHeader.setXid(xid);
-                            } else {
-                                p.replyHeader = new ReplyHeader();
-                                p.replyHeader.setXid(xid);
-                            }
-                            p.rewritebb();
-                        }
                         updateLastSend();
                         ByteBuffer pbb = p.bb;
                         sock.write(pbb);

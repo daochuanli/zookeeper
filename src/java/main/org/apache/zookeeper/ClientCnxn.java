@@ -297,31 +297,6 @@ public class ClientCnxn {
             this.watchRegistration = watchRegistration;
         }
 
-        public void rewritebb() {
-            // copied from Packet constructor above.
-            try {
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                BinaryOutputArchive boa = BinaryOutputArchive.getArchive(baos);
-                boa.writeInt(-1, "len"); // We'll fill this in later
-                if (requestHeader != null) {
-                    requestHeader.serialize(boa, "header");
-                }
-                if (request instanceof ConnectRequest) {
-                    request.serialize(boa, "connect");
-                    // append "am-I-allowed-to-be-readonly" flag
-                    boa.writeBool(readOnly, "readOnly");
-                } else if (request != null) {
-                    request.serialize(boa, "request");
-                }
-                baos.close();
-                this.bb = ByteBuffer.wrap(baos.toByteArray());
-                this.bb.putInt(this.bb.capacity() - 4);
-                this.bb.rewind();
-            } catch (IOException e) {
-                LOG.warn("Ignoring unexpected exception", e);
-            }
-        }
-
         @Override
         public String toString() {
             StringBuilder sb = new StringBuilder();
@@ -1365,10 +1340,8 @@ public class ClientCnxn {
     {
         Packet packet = null;
         synchronized (outgoingQueue) {
-            if (true) { // moving code within to ClientCnxnSocketNIO.doIO().
-                if (h.getType() != OpCode.ping && h.getType() != OpCode.auth) {
-                    h.setXid(getXid());
-                }
+            if (h.getType() != OpCode.ping && h.getType() != OpCode.auth) {
+                h.setXid(getXid());
             }
             packet = new Packet(h, r, request, response, watchRegistration);
             packet.cb = cb;
