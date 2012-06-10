@@ -324,7 +324,8 @@ public class ZooKeeperSaslClient {
         if (LOG.isDebugEnabled()) {
             LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
         }
-        // generate Xid at this point because we're sending it.
+        // Generate Xid now because it will be sent immediately
+        // (by call cnxn.sendPacket() below).
         int xid = cnxn.getXid();
         RequestHeader h = new RequestHeader();
         h.setXid(xid);
