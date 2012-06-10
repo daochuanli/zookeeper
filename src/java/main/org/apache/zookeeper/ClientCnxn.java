@@ -1099,7 +1099,6 @@ public class ClientCnxn {
                     }
                 }
             }
-            LOG.info("send thread CLEANUP AND CLOSE.");
             cleanup();
             clientCnxnSocket.close();
             if (state.isAlive()) {
