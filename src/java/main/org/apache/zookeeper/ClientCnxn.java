@@ -252,6 +252,8 @@ public class ClientCnxn {
 
         WatchRegistration watchRegistration;
 
+        public boolean readOnly;
+
         /** Convenience ctor */
         Packet(RequestHeader requestHeader, ReplyHeader replyHeader,
                Record request, Record response,
@@ -271,12 +273,12 @@ public class ClientCnxn {
             this.response = response;
 
             if (createBB == true) {
-                this.createBB(readOnly);
+                this.createBB();
             }
             this.watchRegistration = watchRegistration;
         }
 
-        private void createBB(boolean readOnly) {
+        public void createBB() {
             try {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 BinaryOutputArchive boa = BinaryOutputArchive.getArchive(baos);
@@ -1369,12 +1371,13 @@ public class ClientCnxn {
                 }
             }
             final boolean readOnly = false;
-            packet = new Packet(h, r, request, response, watchRegistration, readOnly, false);
+            final boolean createBB = false;
+            packet = new Packet(h, r, request, response, watchRegistration,
+              readOnly, createBB);
             packet.cb = cb;
             packet.ctx = ctx;
             packet.clientPath = clientPath;
             packet.serverPath = serverPath;
-            packet.createBB(readOnly);
             if (!state.isAlive() || closing) {
                 conLossPacket(packet);
             } else {

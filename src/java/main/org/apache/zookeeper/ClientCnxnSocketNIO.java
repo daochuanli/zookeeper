@@ -137,6 +137,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     if (p != null) {
                         outgoingQueue.removeFirstOccurrence(p);
                         updateLastSend();
+                        p.createBB();
                         ByteBuffer pbb = p.bb;
                         sock.write(pbb);
                         if (!pbb.hasRemaining()) {
