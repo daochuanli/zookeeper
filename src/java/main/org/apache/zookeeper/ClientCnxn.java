@@ -1363,13 +1363,8 @@ public class ClientCnxn {
             Record response, AsyncCallback cb, String clientPath,
             String serverPath, Object ctx, WatchRegistration watchRegistration)
     {
-        Packet packet = null;
+        Packet packet;
         synchronized (outgoingQueue) {
-            if (false) {
-                if (h.getType() != OpCode.ping && h.getType() != OpCode.auth) {
-                    h.setXid(getXid());
-                }
-            }
             final boolean readOnly = false;
             final boolean createBB = false;
             packet = new Packet(h, r, request, response, watchRegistration,
