@@ -110,21 +110,23 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     Packet p = null;
                     if (cnxn.sendThread.clientTunneledAuthenticationInProgress()) {
                         // Since client's authentication with server is in progress,
-                        // send only ping packets. Find the first such packet, if any, to send.
+                        // send only the null-header packet queued by primeConnection().
+                        // This packet must be sent so that the SASL authentication process
+                        // can proceed, but all other packets should wait until
+                        // SASL authentication completes.
                         Iterator<Packet> iter = outgoingQueue.listIterator();
                         while(iter.hasNext()) {
                             p = iter.next();
-                            if ((p.requestHeader == null)||
-                                 (p.requestHeader.getType() == OpCode.ping)||
-                                 (p.requestHeader.getType() == OpCode.auth)) {
-                                // We've found a ping packet: send it.
+                            if (p.requestHeader == null) {
+                                // We've found the priming-packet: let it through.
                                 break;
                             } else {
                                 // Non-ping packet:
                                 // defer it until later, leaving it in the queue
                                 // until authentication completes.
                                 if (LOG.isDebugEnabled()) {
-                                    LOG.debug("deferring permission-requiring packet: " + p);
+                                    LOG.debug("deferring non-priming packet: " + p +
+                                      "until SASL authentication completes.");
                                 }
                                 p = null;
                             }
