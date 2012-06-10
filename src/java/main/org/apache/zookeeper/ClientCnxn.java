@@ -259,22 +259,17 @@ public class ClientCnxn {
                Record request, Record response,
                WatchRegistration watchRegistration) {
             this(requestHeader, replyHeader, request, response,
-                 watchRegistration, false, true);
+                 watchRegistration, false);
         }
 
         Packet(RequestHeader requestHeader, ReplyHeader replyHeader,
                Record request, Record response,
-               WatchRegistration watchRegistration, boolean readOnly,
-               boolean createBB) {
-
+               WatchRegistration watchRegistration, boolean readOnly) {
             this.requestHeader = requestHeader;
             this.replyHeader = replyHeader;
             this.request = request;
             this.response = response;
             this.readOnly = readOnly;
-            if (createBB == true) {
-                this.createBB();
-            }
             this.watchRegistration = watchRegistration;
         }
 
@@ -870,24 +865,6 @@ public class ClientCnxn {
         }
 
         void primeConnection() throws IOException {
-            // All packets queued here are generated with createBB=true:
-            // so that their Xids are generated at packet-creation time,
-            // rather than packet-send time.
-            // This should be OK because the server initiates the SASL process:
-            // so no client SASL packets will be sent before the server's first
-            // such packet.
-            // In turn, the server will not initiate SASL process until the client
-            // sends its "priming" packet, which is generated here.
-            // Therefore, all packets generated here will be sent prior to SASL
-            // packets' being sent. Therefore priming packets' Xids should all
-            // be lower than any SASL packet's Xids.
-            //
-            // However, it might be preferable for consistency to also change
-            // primeConnection() to generate its Xids at send-time.
-            // To do this, set the last param of the Packet constructors used
-            // herein to false (and also change signatures of some Packet constructors
-            // which do not set this flag, to signature where createBB is used
-            // and set this param to false).
             LOG.info("Socket connection established to "
                      + clientCnxnSocket.getRemoteSocketAddress()
                      + ", initiating session");
@@ -924,7 +901,7 @@ public class ClientCnxn {
                             id.data), null, null));
                 }
                 outgoingQueue.addFirst(new Packet(null, null, conReq,
-                            null, null, readOnly, true));
+                            null, null, readOnly));
             }
             clientCnxnSocket.enableReadWriteOnly();
             if (LOG.isDebugEnabled()) {
@@ -1352,9 +1329,7 @@ public class ClientCnxn {
     public void sendPacket(RequestHeader h, ReplyHeader r, Record request,
                     Record response, AsyncCallback cb)
     throws IOException {
-        // note last param: createBB is true because we are ready to send the
-        // packet: we are not queueing for sending later.
-        Packet p = new Packet(h, r, request, response, null, false, true);
+        Packet p = new Packet(h, r, request, response, null, false);
         p.cb = cb;
         sendThread.sendPacket(p);
     }
@@ -1365,10 +1340,7 @@ public class ClientCnxn {
     {
         Packet packet;
         synchronized (outgoingQueue) {
-            final boolean readOnly = false;
-            final boolean createBB = false;
-            packet = new Packet(h, r, request, response, watchRegistration,
-              readOnly, createBB);
+            packet = new Packet(h, r, request, response, watchRegistration, false);
             packet.cb = cb;
             packet.ctx = ctx;
             packet.clientPath = clientPath;

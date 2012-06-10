@@ -384,6 +384,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         if (sock == null) {
             throw new IOException("Socket is null!");
         }
+        p.createBB();
         ByteBuffer pbb = p.bb;
         sock.write(pbb);
     }
