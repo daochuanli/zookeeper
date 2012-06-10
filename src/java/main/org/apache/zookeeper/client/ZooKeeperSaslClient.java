@@ -377,6 +377,8 @@ public class ZooKeeperSaslClient {
                     return true;
                 }
             }
+        } else {
+            LOG.warn("saslClient is null: client could not authenticate properly.");
         }
         return false;
     }
