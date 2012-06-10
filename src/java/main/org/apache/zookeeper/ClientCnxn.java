@@ -1337,9 +1337,9 @@ public class ClientCnxn {
             Record response, AsyncCallback cb, String clientPath,
             String serverPath, Object ctx, WatchRegistration watchRegistration)
     {
-        Packet packet;
+        Packet packet = null;
         synchronized (outgoingQueue) {
-            packet = new Packet(h, r, request, response, watchRegistration, false);
+            packet = new Packet(h, r, request, response, watchRegistration);
             packet.cb = cb;
             packet.ctx = ctx;
             packet.clientPath = clientPath;
