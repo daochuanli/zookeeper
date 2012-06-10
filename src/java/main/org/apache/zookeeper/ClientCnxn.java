@@ -1365,7 +1365,7 @@ public class ClientCnxn {
     {
         Packet packet = null;
         synchronized (outgoingQueue) {
-            if (true) {
+            if (false) {
                 if (h.getType() != OpCode.ping && h.getType() != OpCode.auth) {
                     h.setXid(getXid());
                 }

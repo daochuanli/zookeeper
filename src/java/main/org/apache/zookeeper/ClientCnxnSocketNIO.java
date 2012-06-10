@@ -137,6 +137,11 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     if (p != null) {
                         outgoingQueue.removeFirstOccurrence(p);
                         updateLastSend();
+                        if ((p.requestHeader != null) &&
+                            (p.requestHeader.getType() != OpCode.ping) &&
+                            (p.requestHeader.getType() != OpCode.auth)) {
+                            p.requestHeader.setXid(cnxn.getXid());
+                        }
                         p.createBB();
                         ByteBuffer pbb = p.bb;
                         sock.write(pbb);
