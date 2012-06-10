@@ -271,7 +271,7 @@ public class ClientCnxn {
             this.replyHeader = replyHeader;
             this.request = request;
             this.response = response;
-
+            this.readOnly = readOnly;
             if (createBB == true) {
                 this.createBB();
             }
