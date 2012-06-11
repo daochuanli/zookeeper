@@ -248,8 +248,6 @@ public class ZooKeeperSaslClient {
     }
 
     public void respondToServer(byte[] serverToken, ClientCnxn cnxn) {
-        saslToken = serverToken;
-
         if (saslClient == null) {
             LOG.error("saslClient is unexpectedly null. Cannot respond to server's SASL message; ignoring.");
             return;
@@ -257,7 +255,7 @@ public class ZooKeeperSaslClient {
 
         if (!(saslClient.isComplete())) {
             try {
-                saslToken = createSaslToken(saslToken);
+                saslToken = createSaslToken(serverToken);
                 if (saslToken != null) {
                     sendSaslPacket(saslToken, cnxn);
                 }
