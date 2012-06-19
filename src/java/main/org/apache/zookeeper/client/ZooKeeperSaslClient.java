@@ -68,6 +68,8 @@ public class ZooKeeperSaslClient {
 
     private SaslState saslState = SaslState.INITIAL;
 
+    public boolean gotLastPacket = false;
+
     public SaslState getSaslState() {
         return saslState;
     }
@@ -264,6 +266,11 @@ public class ZooKeeperSaslClient {
                 this.getLoginContext() + "'.");
                 saslState = SaslState.FAILED;
             }
+            if (saslClient.isComplete()) {
+              if (! (saslClient.getMechanismName() == "GSSAPI")) {
+                gotLastPacket = true;
+              }
+            }
         } else {
           // we are done.
           gotLastPacket = true;
@@ -319,8 +326,6 @@ public class ZooKeeperSaslClient {
               "For diagnosis, please look for WARNs and ERRORs in your log related to the Login class.");
         }
     }
-
-    public boolean gotLastPacket = false;
 
     private void sendSaslPacket(byte[] saslToken, ClientCnxn cnxn)
       throws SaslException{
