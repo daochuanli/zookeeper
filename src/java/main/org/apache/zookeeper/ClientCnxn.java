@@ -793,6 +793,14 @@ public class ClientCnxn {
                     zooKeeperSaslClient.respondToServer(request.getToken(),ClientCnxn.this);
                 }
                 return;
+            } else {
+              if (pendingQueue.isEmpty() && (zooKeeperSaslClient != null) && (zooKeeperSaslClient.isComplete())) {
+                // In this case SASL negotiation is done, but there is a final SASL message from server
+                // which we can discard.
+                GetSASLRequest request = new GetSASLRequest();
+                request.deserialize(bbia,"token");
+                return;
+              }
             }
 
             Packet packet;
