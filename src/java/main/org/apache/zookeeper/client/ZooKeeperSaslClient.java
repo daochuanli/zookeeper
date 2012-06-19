@@ -317,6 +317,8 @@ public class ZooKeeperSaslClient {
         }
     }
 
+    public boolean gotLastPacket = false;
+
     private void sendSaslPacket(byte[] saslToken, ClientCnxn cnxn)
       throws SaslException{
         if (LOG.isDebugEnabled()) {

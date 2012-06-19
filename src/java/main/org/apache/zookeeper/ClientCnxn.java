@@ -794,11 +794,12 @@ public class ClientCnxn {
                 }
                 return;
             } else {
-              if (pendingQueue.isEmpty() && (zooKeeperSaslClient != null) && (zooKeeperSaslClient.isComplete())) {
+              if ((zooKeeperSaslClient != null) &&
+                   zooKeeperSaslClient.isComplete() &&
+                   (zooKeeperSaslClient.gotLastPacket == false)) {
+                zooKeeperSaslClient.gotLastPacket = true;
                 // In this case SASL negotiation is done, but there is a final SASL message from server
-                // which we can discard.
-                GetSASLRequest request = new GetSASLRequest();
-                request.deserialize(bbia,"token");
+                // which we can ignore.
                 return;
               }
             }
@@ -811,6 +812,7 @@ public class ClientCnxn {
                 }
                 packet = pendingQueue.remove();
             }
+
             /*
              * Since requests are processed in order, we better get a response
              * to the first request!
