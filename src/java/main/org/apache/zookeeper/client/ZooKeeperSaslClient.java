@@ -264,6 +264,9 @@ public class ZooKeeperSaslClient {
                 this.getLoginContext() + "'.");
                 saslState = SaslState.FAILED;
             }
+        } else {
+          // we are done.
+          gotLastPacket = true;
         }
     }
 

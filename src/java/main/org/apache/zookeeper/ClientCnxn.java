@@ -779,29 +779,8 @@ public class ClientCnxn {
             if (clientTunneledAuthenticationInProgress()) {
                 GetSASLRequest request = new GetSASLRequest();
                 request.deserialize(bbia,"token");
-                if (request.getToken() == null) {
-                    LOG.info("Zookeeper server's SASL token was null: perhaps " + "" +
-                      "your Zookeeper Server's authentication configuration is incorrect?");
-                    // SASL authentication failed.
-                    zooKeeperSaslClient.setFailed();
-                    eventThread.queueEvent(new WatchedEvent(
-                      Watcher.Event.EventType.None,
-                      Watcher.Event.KeeperState.AuthFailed, null));
-                } else {
-                    // Continue SASL negotiation process with server by replying
-                    // to server's SASL token.
-                    zooKeeperSaslClient.respondToServer(request.getToken(),ClientCnxn.this);
-                }
+                zooKeeperSaslClient.respondToServer(request.getToken(),ClientCnxn.this);
                 return;
-            } else {
-              if ((zooKeeperSaslClient != null) &&
-                   zooKeeperSaslClient.isComplete() &&
-                   (zooKeeperSaslClient.gotLastPacket == false)) {
-                zooKeeperSaslClient.gotLastPacket = true;
-                // In this case SASL negotiation is done, but there is a final SASL message from server
-                // which we can ignore.
-                return;
-              }
             }
 
             Packet packet;
@@ -1260,6 +1239,12 @@ public class ClientCnxn {
                 if ((zooKeeperSaslClient.isComplete() == false) &&
                     (zooKeeperSaslClient.isFailed() == false)) {
                     return true;
+                }
+                if ((zooKeeperSaslClient.isComplete()) &&
+                    (zooKeeperSaslClient.gotLastPacket == false)) {
+                  // In this case SASL negotiation is done, but there is a final SASL message from server
+                  // which must be received.
+                  return true;
                 }
             }
             // Either client is not configured to use a tunnelled authentication
