@@ -27,7 +27,6 @@ import java.util.List;
 
 import org.apache.jute.BinaryInputArchive;
 import org.apache.zookeeper.ClientCnxn.Packet;
-import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.proto.ConnectResponse;
 import org.apache.zookeeper.server.ByteBufferInputStream;
 import org.slf4j.Logger;

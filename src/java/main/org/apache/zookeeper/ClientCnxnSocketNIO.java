@@ -31,8 +31,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.zookeeper.client.ZooKeeperSaslClient;
-import org.apache.zookeeper.proto.ReplyHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.ClientCnxn.EndOfStreamException;

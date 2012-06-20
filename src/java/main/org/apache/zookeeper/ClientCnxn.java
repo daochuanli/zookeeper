@@ -264,6 +264,7 @@ public class ClientCnxn {
         Packet(RequestHeader requestHeader, ReplyHeader replyHeader,
                Record request, Record response,
                WatchRegistration watchRegistration, boolean readOnly) {
+
             this.requestHeader = requestHeader;
             this.replyHeader = replyHeader;
             this.request = request;
@@ -764,6 +765,8 @@ public class ClientCnxn {
                 return;
             }
 
+            // If SASL authentication is currently in progress, construct and send a reponse packet immediately,
+            // rather than queuing a response as with other packets.
             if (clientTunneledAuthenticationInProgress()) {
                 GetSASLRequest request = new GetSASLRequest();
                 request.deserialize(bbia,"token");
@@ -779,7 +782,6 @@ public class ClientCnxn {
                 }
                 packet = pendingQueue.remove();
             }
-
             /*
              * Since requests are processed in order, we better get a response
              * to the first request!
@@ -1260,6 +1262,11 @@ public class ClientCnxn {
 
     private volatile States state = States.NOT_CONNECTED;
 
+    /*
+     * getXid() is called internally by ClientCnxn::doIO() when packets are sent from the outgoingQueue to the server.
+     * However it is also called by ZooKeeperSaslClient, which will send a packet immediately rather than queueing it
+     * in the ClientCnxn's outgoingQueue. Thus, getXid() must be public.
+     */
     synchronized public int getXid() {
         return xid++;
     }
