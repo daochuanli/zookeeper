@@ -256,24 +256,26 @@ public class ZooKeeperSaslClient {
         }
 
         if (!(saslClient.isComplete())) {
+          if (serverToken != null) {
             try {
-                saslToken = createSaslToken(serverToken);
-                if (saslToken != null) {
-                    sendSaslPacket(saslToken, cnxn);
-                }
-            } catch (SaslException e) {
-                LOG.error("SASL authentication failed using login context '" +
-                this.getLoginContext() + "'.");
-                saslState = SaslState.FAILED;
-            }
-            if (saslClient.isComplete()) {
-              if (! (saslClient.getMechanismName() == "GSSAPI")) {
-                gotLastPacket = true;
+              saslToken = createSaslToken(serverToken);
+              if (saslToken != null) {
+                sendSaslPacket(saslToken, cnxn);
               }
+            } catch (SaslException e) {
+              LOG.error("SASL authentication failed using login context '" +
+                      this.getLoginContext() + "'.");
+              saslState = SaslState.FAILED;
             }
-        } else {
-          // we are done.
-          gotLastPacket = true;
+          }
+        }
+
+        if (saslClient.isComplete()) {
+          if ((serverToken == null) && (saslClient.getMechanismName() == "GSSAPI"))
+            gotLastPacket = true;
+          if (saslClient.getMechanismName() != "GSSAPI") {
+            gotLastPacket = true;
+          }
         }
     }
 
