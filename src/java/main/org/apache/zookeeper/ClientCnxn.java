@@ -1263,9 +1263,8 @@ public class ClientCnxn {
     private volatile States state = States.NOT_CONNECTED;
 
     /*
-     * getXid() is called internally by ClientCnxn::doIO() when packets are sent from the outgoingQueue to the server.
-     * However it is also called by ZooKeeperSaslClient, which will send a packet immediately rather than queueing it
-     * in the ClientCnxn's outgoingQueue. Thus, getXid() must be public.
+     * getXid() is called externally by ClientCnxnNIO::doIO() when packets are sent from the outgoingQueue to
+     * the server. Thus, getXid() must be public.
      */
     synchronized public int getXid() {
         return xid++;
@@ -1285,9 +1284,18 @@ public class ClientCnxn {
         return r;
     }
 
-    public void sendPacket(RequestHeader h, ReplyHeader r, Record request,
-                    Record response, AsyncCallback cb)
+    public void sendPacket(Record request, Record response, AsyncCallback cb)
     throws IOException {
+        // Generate Xid now because it will be sent immediately,
+        // by call to sendThread.sendPacket() below.
+        int xid = getXid();
+        RequestHeader h = new RequestHeader();
+        h.setXid(xid);
+        h.setType(ZooDefs.OpCode.sasl);
+
+        ReplyHeader r = new ReplyHeader();
+        r.setXid(xid);
+
         Packet p = new Packet(h, r, request, response, null, false);
         p.cb = cb;
         sendThread.sendPacket(p);

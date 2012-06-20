@@ -22,11 +22,8 @@ import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.ClientCnxn;
 import org.apache.zookeeper.Login;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
-import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.GetSASLRequest;
-import org.apache.zookeeper.proto.ReplyHeader;
-import org.apache.zookeeper.proto.RequestHeader;
 import org.apache.zookeeper.proto.SetSASLResponse;
 import org.apache.zookeeper.server.auth.KerberosName;
 import org.slf4j.Logger;
@@ -330,20 +327,14 @@ public class ZooKeeperSaslClient {
         if (LOG.isDebugEnabled()) {
             LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
         }
-        // Generate Xid now because it will be sent immediately
-        // (by call cnxn.sendPacket() below).
-        int xid = cnxn.getXid();
-        RequestHeader h = new RequestHeader();
-        h.setXid(xid);
-        h.setType(ZooDefs.OpCode.sasl);
+
         GetSASLRequest request = new GetSASLRequest();
         request.setToken(saslToken);
         SetSASLResponse response = new SetSASLResponse();
         ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
-        ReplyHeader r = new ReplyHeader();
-        r.setXid(xid);
+
         try {
-            cnxn.sendPacket(h,r,request,response,cb);
+            cnxn.sendPacket(request,response,cb);
         } catch (IOException e) {
             throw new SaslException("Failed to send SASL packet to server due " +
               "to IOException:" + e);
@@ -354,15 +345,12 @@ public class ZooKeeperSaslClient {
         if (LOG.isDebugEnabled()) {
             LOG.debug("ClientCnxn:sendSaslPacket:length="+saslToken.length);
         }
-        RequestHeader h = new RequestHeader();
-        h.setType(ZooDefs.OpCode.sasl);
         GetSASLRequest request = new GetSASLRequest();
         request.setToken(createSaslToken());
         SetSASLResponse response = new SetSASLResponse();
         ServerSaslResponseCallback cb = new ServerSaslResponseCallback();
-        ReplyHeader r = new ReplyHeader();
         try {
-            cnxn.sendPacket(h,r,request,response,cb);
+            cnxn.sendPacket(request,response,cb);
         } catch (IOException e) {
             throw new SaslException("Failed to send SASL packet to server due " +
               "to IOException:" + e);
