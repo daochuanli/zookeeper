@@ -358,7 +358,8 @@ public class ZooKeeperSaslClient {
         }
     }
 
-    // used by ClientCnxn to know when to emit a SASL-related event (either AuthFailed or SaslAuthenticated).
+    // used by ClientCnxn to know whether to emit a SASL-related event: either AuthFailed or SaslAuthenticated,
+    // or none, if not ready yet.
     public KeeperState getKeeperState() {
         if (saslClient != null) {
             if (saslState == SaslState.FAILED) {
@@ -371,6 +372,7 @@ public class ZooKeeperSaslClient {
                 }
             }
         }
+	// No event ready to emit yet.
         return null;
     }
 
