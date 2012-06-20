@@ -63,8 +63,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
      * @throws InterruptedException
      * @throws IOException
      */
-    void doIO(List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue,
-              ClientCnxn cnxn)
+    void doIO(List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue, ClientCnxn cnxn)
       throws InterruptedException, IOException {
         SocketChannel sock = (SocketChannel) sockKey.channel();
         if (sock == null) {
@@ -119,8 +118,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                                 // We've found the priming-packet: let it through.
                                 break;
                             } else {
-                                // Non-ping packet:
-                                // defer it until later, leaving it in the queue
+                                // Non-priming packet: defer it until later, leaving it in the queue
                                 // until authentication completes.
                                 if (LOG.isDebugEnabled()) {
                                     LOG.debug("deferring non-priming packet: " + p +
