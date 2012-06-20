@@ -989,7 +989,7 @@ public class ClientCnxn {
                                       KeeperState.AuthFailed,null));
                                 }
                             }
-                            KeeperState authState = zooKeeperSaslClient.readyToSendSaslEvent();
+                            KeeperState authState = zooKeeperSaslClient.getKeeperState();
                             if (authState != null) {
                                 if (authState == KeeperState.AuthFailed) {
                                   state = States.AUTH_FAILED;

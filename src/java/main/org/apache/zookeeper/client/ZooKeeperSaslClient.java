@@ -370,7 +370,7 @@ public class ZooKeeperSaslClient {
     }
 
     // used by ClientCnxn to know when to emit a SASL-related event (either AuthFailed or SaslAuthenticated).
-    public KeeperState readyToSendSaslEvent() {
+    public KeeperState getKeeperState() {
         if (saslClient != null) {
             if (saslState == SaslState.FAILED) {
               return KeeperState.AuthFailed;
