@@ -256,17 +256,16 @@ public class ZooKeeperSaslClient {
         }
 
         if (!(saslClient.isComplete())) {
-          if (serverToken != null) {
-            try {
-              saslToken = createSaslToken(serverToken);
-              if (saslToken != null) {
-                sendSaslPacket(saslToken, cnxn);
-              }
-            } catch (SaslException e) {
-              LOG.error("SASL authentication failed using login context '" +
-                      this.getLoginContext() + "'.");
-              saslState = SaslState.FAILED;
+          try {
+            saslToken = createSaslToken(serverToken);
+            if (saslToken != null) {
+              sendSaslPacket(saslToken, cnxn);
             }
+          } catch (SaslException e) {
+            LOG.error("SASL authentication failed using login context '" +
+                    this.getLoginContext() + "'.");
+            saslState = SaslState.FAILED;
+            gotLastPacket = true;
           }
         }
 

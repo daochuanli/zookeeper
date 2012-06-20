@@ -1240,7 +1240,8 @@ public class ClientCnxn {
                     (zooKeeperSaslClient.isFailed() == false)) {
                     return true;
                 }
-                if ((zooKeeperSaslClient.isComplete()) &&
+                if (((zooKeeperSaslClient.isComplete()) ||
+                     (zooKeeperSaslClient.isFailed())) &&
                     (zooKeeperSaslClient.gotLastPacket == false)) {
                   // In this case SASL negotiation is done, but there is a final SASL message from server
                   // which must be received.
