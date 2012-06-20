@@ -551,6 +551,7 @@ public class ClientCnxn {
                       } else {
                           cb.processResult(rc, clientPath, p.ctx, null);
                       }
+                    // TODO: remove this dead code: if () {...} (dead because of ZK-1437)
                   } else if (p.cb instanceof ZooKeeperSaslClient.ServerSaslResponseCallback) {
                       ZooKeeperSaslClient.ServerSaslResponseCallback cb = (ZooKeeperSaslClient.ServerSaslResponseCallback) p.cb;
                       SetSASLResponse rsp = (SetSASLResponse) p.response;
@@ -1001,10 +1002,17 @@ public class ClientCnxn {
                                       KeeperState.AuthFailed,null));
                                 }
                             }
-                            if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
+                            if (zooKeeperSaslClient.isFailed()) {
+                                state = States.AUTH_FAILED;
                                 eventThread.queueEvent(new WatchedEvent(
-                                  Watcher.Event.EventType.None,
-                                  Watcher.Event.KeeperState.SaslAuthenticated, null));
+                                      Watcher.Event.EventType.None,
+                                      KeeperState.AuthFailed,null));
+                            } else {
+                                if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
+                                  eventThread.queueEvent(new WatchedEvent(
+                                        Watcher.Event.EventType.None,
+                                        Watcher.Event.KeeperState.SaslAuthenticated, null));
+                                }
                             }
                         }
                         to = readTimeout - clientCnxnSocket.getIdleRecv();
