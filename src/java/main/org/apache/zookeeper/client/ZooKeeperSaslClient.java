@@ -69,7 +69,7 @@ public class ZooKeeperSaslClient {
 
     private SaslState saslState = SaslState.INITIAL;
 
-    public boolean gotLastPacket = false;
+    private boolean gotLastPacket = false;
 
     public SaslState getSaslState() {
         return saslState;
@@ -470,4 +470,33 @@ public class ZooKeeperSaslClient {
             }
         }
     }
+
+    public boolean clientTunneledAuthenticationInProgress() {
+        if (System.getProperty("java.security.auth.login.config") != null) {
+            // Client is configured to use SASL.
+
+            // 1.  SendThread has created the authenticating object, but
+            // authentication hasn't finished yet: we must wait for it to do so.
+            if ((isComplete() == false) &&
+                    (isFailed() == false)) {
+                return true;
+            }
+
+            // 2. In this case SASL negotiation has completed (either successfully or not), but there is a
+            //    final SASL message from server which must be received.
+            if (((isComplete()) ||
+                    (isFailed())) &&
+                    (gotLastPacket == false)) {
+
+                return true;
+            }
+        }
+        // Either client is not configured to use a tunnelled authentication
+        // scheme, or tunnelled authentication has completed (successfully or
+        // not).
+        return false;
+    }
+
+
+
 }
