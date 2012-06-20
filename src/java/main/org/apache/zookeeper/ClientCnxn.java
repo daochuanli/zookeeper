@@ -551,18 +551,6 @@ public class ClientCnxn {
                       } else {
                           cb.processResult(rc, clientPath, p.ctx, null);
                       }
-                    // TODO: remove this dead code: if () {...} (dead because of ZK-1437)
-                  } else if (p.cb instanceof ZooKeeperSaslClient.ServerSaslResponseCallback) {
-                      ZooKeeperSaslClient.ServerSaslResponseCallback cb = (ZooKeeperSaslClient.ServerSaslResponseCallback) p.cb;
-                      SetSASLResponse rsp = (SetSASLResponse) p.response;
-                      // TODO : check rc (== 0, etc) as with other packet types.
-                      cb.processResult(rc,null,p.ctx,rsp.getToken(),null);
-                      ClientCnxn clientCnxn = (ClientCnxn)p.ctx;
-                      if ((clientCnxn == null) || (clientCnxn.zooKeeperSaslClient == null) ||
-                              (clientCnxn.zooKeeperSaslClient.getSaslState() == ZooKeeperSaslClient.SaslState.FAILED)) {
-                          queueEvent(new WatchedEvent(EventType.None,
-                                  KeeperState.AuthFailed, null));
-                      }
                   } else if (p.response instanceof GetDataResponse) {
                       DataCallback cb = (DataCallback) p.cb;
                       GetDataResponse rsp = (GetDataResponse) p.response;
