@@ -63,7 +63,7 @@ public class ZooKeeperSaslClient {
     private byte[] saslToken = new byte[0];
 
     public enum SaslState {
-        INITIAL,INTERMEDIATE,COMPLETE,FAILED
+        INITIAL,INTERMEDIATE,COMPLETE,FAILED,NOT_CONFIGURED
     }
 
     private SaslState saslState = SaslState.INITIAL;
@@ -103,7 +103,7 @@ public class ZooKeeperSaslClient {
         } else {
             // Handle situation of clientSection's being null: it might simply because the client does not intend to 
             // use SASL, so not necessarily an error.
-            saslState = SaslState.FAILED;
+            saslState = SaslState.NOT_CONFIGURED;
             String explicitClientSection = System.getProperty(ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY);
             if (explicitClientSection != null) {
                 // If the user explicitly overrides the default Login Context, they probably expected SASL to
@@ -243,10 +243,6 @@ public class ZooKeeperSaslClient {
             LOG.error("Exception while trying to create SASL client: " + e);
             return null;
         }
-    }
-
-    public void setFailed() {
-        saslState = SaslState.FAILED;
     }
 
     public void respondToServer(byte[] serverToken, ClientCnxn cnxn) {
