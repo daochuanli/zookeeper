@@ -69,7 +69,6 @@ import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.RequestHeader;
 import org.apache.zookeeper.proto.SetACLResponse;
 import org.apache.zookeeper.proto.SetDataResponse;
-import org.apache.zookeeper.proto.SetSASLResponse;
 import org.apache.zookeeper.proto.SetWatches;
 import org.apache.zookeeper.proto.WatcherEvent;
 import org.apache.zookeeper.server.ByteBufferInputStream;
@@ -990,17 +989,14 @@ public class ClientCnxn {
                                       KeeperState.AuthFailed,null));
                                 }
                             }
-                            if (zooKeeperSaslClient.isFailed()) {
-                                state = States.AUTH_FAILED;
+                            KeeperState authState = zooKeeperSaslClient.readyToSendSaslEvent();
+                            if (authState != null) {
+                                if (authState == KeeperState.AuthFailed) {
+                                  state = States.AUTH_FAILED;
+                                }
                                 eventThread.queueEvent(new WatchedEvent(
                                       Watcher.Event.EventType.None,
-                                      KeeperState.AuthFailed,null));
-                            } else {
-                                if (zooKeeperSaslClient.readyToSendSaslAuthEvent()) {
-                                  eventThread.queueEvent(new WatchedEvent(
-                                        Watcher.Event.EventType.None,
-                                        Watcher.Event.KeeperState.SaslAuthenticated, null));
-                                }
+                                      authState,null));
                             }
                         }
                         to = readTimeout - clientCnxnSocket.getIdleRecv();
@@ -1239,8 +1235,8 @@ public class ClientCnxn {
                 if (((zooKeeperSaslClient.isComplete()) ||
                      (zooKeeperSaslClient.isFailed())) &&
                     (zooKeeperSaslClient.gotLastPacket == false)) {
-                  // In this case SASL negotiation is done, but there is a final SASL message from server
-                  // which must be received.
+                  // In this case SASL negotiation has completed (either successfully or not), but there is a
+                  // final SASL message from server which must be received.
                   return true;
                 }
             }

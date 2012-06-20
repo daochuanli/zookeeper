@@ -21,6 +21,7 @@ package org.apache.zookeeper.client;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.ClientCnxn;
 import org.apache.zookeeper.Login;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.GetSASLRequest;
@@ -63,7 +64,7 @@ public class ZooKeeperSaslClient {
     private byte[] saslToken = new byte[0];
 
     public enum SaslState {
-        INITIAL,INTERMEDIATE,COMPLETE,FAILED,NOT_CONFIGURED
+        INITIAL,INTERMEDIATE,COMPLETE,FAILED
     }
 
     private SaslState saslState = SaslState.INITIAL;
@@ -103,7 +104,7 @@ public class ZooKeeperSaslClient {
         } else {
             // Handle situation of clientSection's being null: it might simply because the client does not intend to 
             // use SASL, so not necessarily an error.
-            saslState = SaslState.NOT_CONFIGURED;
+            saslState = SaslState.FAILED;
             String explicitClientSection = System.getProperty(ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY);
             if (explicitClientSection != null) {
                 // If the user explicitly overrides the default Login Context, they probably expected SASL to
@@ -368,24 +369,20 @@ public class ZooKeeperSaslClient {
         }
     }
 
-    // used by ClientCnxn to know when to emit SaslAuthenticated event.
-    // transitions internally from INTERMEDIATE to COMPLETE as a side effect if
-    // it's ready to emit this event.
-    public boolean readyToSendSaslAuthEvent() {
-        if (saslState == SaslState.FAILED) {
-            return false;
-        }
+    // used by ClientCnxn to know when to emit a SASL-related event (either AuthFailed or SaslAuthenticated).
+    public KeeperState readyToSendSaslEvent() {
         if (saslClient != null) {
+            if (saslState == SaslState.FAILED) {
+              return KeeperState.AuthFailed;
+            }
             if (saslClient.isComplete()) {
                 if (saslState == SaslState.INTERMEDIATE) {
                     saslState = SaslState.COMPLETE;
-                    return true;
+                    return KeeperState.SaslAuthenticated;
                 }
             }
-        } else {
-            LOG.warn("saslClient is null: client could not authenticate properly.");
         }
-        return false;
+        return null;
     }
 
     public void initialize(ClientCnxn cnxn) throws SaslException {
