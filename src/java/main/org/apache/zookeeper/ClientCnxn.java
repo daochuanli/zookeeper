@@ -1284,14 +1284,14 @@ public class ClientCnxn {
         return r;
     }
 
-    public void sendPacket(Record request, Record response, AsyncCallback cb)
+    public void sendPacket(Record request, Record response, AsyncCallback cb, int opCode)
     throws IOException {
         // Generate Xid now because it will be sent immediately,
         // by call to sendThread.sendPacket() below.
         int xid = getXid();
         RequestHeader h = new RequestHeader();
         h.setXid(xid);
-        h.setType(ZooDefs.OpCode.sasl);
+        h.setType(opCode);
 
         ReplyHeader r = new ReplyHeader();
         r.setXid(xid);
@@ -1306,6 +1306,10 @@ public class ClientCnxn {
             String serverPath, Object ctx, WatchRegistration watchRegistration)
     {
         Packet packet = null;
+
+        // Note that we do not generate the Xid for the packet yet. It is
+        // generated later at send-time, by an implementation of ClientCnxnSocket::doIO(),
+        // where the packet is actually sent.
         synchronized (outgoingQueue) {
             packet = new Packet(h, r, request, response, watchRegistration);
             packet.cb = cb;
