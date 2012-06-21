@@ -765,7 +765,7 @@ public class ClientCnxn {
                 return;
             }
 
-            // If SASL authentication is currently in progress, construct and send a reponse packet immediately,
+            // If SASL authentication is currently in progress, construct and send a response packet immediately,
             // rather than queuing a response as with other packets.
             if (clientTunneledAuthenticationInProgress()) {
                 GetSASLRequest request = new GetSASLRequest();
@@ -1286,6 +1286,10 @@ public class ClientCnxn {
 
     public void disableWrite() {
         sendThread.getClientCnxnSocket().disableWrite();
+    }
+
+    public void enableWrite() {
+        sendThread.getClientCnxnSocket().enableWrite();
     }
 
     public void sendPacket(Record request, Record response, AsyncCallback cb, int opCode)

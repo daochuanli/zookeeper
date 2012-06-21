@@ -79,6 +79,10 @@ public class ZooKeeperSaslClient {
       return loginContext;
     }
 
+    public void concludeAuthentication(ClientCnxn cnxn) {
+
+    }
+
     public ZooKeeperSaslClient(final String serverPrincipal)
             throws LoginException {
         /**
@@ -234,11 +238,11 @@ public class ZooKeeperSaslClient {
                     return null;
                 }
             }
-        }
-        catch (LoginException e) {
+        } catch (LoginException e) {
+            // We throw LoginExceptions...
             throw e;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
+            // ..but consume (with a log message) all other types of exceptions.
             LOG.error("Exception while trying to create SASL client: " + e);
             return null;
         }
@@ -251,25 +255,26 @@ public class ZooKeeperSaslClient {
         }
 
         if (!(saslClient.isComplete())) {
-          try {
-            saslToken = createSaslToken(serverToken);
-            if (saslToken != null) {
-              sendSaslPacket(saslToken, cnxn);
+            try {
+                saslToken = createSaslToken(serverToken);
+                if (saslToken != null) {
+                    sendSaslPacket(saslToken, cnxn);
+                }
+            } catch (SaslException e) {
+                LOG.error("SASL authentication failed using login context '" +
+                        this.getLoginContext() + "'.");
+                saslState = SaslState.FAILED;
+                gotLastPacket = true;
             }
-          } catch (SaslException e) {
-            LOG.error("SASL authentication failed using login context '" +
-                    this.getLoginContext() + "'.");
-            saslState = SaslState.FAILED;
-            gotLastPacket = true;
-          }
         }
 
         if (saslClient.isComplete()) {
-          if ((serverToken == null) && (saslClient.getMechanismName() == "GSSAPI"))
-            gotLastPacket = true;
-          if (saslClient.getMechanismName() != "GSSAPI") {
-            gotLastPacket = true;
-          }
+            if ((serverToken == null) && (saslClient.getMechanismName() == "GSSAPI"))
+                gotLastPacket = true;
+            if (saslClient.getMechanismName() != "GSSAPI") {
+                gotLastPacket = true;
+            }
+            cnxn.enableWrite();
         }
     }
 
@@ -336,7 +341,8 @@ public class ZooKeeperSaslClient {
 
         try {
             cnxn.sendPacket(request,response,cb, ZooDefs.OpCode.sasl);
-            cnxn.disableWrite();
+// causes hang.
+//            cnxn.disableWrite();
         } catch (IOException e) {
             throw new SaslException("Failed to send SASL packet to server due " +
               "to IOException:" + e);

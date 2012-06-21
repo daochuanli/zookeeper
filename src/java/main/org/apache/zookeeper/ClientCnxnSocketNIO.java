@@ -333,12 +333,14 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             }
         }
         if (sendThread.getZkState().isConnected()) {
-            synchronized(outgoingQueue) {
-                if ((!outgoingQueue.isEmpty()) || (cnxn.sendThread.clientTunneledAuthenticationInProgress())) {
-                    enableWrite();
-                } else {
-                    disableWrite();
+            if (cnxn.sendThread.clientTunneledAuthenticationInProgress() == false) {
+                synchronized(outgoingQueue) {
+                    if ((!outgoingQueue.isEmpty())) {
+                        enableWrite();
+                    }
                 }
+            } else {
+                enableWrite();
             }
         }
         selected.clear();
