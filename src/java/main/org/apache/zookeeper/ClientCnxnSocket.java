@@ -160,6 +160,8 @@ abstract class ClientCnxnSocket {
 
     abstract void enableWrite();
 
+    abstract void disableWrite();
+
     abstract void enableReadWriteOnly();
 
     abstract void doTransport(int waitTimeOut, List<Packet> pendingQueue,

@@ -49,6 +49,8 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
 
     private SocketAddress remoteSocketAddress;
 
+    private boolean sentPrimingPacket = false;
+
     ClientCnxnSocketNIO() throws IOException {
         super();
     }
@@ -131,6 +133,10 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                         // Tunnelled authentication is not in progress: just
                         // send the first packet in the queue.
                         p = outgoingQueue.getFirst();
+                    }
+                    if (p == null) {
+                        // no suitable packet to send: turn off write interest flag.
+                        disableWrite();
                     }
                     if (p != null) {
                         outgoingQueue.removeFirstOccurrence(p);
@@ -353,7 +359,8 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         }
     }
 
-    private synchronized void disableWrite() {
+    @Override
+    public synchronized void disableWrite() {
         int i = sockKey.interestOps();
         if ((i & SelectionKey.OP_WRITE) != 0) {
             sockKey.interestOps(i & (~SelectionKey.OP_WRITE));

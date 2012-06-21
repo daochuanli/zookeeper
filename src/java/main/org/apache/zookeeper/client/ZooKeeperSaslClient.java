@@ -336,6 +336,7 @@ public class ZooKeeperSaslClient {
 
         try {
             cnxn.sendPacket(request,response,cb, ZooDefs.OpCode.sasl);
+            cnxn.disableWrite();
         } catch (IOException e) {
             throw new SaslException("Failed to send SASL packet to server due " +
               "to IOException:" + e);

@@ -1284,6 +1284,10 @@ public class ClientCnxn {
         return r;
     }
 
+    public void disableWrite() {
+        sendThread.getClientCnxnSocket().disableWrite();
+    }
+
     public void sendPacket(Record request, Record response, AsyncCallback cb, int opCode)
     throws IOException {
         // Generate Xid now because it will be sent immediately,
