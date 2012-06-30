@@ -190,6 +190,19 @@ BUGFIXES:
 
   ZOOKEEPER-1466. QuorumCnxManager.shutdown missing synchronization. (Patrick Hunt via mahadev)
 
+  ZOOKEEPER-1490. If the configured log directory does not exist
+    zookeeper will not start. Better to create the directory and start
+    (suja s via phunt)
+
+  ZOOKEEPER-1210. Can't build ZooKeeper RPM with RPM >= 4.6.0 (i.e. on
+    RHEL 6 and Fedora >= 10) (Tadeusz Andrzej Kadłubowski via phunt)
+
+  ZOOKEEPER-1236. Security uses proprietary Sun APIs
+    (Adalberto Medeiros via phunt)
+
+  ZOOKEEPER-1471. Jute generates invalid C++ code
+    (Michi Mutsuzaki via phunt)
+
 IMPROVEMENTS:
 
   ZOOKEEPER-1170. Fix compiler (eclipse) warnings: unused imports,
@@ -303,6 +316,9 @@ IMPROVEMENTS:
 
   ZOOKEEPER-1440. Spurious log error messages when QuorumCnxManager is shutting
   down (Jordan Zimmerman via michim)
+
+  ZOOKEEPER-1454. Document how to run autoreconf if cppunit is
+    installed in a non-standard directory (Michi Mutsuzaki via phunt)
 
 Release 3.4.0 - 
 
