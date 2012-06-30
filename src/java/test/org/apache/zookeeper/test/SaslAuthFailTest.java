@@ -90,7 +90,10 @@ public class SaslAuthFailTest extends ClientBase {
         @Override
         public synchronized void process(WatchedEvent event) {
             if (event.getState() == KeeperState.AuthFailed) {
-                authFailed.incrementAndGet();
+                synchronized(authFailed) {
+                    authFailed.incrementAndGet();
+                    authFailed.notify();
+                }
             }
             else {
                 super.process(event);
@@ -101,7 +104,10 @@ public class SaslAuthFailTest extends ClientBase {
     @Test
     public void testBadSaslAuthNotifiesWatch() throws Exception {
         ZooKeeper zk = createClient();
-        Thread.sleep(1000);
+        // wait for authFailed event from client's EventThread.
+        synchronized(authFailed) {
+            authFailed.wait();
+        }
         Assert.assertEquals(authFailed.get(),1);
         zk.close();
     }
@@ -110,7 +116,6 @@ public class SaslAuthFailTest extends ClientBase {
     @Test
     public void testAuthFail() throws Exception {
         ZooKeeper zk = createClient();
-        Thread.sleep(1000);
         try {
             zk.create("/path1", null, Ids.CREATOR_ALL_ACL, CreateMode.PERSISTENT);
             Assert.fail("Should have gotten exception.");
