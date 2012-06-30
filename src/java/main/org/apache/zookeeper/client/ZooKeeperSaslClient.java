@@ -265,8 +265,11 @@ public class ZooKeeperSaslClient {
         }
 
         if (saslClient.isComplete()) {
+            // GSSAPI: server sends a final packet after authentication succeeds
+            // or fails.
             if ((serverToken == null) && (saslClient.getMechanismName() == "GSSAPI"))
                 gotLastPacket = true;
+            // non-GSSAPI: no final packet from server.
             if (saslClient.getMechanismName() != "GSSAPI") {
                 gotLastPacket = true;
             }
@@ -472,25 +475,24 @@ public class ZooKeeperSaslClient {
         if (System.getProperty("java.security.auth.login.config") != null) {
             // Client is configured to use SASL.
 
-            // 1.  SendThread has created the authenticating object, but
-            // authentication hasn't finished yet: we must wait for it to do so.
+            // 1. Authentication hasn't finished yet: we must wait for it to do so.
             if ((isComplete() == false) &&
-                    (isFailed() == false)) {
+                (isFailed() == false)) {
                 return true;
             }
 
-            // 2. In this case SASL negotiation has completed (either successfully or not), but there is a
-            //    final SASL message from server which must be received.
-            if (((isComplete()) ||
-                    (isFailed())) &&
-                    (gotLastPacket == false)) {
-
-                return true;
+            // 2. SASL authentication has succeeded or failed..
+            if (isComplete() || isFailed()) {
+                if (gotLastPacket == false) {
+                    // ..but still in progress, because there is a final SASL
+                    // message from server which must be received.
+                    return true;
+                }
             }
         }
         // Either client is not configured to use a tunnelled authentication
         // scheme, or tunnelled authentication has completed (successfully or
-        // not).
+        // not), and all server SASL messages have been received.
         return false;
     }
 
