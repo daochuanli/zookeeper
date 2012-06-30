@@ -376,7 +376,7 @@ public class ZooKeeperSaslClient {
                 }
             }
         }
-	// No event ready to emit yet.
+        // No event ready to emit yet.
         return null;
     }
 
