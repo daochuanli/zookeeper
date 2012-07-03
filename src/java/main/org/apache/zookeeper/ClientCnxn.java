@@ -922,9 +922,9 @@ public class ClientCnxn {
 
         private int pingRwTimeout = minPingRwTimeout;
 
-        // Set to true if constructor of ZooKeeperSaslClient
-        // throws an exception: see startConnect() below.
-        private boolean saslAuthFailed = false;
+        // Set to true if and only if constructor of ZooKeeperSaslClient
+        // throws a LoginException: see startConnect() below.
+        private boolean saslLoginFailed = false;
 
         private void startConnect() throws IOException {
             if(!isFirstConnect){
@@ -960,7 +960,7 @@ public class ClientCnxn {
                 eventThread.queueEvent(new WatchedEvent(
                         Watcher.Event.EventType.None,
                         Watcher.Event.KeeperState.AuthFailed, null));
-                saslAuthFailed = true;
+                saslLoginFailed = true;
             }
             clientCnxnSocket.connect(addr);
         }
@@ -1218,8 +1218,8 @@ public class ClientCnxn {
         }
 
         public boolean clientTunneledAuthenticationInProgress() {
-            // 1. zooKeeperSaslClient initialization failed.
-            if (saslAuthFailed == true) {
+            // 1. SASL login failed.
+            if (saslLoginFailed == true) {
                 return false;
             }
 
