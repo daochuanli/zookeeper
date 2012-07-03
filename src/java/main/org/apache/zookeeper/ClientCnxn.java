@@ -765,12 +765,14 @@ public class ClientCnxn {
                 return;
             }
 
-            // If SASL authentication is currently in progress, construct and send a response packet immediately,
-            // rather than queuing a response as with other packets.
+            // If SASL authentication is currently in progress, construct and
+            // send a response packet immediately, rather than queuing a
+            // response as with other packets.
             if (clientTunneledAuthenticationInProgress()) {
                 GetSASLRequest request = new GetSASLRequest();
                 request.deserialize(bbia,"token");
-                zooKeeperSaslClient.respondToServer(request.getToken(),ClientCnxn.this);
+                zooKeeperSaslClient.respondToServer(request.getToken(),
+                  ClientCnxn.this);
                 return;
             }
 
