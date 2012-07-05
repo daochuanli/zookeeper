@@ -30,6 +30,7 @@ import javax.security.sasl.SaslServer;
 import org.apache.zookeeper.Login;
 
 public class ZooKeeperSaslServer {
+    public static final String LOGIN_CONTEXT_NAME_KEY = "zookeeper.sasl.serverconfig";
     Logger LOG = LoggerFactory.getLogger(ZooKeeperSaslServer.class);
     private SaslServer saslServer;
 

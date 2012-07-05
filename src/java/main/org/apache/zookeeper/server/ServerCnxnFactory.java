@@ -24,6 +24,10 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import javax.security.auth.login.Configuration;
+import javax.security.auth.login.LoginException;
+import javax.security.auth.login.AppConfigurationEntry;
+
 import javax.management.JMException;
 
 import org.apache.zookeeper.Login;
@@ -146,4 +150,38 @@ public abstract class ServerCnxnFactory {
 
     }
 
+    protected void configureSaslLogin() throws IOException {
+        String serverSection = System.getProperty(ZooKeeperSaslServer.LOGIN_CONTEXT_NAME_KEY, "Server");
+
+        // Note that 'Configuration' here refers to javax.security.auth.login.Configuration.
+        AppConfigurationEntry entries[] = null;
+        SecurityException securityException = null;
+        try {
+            entries = Configuration.getConfiguration().getAppConfigurationEntry(serverSection);
+        } catch (SecurityException e) {
+            // handle below: might be harmless if the user doesn't intend to use JAAS authentication.
+            securityException = e;
+        }
+
+        // No entries in jaas.conf
+        if (entries == null) {
+            if (securityException != null &&
+                (System.getProperty("java.security.auth.login.config") != null ||
+                 System.getProperty(ZooKeeperSaslServer.LOGIN_CONTEXT_NAME_KEY) != null))
+            {
+                throw securityException;
+            }
+            return;
+        }
+
+        // jaas.conf entry available
+        try {
+            saslServerCallbackHandler = new SaslServerCallbackHandler(Configuration.getConfiguration());
+            login = new Login(serverSection, saslServerCallbackHandler);
+            login.startThreadIfNeeded();
+        } catch (LoginException e) {
+            throw new IOException("Could not configure server because SASL configuration did not allow the "
+              + " Zookeeper server to authenticate itself properly: " + e);
+        }
+    }
 }
