@@ -1264,7 +1264,7 @@ public class ClientCnxn {
         public boolean clientTunneledAuthenticationInProgress() {
             // 1. Client is configured to disable SASL.
             if (System.getProperty(ZooKeeperSaslClient.ENABLE_CLIENT_SASL,
-                ZooKeeperSaslClient.ENABLE_CLIENT_SASL_DEFAULT) == "false") {
+                ZooKeeperSaslClient.ENABLE_CLIENT_SASL_DEFAULT).equals("false")) {
                 return false;
             }
 
