@@ -979,19 +979,22 @@ public class ClientCnxn {
 
             setName(getName().replaceAll("\\(.*\\)",
                     "(" + addr.getHostName() + ":" + addr.getPort() + ")"));
-            try {
-                zooKeeperSaslClient = new ZooKeeperSaslClient("zookeeper/"+addr.getHostName());
-            } catch (LoginException e) {
-                // An authentication error occurred when the SASL client tried to initialize:
-                // for Kerberos this means that the client failed to authenticate with the KDC.
-                // This is different from an authentication error that occurs during communication
-                // with the Zookeeper server, which is handled below.
-                LOG.warn("SASL configuration failed: " + e + " Will continue connection to Zookeeper server without "
-                  + "SASL authentication, if Zookeeper server allows it.");
-                eventThread.queueEvent(new WatchedEvent(
-                  Watcher.Event.EventType.None,
-                  Watcher.Event.KeeperState.AuthFailed, null));
-                saslLoginFailed = true;
+            if (System.getProperty(ZooKeeperSaslClient.ENABLE_CLIENT_SASL,
+                ZooKeeperSaslClient.ENABLE_CLIENT_SASL_DEFAULT) == "true") {
+                try {
+                    zooKeeperSaslClient = new ZooKeeperSaslClient("zookeeper/"+addr.getHostName());
+                } catch (LoginException e) {
+                    // An authentication error occurred when the SASL client tried to initialize:
+                    // for Kerberos this means that the client failed to authenticate with the KDC.
+                    // This is different from an authentication error that occurs during communication
+                    // with the Zookeeper server, which is handled below.
+                    LOG.warn("SASL configuration failed: " + e + " Will continue connection to Zookeeper server without "
+                        + "SASL authentication, if Zookeeper server allows it.");
+                    eventThread.queueEvent(new WatchedEvent(
+                        Watcher.Event.EventType.None,
+                        Watcher.Event.KeeperState.AuthFailed, null));
+                    saslLoginFailed = true;
+                }
             }
             logStartConnect(addr);
 
@@ -1259,18 +1262,24 @@ public class ClientCnxn {
         }
 
         public boolean clientTunneledAuthenticationInProgress() {
-            // 1. SASL login failed.
+            // 1. Client is configured to disable SASL.
+            if (System.getProperty(ZooKeeperSaslClient.ENABLE_CLIENT_SASL,
+                ZooKeeperSaslClient.ENABLE_CLIENT_SASL_DEFAULT) == "false") {
+                return false;
+            }
+
+            // 2. SASL login failed.
             if (saslLoginFailed == true) {
                 return false;
             }
 
-            // 2. SendThread has not created the authenticating object yet,
+            // 3. SendThread has not created the authenticating object yet,
             // therefore authentication is (at the earliest stage of being) in progress.
             if (zooKeeperSaslClient == null) {
                 return true;
             }
 
-            // 3. authenticating object exists, so ask it for its progress.
+            // 4. authenticating object exists, so ask it for its progress.
             return zooKeeperSaslClient.clientTunneledAuthenticationInProgress();
         }
 

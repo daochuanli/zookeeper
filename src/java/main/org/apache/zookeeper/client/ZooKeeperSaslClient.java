@@ -56,6 +56,8 @@ import javax.security.sasl.SaslException;
  */
 public class ZooKeeperSaslClient {
     public static final String LOGIN_CONTEXT_NAME_KEY = "zookeeper.sasl.clientconfig";
+    public static final String ENABLE_CLIENT_SASL = "zookeeper.sasl.client";
+    public static final String ENABLE_CLIENT_SASL_DEFAULT = "true";
     private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperSaslClient.class);
     private static Login login = null;
     private SaslClient saslClient;
