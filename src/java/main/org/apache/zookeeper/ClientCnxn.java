@@ -980,7 +980,7 @@ public class ClientCnxn {
             setName(getName().replaceAll("\\(.*\\)",
                     "(" + addr.getHostName() + ":" + addr.getPort() + ")"));
             if (System.getProperty(ZooKeeperSaslClient.ENABLE_CLIENT_SASL,
-                ZooKeeperSaslClient.ENABLE_CLIENT_SASL_DEFAULT) == "true") {
+                ZooKeeperSaslClient.ENABLE_CLIENT_SASL_DEFAULT).equals("true")) {
                 try {
                     zooKeeperSaslClient = new ZooKeeperSaslClient("zookeeper/"+addr.getHostName());
                 } catch (LoginException e) {
