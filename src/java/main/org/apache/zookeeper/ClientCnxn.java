@@ -789,6 +789,30 @@ public class ClientCnxn {
     }
     
     /**
+     * Determine the Zookeeper Server's principal name that the client will
+     * use when doing mutual authentication with the server.
+     * Principal name will be the string "zookeeper/" concatenated with
+     * the server's instance name.
+     * The instance name, in Kerberos terminology, is the part of the
+     * Kerberos principal that follows the slash character (/), if present.
+     * If the system property 'zookeeper.clusterName' exists, use
+     * this as the instance name; otherwise, the default is to use the
+     * Zookeeper server name (as supplied by the input serverHostName) as
+     * the instance name.
+     *
+     * @param serverHostName
+     * @return Name of Kerberos server principal.
+     */
+    public static String getServerInstance(String serverHostName) {
+        String instanceName = serverHostName;
+        String clusterName = System.getProperty("zookeeper.clusterName");
+        if (clusterName != null) {
+            instanceName = clusterName;
+        }
+        return instanceName;
+    }
+
+    /**
      * This class services the outgoing request queue and generates the heart
      * beats. It also spawns the ReadThread.
      */
@@ -1098,10 +1122,11 @@ public class ClientCnxn {
             clientCnxnSocket.connect(addr);
         }
 
-        private String getServerPrincipal(InetSocketAddress addr) {
+	// TODO: just pass a string here, since we are just using addr.getHostString().
+        public final String getServerPrincipal(InetSocketAddress addr) {
             String principalUserName = clientConfig.getProperty(ZKClientConfig.ZK_SASL_CLIENT_USERNAME,
                     ZKClientConfig.ZK_SASL_CLIENT_USERNAME_DEFAULT);
-            String serverPrincipal = principalUserName + "/" + addr.getHostString();
+            String serverPrincipal = principalUserName + "/" + getServerInstance(addr.getHostString());
             return serverPrincipal;
         }
 
