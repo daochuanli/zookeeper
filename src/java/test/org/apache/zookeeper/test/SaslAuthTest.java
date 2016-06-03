@@ -21,10 +21,12 @@ package org.apache.zookeeper.test;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.zookeeper.ClientCnxn;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.TestableZooKeeper;
@@ -143,4 +145,24 @@ public class SaslAuthTest extends ClientBase {
         }
     }
 
+    @Test
+    public void testDefaultServerInstanceName() throws Exception {
+	/*
+	InetSocketAddress serverAddr = new InetSocketAddress("myzk.mydomain.com",1234);
+        String instanceName =
+	    ClientCnxn.getServerPrincipal(serverAddr);
+        Assert.assertEquals(instanceName,"zookeeper/myzk.mydomain.com");
+	*/
+    }
+
+    @Test
+    public void testSpecifiedServerInstanceName() throws Exception {
+	/*
+        // override the default instance name with "mycluster":
+        System.setProperty("zookeeper.clusterName", "mycluster");
+        String instanceName =
+	    ClientCnxn.getServerPrincipal(new InetSocketAddress("myzk.mydomain.com",1234));
+        Assert.assertEquals(instanceName,"zookeeper/mycluster");
+	*/
+    }
 }
