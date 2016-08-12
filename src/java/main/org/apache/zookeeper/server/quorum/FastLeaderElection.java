@@ -802,6 +802,7 @@ public class FastLeaderElection implements Election {
         }
         if (self.start_fle == 0) {
            self.start_fle = System.currentTimeMillis();
+           self.setFleTimeTaken(-1);
         }
         try {
             HashMap<Long, Vote> recvset = new HashMap<Long, Vote>();

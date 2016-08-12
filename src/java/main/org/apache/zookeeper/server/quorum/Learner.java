@@ -39,8 +39,6 @@ import org.apache.jute.BinaryOutputArchive;
 import org.apache.jute.InputArchive;
 import org.apache.jute.OutputArchive;
 import org.apache.jute.Record;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.server.Request;
 import org.apache.zookeeper.server.ServerCnxn;
 import org.apache.zookeeper.server.ZooTrace;
@@ -48,6 +46,8 @@ import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
 import org.apache.zookeeper.server.util.SerializeUtils;
 import org.apache.zookeeper.server.util.ZxidUtils;
 import org.apache.zookeeper.txn.TxnHeader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is the superclass of two of the three main actors in a ZK
@@ -215,7 +215,8 @@ public class Learner {
      * Establish a connection with the Leader found by findLeader. Retries
      * 5 times before giving up. 
      * @param addr - the address of the Leader to connect to.
-     * @throws IOException - if the socket connection fails on the 5th attempt
+     * @throws IOException <li>if the socket connection fails on the 5th attempt</li>
+     * <li>if there is an authentication failure while connecting to leader</li>
      * @throws ConnectException
      * @throws InterruptedException
      */
@@ -241,6 +242,9 @@ public class Learner {
             }
             Thread.sleep(1000);
         }
+
+        self.authLearner.authenticate(sock);
+
         leaderIs = BinaryInputArchive.getArchive(new BufferedInputStream(
                 sock.getInputStream()));
         bufferedOutput = new BufferedOutputStream(sock.getOutputStream());
